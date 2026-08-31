@@ -1,0 +1,89 @@
+<header class="ac-topbar">
+
+  <!-- Ouverture de la barre latérale, sur mobile uniquement -->
+  <button
+    type="button"
+    class="ac-btn-icon d-lg-none"
+    (click)="toggleSidebar.emit()"
+    aria-label="Ouvrir le menu"
+  >
+    <i class="bi bi-list fs-5" aria-hidden="true"></i>
+  </button>
+
+  <!--
+    Recherche globale.
+    Elle sera branchée au Lot 6, quand il y aura des véhicules et des
+    clients à chercher. Le champ est désactivé plutôt qu'absent :
+    ainsi la mise en page définitive est validée dès maintenant.
+  -->
+  <div class="ac-topbar__search">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input
+      type="search"
+      class="form-control"
+      placeholder="Rechercher un véhicule, un client, une plaque…"
+      disabled
+      aria-label="Recherche globale"
+    />
+  </div>
+
+  <div class="ac-topbar__actions">
+
+    <!-- Station courante : essentiel dès qu'un client gère plusieurs sites -->
+    <span class="ac-topbar__station d-none d-md-inline-flex">
+      <i class="bi bi-geo-alt" aria-hidden="true"></i>
+      {{ stationName }}
+    </span>
+
+    <!-- Notifications -->
+    <button type="button" class="ac-btn-icon position-relative" aria-label="Notifications">
+      <i class="bi bi-bell fs-5" aria-hidden="true"></i>
+
+      @if (unreadNotifications > 0) {
+        <span class="ac-topbar__badge">{{ unreadNotifications }}</span>
+      }
+    </button>
+
+    <!-- Profil -->
+    <div class="ac-topbar__profile">
+      <button
+        type="button"
+        class="ac-topbar__profile-button"
+        (click)="toggleProfileMenu()"
+        [attr.aria-expanded]="isProfileMenuOpen()"
+        aria-haspopup="menu"
+      >
+        <ac-avatar [name]="userName" size="sm" />
+
+        <span class="d-none d-md-flex flex-column align-items-start lh-sm">
+          <span class="ac-topbar__profile-name">{{ userName }}</span>
+          <span class="ac-topbar__profile-role">{{ userRole }}</span>
+        </span>
+
+        <i class="bi bi-chevron-down ac-text-muted small" aria-hidden="true"></i>
+      </button>
+
+      @if (isProfileMenuOpen()) {
+        <!--
+          Zone transparente couvrant la page : un clic n'importe où
+          referme le menu. Solution simple et fiable, sans écouteur
+          global sur le document.
+        -->
+        <div class="ac-overlay-invisible" (click)="closeProfileMenu()"></div>
+
+        <div class="ac-topbar__menu" role="menu">
+          <button class="ac-topbar__menu-item" role="menuitem" disabled>
+            <i class="bi bi-person" aria-hidden="true"></i> Mon profil
+          </button>
+          <button class="ac-topbar__menu-item" role="menuitem" disabled>
+            <i class="bi bi-gear" aria-hidden="true"></i> Paramètres
+          </button>
+          <hr class="my-1" />
+          <button class="ac-topbar__menu-item ac-topbar__menu-item--danger" role="menuitem" disabled>
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Se déconnecter
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</header>

@@ -56,8 +56,8 @@ npm install
 npm start
 ```
 
-Ouvre ensuite **http://localhost:4200** : la page de vérification doit
-afficher « Connexion établie ».
+Ouvre ensuite **http://localhost:4200** : tu arrives sur la page du
+design system. `/health` vérifie que l'API et la base répondent.
 
 Procédure détaillée et dépannage : **[docs/setup.md](docs/setup.md)**
 
@@ -89,6 +89,7 @@ AUTOCARS-OS/
 | Document | Contenu |
 |---|---|
 | [docs/setup.md](docs/setup.md) | Installation pas à pas et dépannage |
+| [docs/design-system.md](docs/design-system.md) | Couleurs, typographie, composants, règles visuelles |
 | [docs/architecture.md](docs/architecture.md) | Choix techniques et leur justification |
 | [docs/api.md](docs/api.md) | Contrat de l'API REST |
 | [docs/database.md](docs/database.md) | Modèle de données |
@@ -103,7 +104,7 @@ suivant.
 
 **Phase A — Fondations**
 - [x] **Lot 1** — Initialisation : Angular, API PHP, configuration, documentation
-- [ ] Lot 2 — Design system
+- [x] **Lot 2** — Design system : jetons, Bootstrap personnalisé, layout, composants, page `/styleguide`
 - [ ] Lot 3 — Base de données du MVP
 
 **Phase B — Cœur du MVP**

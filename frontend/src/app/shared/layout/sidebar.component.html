@@ -1,0 +1,61 @@
+<aside class="ac-sidebar" [class.is-open]="isOpen()">
+
+  <!-- Identité du produit -->
+  <div class="ac-sidebar__brand">
+    <span class="ac-sidebar__logo" aria-hidden="true">
+      <i class="bi bi-droplet-fill"></i>
+    </span>
+    <span class="ac-sidebar__brand-text">
+      <strong>AUTOCARE</strong><span>OS</span>
+    </span>
+  </div>
+
+  <nav class="ac-sidebar__nav" aria-label="Navigation principale">
+
+    <!-- Modules déjà développés -->
+    @for (item of available; track item.label) {
+      <a
+        class="ac-nav-item"
+        [routerLink]="item.route"
+        routerLinkActive="is-active"
+        (click)="navigate.emit()"
+      >
+        <i class="bi" [class]="'bi-' + item.icon" aria-hidden="true"></i>
+        <span>{{ item.label }}</span>
+      </a>
+    }
+
+    <hr class="ac-sidebar__separator" />
+
+    <!--
+      Modules à venir.
+      Ils sont affichés désactivés plutôt que masqués : le gérant voit
+      ainsi l'étendue réelle du produit, et nous ne l'envoyons jamais
+      sur une page vide. L'infobulle indique le lot prévu.
+    -->
+    @for (group of groups; track group.label) {
+
+      @if (group.label) {
+        <p class="ac-sidebar__group-label">{{ group.label }}</p>
+      }
+
+      @for (item of group.items; track item.label) {
+        <span class="ac-nav-item is-disabled" [title]="'Disponible au lot ' + item.lot">
+          <i class="bi" [class]="'bi-' + item.icon" aria-hidden="true"></i>
+          <span>{{ item.label }}</span>
+          <span class="ac-nav-item__soon">Lot {{ item.lot }}</span>
+        </span>
+      }
+    }
+  </nav>
+
+  <!-- Outils, séparés des modules métier -->
+  <div class="ac-sidebar__footer">
+    @for (item of footerItems; track item.label) {
+      <span class="ac-nav-item is-disabled" [title]="'Disponible au lot ' + item.lot">
+        <i class="bi" [class]="'bi-' + item.icon" aria-hidden="true"></i>
+        <span>{{ item.label }}</span>
+      </span>
+    }
+  </div>
+</aside>

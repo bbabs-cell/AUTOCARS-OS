@@ -1,0 +1,129 @@
+// ==================================================================
+// AUTOCARE OS — PERSONNALISATION DE BOOTSTRAP
+// ==================================================================
+//
+// POURQUOI CE FICHIER ?
+// Bootstrap a une apparence par défaut très reconnaissable : bleu
+// #0d6efd, angles peu arrondis, ombres marquées. Une application qui
+// « ressemble à du Bootstrap » ne ressemble pas à un produit.
+//
+// On surcharge donc ses variables Sass AVANT sa compilation. C'est
+// la différence entre :
+//   - personnaliser Bootstrap (ce qu'on fait ici) : propre, léger ;
+//   - écraser son CSS après coup avec des !important : ingérable.
+//
+// Attention : ce sont des variables SASS, pas les variables CSS de
+// _tokens.scss. Sass ne sait pas lire une variable CSS au moment de
+// la compilation, les valeurs sont donc écrites en double. Les deux
+// fichiers doivent rester cohérents — c'est le seul endroit du
+// projet où une couleur est répétée.
+// ==================================================================
+
+@use 'bootstrap/scss/bootstrap' with (
+
+  // --- Palette --------------------------------------------------
+  // Note de nommage : le « secondary » du cahier des charges (cyan)
+  // correspond ici à $info. Le $secondary de Bootstrap sert aux
+  // boutons neutres, on lui donne donc un gris.
+  $primary:   #2563eb,
+  $secondary: #64748b,
+  // Vert et rouge volontairement plus foncés que les jetons
+  // --ac-success / --ac-danger. Raison : Bootstrap met du texte
+  // BLANC sur ces couleurs. Avec #10b981 le contraste tombe à 2.5,
+  // très en dessous du seuil d'accessibilité de 4.5 — le libellé
+  // « Terminer » serait difficile à lire en plein soleil, situation
+  // quotidienne de nos utilisateurs.
+  // Les teintes claires restent disponibles pour les pastilles et
+  // les icônes, où elles ne portent pas de texte.
+  $success:   #047857,
+  $info:      #06b6d4,
+  $warning:   #f59e0b,
+  $danger:    #dc2626,
+  $light:     #f8fafc,
+  $dark:      #111827,
+
+  // --- Fondations -----------------------------------------------
+  $body-bg:            #f8fafc,
+  $body-color:         #111827,
+  $body-secondary-color: #64748b,
+  $border-color:       #e2e8f0,
+
+  // --- Typographie ----------------------------------------------
+  $font-family-sans-serif: ('Manrope', -apple-system, BlinkMacSystemFont,
+                            'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+                            sans-serif),
+  $font-size-base:     0.9375rem,   // 15px
+  $line-height-base:   1.5,
+  $headings-font-weight: 700,
+  $headings-color:     #111827,
+  $headings-line-height: 1.25,
+
+  // --- Arrondis -------------------------------------------------
+  $border-radius-sm:   0.375rem,
+  $border-radius:      0.5rem,
+  $border-radius-lg:   0.75rem,
+  $border-radius-xl:   1rem,
+
+  // --- Ombres ---------------------------------------------------
+  // Volontairement discrètes, et teintées de bleu-gris.
+  $box-shadow-sm:      0 1px 2px rgba(15, 23, 42, 0.06),
+  $box-shadow:         0 4px 12px rgba(15, 23, 42, 0.08),
+  $box-shadow-lg:      0 12px 32px rgba(15, 23, 42, 0.10),
+
+  // Désactive les dégradés et ombres automatiques de Bootstrap :
+  // le cahier des charges interdit les dégradés agressifs.
+  $enable-gradients:   false,
+  $enable-shadows:     false,
+
+  // --- Boutons --------------------------------------------------
+  $btn-font-weight:        600,
+  $btn-padding-y:          0.5rem,
+  $btn-padding-x:          1rem,
+  $btn-padding-y-lg:       0.75rem,
+  $btn-padding-x-lg:       1.5rem,
+  $btn-font-size-lg:       0.9375rem,
+  $btn-focus-width:        3px,
+  $btn-focus-box-shadow:   0 0 0 3px rgba(37, 99, 235, 0.18),
+
+  // --- Champs de formulaire -------------------------------------
+  $input-padding-y:            0.5rem,
+  $input-padding-x:            0.75rem,
+  $input-border-color:         #cbd5e1,
+  $input-focus-border-color:   #2563eb,
+  $input-focus-box-shadow:     0 0 0 3px rgba(37, 99, 235, 0.18),
+  $input-placeholder-color:    #94a3b8,
+  $form-label-font-weight:     600,
+  $form-label-font-size:       0.8125rem,
+  $form-label-color:           #334155,
+  $form-label-margin-bottom:   0.375rem,
+
+  // --- Cartes ---------------------------------------------------
+  $card-border-color:      #e2e8f0,
+  $card-border-radius:     0.75rem,
+  $card-cap-bg:            #ffffff,
+  $card-spacer-y:          1.5rem,
+  $card-spacer-x:          1.5rem,
+
+  // --- Tableaux -------------------------------------------------
+  $table-cell-padding-y:   0.875rem,
+  $table-cell-padding-x:   1rem,
+  $table-border-color:     #e2e8f0,
+  $table-hover-bg:         #f8fafc,
+  $table-th-font-weight:   600,
+
+  // --- Modales --------------------------------------------------
+  $modal-content-border-radius: 1rem,
+  $modal-content-border-color:  #e2e8f0,
+  $modal-backdrop-bg:           #0f172a,
+  $modal-backdrop-opacity:      0.4,
+
+  // --- Divers ---------------------------------------------------
+  $badge-font-weight:    600,
+  $badge-padding-y:      0.3125rem,
+  $badge-padding-x:      0.625rem,
+  $dropdown-border-color: #e2e8f0,
+  $dropdown-border-radius: 0.75rem,
+  $tooltip-bg:           #1e293b,
+  $tooltip-border-radius: 0.375rem,
+  $spacer:               1rem
+);

@@ -112,6 +112,89 @@ Réponse attendue :
 
 ---
 
+## 3 bis. Installation avec Laragon sur Windows (environnement de référence)
+
+C'est la configuration sur laquelle le projet est développé et testé.
+Laragon installe PHP, MySQL, Composer et Node en une seule fois — bien
+moins pénible que quatre installations séparées.
+
+**Version validée : Laragon 8.7 · PHP 8.3.33 · MySQL 8.4.3.**
+
+### 1. Installer
+
+Télécharge **Laragon Full** sur <https://laragon.org/download/> et
+installe-le dans le dossier proposé (`C:\laragon`).
+
+### 2. Démarrer les services
+
+Ouvre Laragon et clique sur **▷ Démarrer**. Apache et MySQL passent au
+vert.
+
+> Seul MySQL nous est indispensable : l'API utilise le serveur intégré
+> de PHP, pas Apache. Mais laisser tout démarrer ne gêne pas.
+
+### 3. Rendre `php` et `composer` visibles dans PowerShell
+
+Dans Laragon : **Menu → Outils → Chemin → Ajouter Laragon au Path**,
+puis **ferme et rouvre PowerShell** (il garde l'ancien PATH en
+mémoire tant qu'il reste ouvert).
+
+Le bouton **Terminal** de Laragon fonctionne, lui, immédiatement.
+
+Vérifie :
+
+```powershell
+php -v
+composer -V
+node -v
+```
+
+### 4. Installer le projet
+
+```powershell
+cd C:\Users\<toi>\AUTOCARS-OS\backend
+composer install
+Copy-Item .env.example .env
+mysql -u root -e "CREATE DATABASE autocare_os CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+notepad .env
+```
+
+Valeurs à mettre dans `.env` — **le mot de passe root de Laragon est
+vide par défaut** :
+
+```ini
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=autocare_os
+DB_USER=root
+DB_PASSWORD=
+```
+
+### 5. Vérifier et lancer
+
+```powershell
+php tools/check_db.php
+php -S localhost:8000 -t public router.php
+```
+
+Dans un **second** terminal :
+
+```powershell
+cd C:\Users\<toi>\AUTOCARS-OS\frontend
+npm install
+npm start
+```
+
+### Différences PowerShell / Linux
+
+| Linux, macOS | PowerShell |
+|---|---|
+| `cp .env.example .env` | `Copy-Item .env.example .env` |
+| `nano .env` | `notepad .env` |
+| `ls` | `dir` (ou `ls`, qui est un alias) |
+
+---
+
 ## 4. Frontend
 
 Dans un **second terminal** (le serveur PHP doit rester allumé) :

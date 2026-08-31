@@ -1,0 +1,165 @@
+// ==================================================================
+// AUTOCARE OS — STYLES DE BASE
+// ==================================================================
+// Ce que le navigateur applique à toute l'application avant même
+// qu'un composant ne soit écrit : typographie, liens, focus.
+// ==================================================================
+
+// --- Fondations ---------------------------------------------------
+
+html {
+  // -webkit-text-size-adjust empêche iOS d'agrandir tout seul les
+  // textes quand on tourne le téléphone en paysage. Nos employés
+  // travaillent debout, téléphone à la main : l'interface ne doit
+  // pas changer de taille sans raison.
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--ac-font-sans);
+  font-size: var(--ac-text-base);
+  line-height: var(--ac-leading-normal);
+  color: var(--ac-text);
+  background-color: var(--ac-background);
+
+  // Lissage des polices : Manrope est nettement plus nette ainsi
+  // sur les écrans Mac et sur les écrans à forte densité.
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// --- Hiérarchie typographique -------------------------------------
+//
+// Cinq niveaux, pas un de plus. Une hiérarchie que l'on peut réciter
+// de mémoire est une hiérarchie qui sera respectée.
+
+h1, .ac-h1 {
+  font-size: var(--ac-text-3xl);
+  font-weight: var(--ac-weight-bold);
+  line-height: var(--ac-leading-tight);
+  letter-spacing: -0.02em;   // les grandes tailles ont besoin d'être resserrées
+  margin-bottom: var(--ac-space-2);
+}
+
+h2, .ac-h2 {
+  font-size: var(--ac-text-2xl);
+  font-weight: var(--ac-weight-bold);
+  line-height: var(--ac-leading-tight);
+  letter-spacing: -0.015em;
+  margin-bottom: var(--ac-space-2);
+}
+
+h3, .ac-h3 {
+  font-size: var(--ac-text-xl);
+  font-weight: var(--ac-weight-semibold);
+  line-height: var(--ac-leading-tight);
+  margin-bottom: var(--ac-space-2);
+}
+
+h4, .ac-h4 {
+  font-size: var(--ac-text-lg);
+  font-weight: var(--ac-weight-semibold);
+  line-height: var(--ac-leading-tight);
+  margin-bottom: var(--ac-space-2);
+}
+
+// Libellé de champ, en-tête de colonne, intitulé de statistique
+.ac-label {
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-semibold);
+  color: var(--ac-text-secondary);
+}
+
+// Mention discrète : horodatage, aide sous un champ
+.ac-caption {
+  font-size: var(--ac-text-xs);
+  color: var(--ac-text-muted);
+}
+
+.ac-text-secondary { color: var(--ac-text-secondary); }
+.ac-text-muted     { color: var(--ac-text-muted); }
+
+// Chiffres alignés en colonne dans les tableaux et les montants.
+// Sans cela, « 1 111 » est plus étroit que « 9 999 » et les colonnes
+// de prix paraissent bancales.
+.ac-numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+// --- Liens --------------------------------------------------------
+
+a {
+  color: var(--ac-primary);
+  text-decoration: none;
+  transition: color var(--ac-transition-fast);
+
+  &:hover {
+    color: var(--ac-primary-600);
+    text-decoration: underline;
+  }
+}
+
+// --- Accessibilité au clavier -------------------------------------
+//
+// RÈGLE ABSOLUE : on ne supprime jamais l'indicateur de focus.
+// Certains utilisateurs naviguent uniquement au clavier ; sans cet
+// anneau, ils ne savent pas où ils se trouvent dans la page.
+//
+// :focus-visible ne l'affiche qu'en navigation clavier, pas au clic
+// de souris — on garde donc l'accessibilité sans alourdir le visuel.
+
+*:focus-visible {
+  outline: 2px solid var(--ac-primary);
+  outline-offset: 2px;
+  border-radius: var(--ac-radius-sm);
+}
+
+// --- Sélection de texte -------------------------------------------
+
+::selection {
+  background-color: var(--ac-primary-100);
+  color: var(--ac-primary-700);
+}
+
+// --- Barres de défilement ------------------------------------------
+// Discrètes, pour ne pas attirer l'œil sur un élément qui n'est
+// qu'un outil. Uniquement sur navigateurs WebKit.
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--ac-gray-300);
+  border-radius: var(--ac-radius-full);
+  border: 3px solid transparent;
+  background-clip: content-box;
+
+  &:hover {
+    background-color: var(--ac-gray-400);
+  }
+}
+
+// --- Respect des préférences système -------------------------------
+//
+// Certaines personnes désactivent les animations dans leur système
+// (troubles vestibulaires, sensibilité au mouvement). On respecte
+// ce choix : ce n'est pas une option, c'est une règle
+// d'accessibilité.
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

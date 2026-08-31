@@ -1,0 +1,112 @@
+// Styles propres à la page de référence.
+// Ils ne servent QUE ici (échantillons de couleur, règles de mesure)
+// et n'ont donc pas leur place dans le design system lui-même.
+
+.ac-sg-section {
+  margin-bottom: var(--ac-space-12);
+  scroll-margin-top: calc(var(--ac-topbar-height) + var(--ac-space-4));
+}
+
+.ac-sg-title {
+  font-size: var(--ac-text-xl);
+  font-weight: var(--ac-weight-bold);
+  padding-bottom: var(--ac-space-3);
+  margin-bottom: var(--ac-space-3);
+  border-bottom: 2px solid var(--ac-border);
+}
+
+.ac-sg-subtitle {
+  font-size: var(--ac-text-md);
+  font-weight: var(--ac-weight-semibold);
+  margin: var(--ac-space-6) 0 var(--ac-space-3);
+}
+
+.ac-sg-intro {
+  color: var(--ac-text-secondary);
+  max-width: 68ch;   // au-delà, l'œil perd la ligne suivante
+  margin-bottom: var(--ac-space-5);
+}
+
+.ac-sg-swatch {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ac-radius);
+  border: 1px solid var(--ac-border);
+}
+
+.ac-sg-scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ac-space-3);
+}
+
+.ac-sg-scale__item {
+  text-align: center;
+}
+
+.ac-sg-scale__box {
+  display: block;
+  width: 72px;
+  height: 48px;
+  border-radius: var(--ac-radius);
+  border: 1px solid var(--ac-border);
+  margin-bottom: var(--ac-space-1);
+}
+
+.ac-sg-type-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ac-space-5);
+  padding: var(--ac-space-4) 0;
+  border-bottom: 1px dashed var(--ac-border);
+
+  &:last-child { border-bottom: 0; }
+
+  @media (max-width: 767.98px) {
+    flex-direction: column;
+    gap: var(--ac-space-2);
+  }
+}
+
+.ac-sg-type-meta {
+  flex-shrink: 0;
+  width: 170px;
+  font-size: var(--ac-text-xs);
+  font-weight: var(--ac-weight-semibold);
+  color: var(--ac-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ac-sg-space-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-2) 0;
+}
+
+.ac-sg-space-bar {
+  height: 16px;
+  background-color: var(--ac-primary-200);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.ac-sg-radius-box,
+.ac-sg-shadow-box {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--ac-space-2);
+}
+
+.ac-sg-radius-box {
+  background-color: var(--ac-primary-100);
+  border: 1px solid var(--ac-primary-200);
+}
+
+.ac-sg-shadow-box {
+  background-color: var(--ac-surface);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius);
+}

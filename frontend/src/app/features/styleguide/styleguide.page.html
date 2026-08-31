@@ -1,0 +1,720 @@
+<ac-page-header
+  title="Design system"
+  subtitle="Le vocabulaire visuel d'AUTOCARE OS. Tout écran du produit se construit avec ces éléments — et uniquement avec eux."
+>
+  <button type="button" class="btn btn-outline-secondary" (click)="showToast()">
+    <i class="bi bi-bell"></i> Tester une notification
+  </button>
+  <button type="button" class="btn btn-primary" (click)="openModal()">
+    <i class="bi bi-window"></i> Ouvrir une modale
+  </button>
+</ac-page-header>
+
+<div class="ac-alert ac-alert--info mb-5">
+  <i class="bi bi-info-circle-fill"></i>
+  <div>
+    <strong>Règle de cohérence.</strong> Une fois ce design system validé, les couleurs,
+    la typographie, les rayons et les espacements ne changent plus. Tout nouvel écran
+    réutilise les composants présentés ici. S'il manque quelque chose, on l'ajoute
+    <em>à cette page</em> avant de l'utiliser ailleurs.
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- COULEURS                                                     -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">1. Couleurs</h2>
+  <p class="ac-sg-intro">
+    Le bleu identifie l'action et l'information importante. Il ne doit jamais envahir
+    l'écran : sur une page type, moins de 10&nbsp;% de la surface est bleue. Le reste
+    de l'interface est construit en blanc, gris très clair et espaces vides.
+  </p>
+
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th style="width: 64px">Teinte</th>
+            <th>Nom</th>
+            <th>Variable CSS</th>
+            <th>Valeur</th>
+            <th>Usage</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (color of palette; track color.variable) {
+            <tr>
+              <td>
+                <span class="ac-sg-swatch" [style.background-color]="'var(' + color.variable + ')'"></span>
+              </td>
+              <td class="fw-semibold">{{ color.name }}</td>
+              <td><code class="ac-code">{{ color.variable }}</code></td>
+              <td class="ac-numeric ac-text-secondary">{{ color.hex }}</td>
+              <td class="ac-text-secondary">{{ color.usage }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="ac-alert ac-alert--warning mt-4">
+    <i class="bi bi-universal-access"></i>
+    <div>
+      <strong>Deux verts, deux rouges — et c'est volontaire.</strong>
+      Les teintes claires (<code class="ac-code">#10B981</code>,
+      <code class="ac-code">#EF4444</code>) servent aux pastilles, icônes et bordures.
+      Les boutons pleins utilisent des teintes plus foncées
+      (<code class="ac-code">#047857</code>, <code class="ac-code">#DC2626</code>),
+      parce qu'ils portent du texte blanc : sur le vert clair, le contraste tombe à
+      <strong>2,54</strong>, très en dessous du seuil d'accessibilité de 4,5. Le libellé
+      « Terminer » serait difficile à lire en plein soleil — situation quotidienne de
+      nos utilisateurs.
+    </div>
+  </div>
+
+  <h3 class="ac-sg-subtitle">Nuances du bleu</h3>
+  <div class="ac-sg-scale">
+    @for (shade of ['50', '100', '200', '300', '400', '', '600', '700']; track $index) {
+      <div class="ac-sg-scale__item">
+        <span class="ac-sg-scale__box"
+              [style.background-color]="'var(--ac-primary' + (shade ? '-' + shade : '') + ')'"></span>
+        <span class="ac-caption">{{ shade || 'base' }}</span>
+      </div>
+    }
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- TYPOGRAPHIE                                                  -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">2. Typographie</h2>
+  <p class="ac-sg-intro">
+    <strong>Manrope</strong>, hébergée avec l'application. Cinq niveaux seulement :
+    une hiérarchie que l'on peut réciter de mémoire est une hiérarchie qui sera
+    respectée.
+  </p>
+
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">H1 · 32px · 700</span>
+        <h1 class="mb-0">Tableau de bord</h1>
+      </div>
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">H2 · 24px · 700</span>
+        <h2 class="mb-0">Véhicules en cours</h2>
+      </div>
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">H3 · 20px · 600</span>
+        <h3 class="mb-0">Inspection du véhicule</h3>
+      </div>
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">H4 · 18px · 600</span>
+        <h4 class="mb-0">Photos avant prise en charge</h4>
+      </div>
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">Corps · 15px · 400</span>
+        <p class="mb-0">
+          Le véhicule a été réceptionné à 09h14 par Aliou Sow. Aucun dommage
+          n'a été signalé lors de l'inspection d'entrée.
+        </p>
+      </div>
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">Libellé · 13px · 600</span>
+        <span class="ac-label">Plaque d'immatriculation</span>
+      </div>
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">Légende · 12px · 400</span>
+        <span class="ac-caption">Dernière mise à jour il y a 3 minutes</span>
+      </div>
+      <div class="ac-sg-type-row">
+        <span class="ac-sg-type-meta">Chiffres tabulaires</span>
+        <span class="ac-numeric fs-5 fw-bold">1 485 000 FCFA</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- ESPACEMENTS ET RAYONS                                        -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">3. Espacements, rayons et ombres</h2>
+  <p class="ac-sg-intro">
+    Échelle d'espacement basée sur 4&nbsp;px. On n'utilise que ces valeurs : un
+    <code class="ac-code">padding: 17px</code> choisi au hasard casse le rythme de
+    toute la page.
+  </p>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="ac-card h-100">
+        <div class="ac-card__header"><h3 class="ac-card__title">Espacements</h3></div>
+        <div class="ac-card__body">
+          @for (space of spacing; track space.token) {
+            <div class="ac-sg-space-row">
+              <span class="ac-sg-space-bar" [style.width]="'var(' + space.token + ')'"></span>
+              <code class="ac-code">{{ space.token }}</code>
+              <span class="ac-caption ms-auto">{{ space.px }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="ac-card h-100">
+        <div class="ac-card__header"><h3 class="ac-card__title">Rayons</h3></div>
+        <div class="ac-card__body d-flex flex-wrap gap-4">
+          @for (radius of ['sm', '', 'lg', 'xl']; track $index) {
+            <div class="text-center">
+              <div class="ac-sg-radius-box"
+                   [style.border-radius]="'var(--ac-radius' + (radius ? '-' + radius : '') + ')'"></div>
+              <span class="ac-caption">{{ radius || 'base' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="ac-card h-100">
+        <div class="ac-card__header"><h3 class="ac-card__title">Ombres</h3></div>
+        <div class="ac-card__body d-flex flex-wrap gap-4">
+          @for (shadow of ['sm', '', 'md', 'lg']; track $index) {
+            <div class="text-center">
+              <div class="ac-sg-shadow-box"
+                   [style.box-shadow]="'var(--ac-shadow' + (shadow ? '-' + shadow : '') + ')'"></div>
+              <span class="ac-caption">{{ shadow || 'base' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- BOUTONS                                                      -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">4. Boutons</h2>
+  <p class="ac-sg-intro">
+    <strong>Un seul bouton principal par écran.</strong> S'il y en a deux, l'utilisateur
+    ne sait plus lequel compte. Les actions secondaires sont en contour, les actions
+    mineures en texte seul.
+  </p>
+
+  <div class="ac-card mb-4">
+    <div class="ac-card__header"><h3 class="ac-card__title">Hiérarchie</h3></div>
+    <div class="ac-card__body d-flex flex-wrap align-items-center gap-3">
+      <button class="btn btn-primary">Action principale</button>
+      <button class="btn btn-outline-secondary">Action secondaire</button>
+      <button class="btn btn-link">Action mineure</button>
+      <button class="btn btn-outline-danger">Supprimer</button>
+      <button class="btn btn-primary" disabled>Désactivé</button>
+      <button class="ac-btn-icon" aria-label="Options"><i class="bi bi-three-dots-vertical"></i></button>
+    </div>
+  </div>
+
+  <div class="ac-card mb-4">
+    <div class="ac-card__header"><h3 class="ac-card__title">Tailles</h3></div>
+    <div class="ac-card__body d-flex flex-wrap align-items-center gap-3">
+      <button class="btn btn-primary btn-sm">Petit</button>
+      <button class="btn btn-primary">Standard</button>
+      <button class="btn btn-primary btn-lg">Grand</button>
+    </div>
+  </div>
+
+  <div class="ac-card">
+    <div class="ac-card__header">
+      <h3 class="ac-card__title">Boutons terrain</h3>
+      <span class="ac-badge ac-badge--info">Spécifique au produit</span>
+    </div>
+    <div class="ac-card__body">
+      <p class="ac-text-secondary mb-4">
+        Les employés utilisent l'application debout, souvent les mains mouillées,
+        parfois avec des gants, sur un téléphone tenu d'une seule main. Les actions
+        fréquentes ont donc une cible tactile de <strong>52&nbsp;px</strong> de haut,
+        bien au-delà des 44&nbsp;px recommandés. Ce n'est pas du confort : c'est ce qui
+        évite les erreurs de manipulation sur le véhicule d'un client.
+      </p>
+
+      <div class="row g-3" style="max-width: 640px">
+        <div class="col-sm-6">
+          <button class="btn btn-primary ac-btn-field ac-btn-block">
+            <i class="bi bi-play-fill"></i> Commencer le lavage
+          </button>
+        </div>
+        <div class="col-sm-6">
+          <button class="btn btn-success ac-btn-field ac-btn-block">
+            <i class="bi bi-check-lg"></i> Terminer
+          </button>
+        </div>
+        <div class="col-sm-6">
+          <button class="btn btn-outline-secondary ac-btn-field ac-btn-block">
+            <i class="bi bi-camera"></i> Prendre une photo
+          </button>
+        </div>
+        <div class="col-sm-6">
+          <button class="btn btn-outline-secondary ac-btn-field ac-btn-block">
+            <i class="bi bi-box-arrow-right"></i> Restituer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- FORMULAIRES                                                  -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">5. Formulaires</h2>
+  <p class="ac-sg-intro">
+    Libellé toujours au-dessus du champ, jamais à l'intérieur : un texte d'exemple qui
+    disparaît à la saisie oblige l'utilisateur à se souvenir de ce qu'on lui demandait.
+    Les erreurs s'affichent sous le champ concerné, en toutes lettres.
+  </p>
+
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="row g-4" style="max-width: 760px">
+        <div class="col-md-6">
+          <label for="sg-plate" class="form-label">Plaque d'immatriculation</label>
+          <input id="sg-plate" type="text" class="form-control" value="DK-1234-AA" />
+          <span class="ac-caption">Format sénégalais : deux lettres, quatre chiffres, deux lettres.</span>
+        </div>
+
+        <div class="col-md-6">
+          <label for="sg-service" class="form-label">Prestation</label>
+          <select id="sg-service" class="form-select">
+            <option>Lavage standard — 5 000 FCFA</option>
+            <option selected>Lavage premium — 10 000 FCFA</option>
+            <option>Detailing complet — 35 000 FCFA</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label for="sg-phone" class="form-label">Téléphone du client</label>
+          <input id="sg-phone" type="tel" class="form-control" placeholder="+221 77 000 00 00" />
+        </div>
+
+        <div class="col-md-6">
+          <label for="sg-error" class="form-label">Champ en erreur</label>
+          <input id="sg-error" type="text" class="form-control is-invalid" value="DK-12" />
+          <div class="invalid-feedback">
+            Cette plaque est incomplète. Format attendu : DK-1234-AA.
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label for="sg-notes" class="form-label">Observations</label>
+          <textarea id="sg-notes" class="form-control" rows="3"
+                    placeholder="Rayure sur la portière avant droite, présente à l'arrivée…"></textarea>
+        </div>
+
+        <div class="col-12 d-flex flex-wrap gap-4">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="sg-check" checked />
+            <label class="form-check-label" for="sg-check">Client présent lors de l'inspection</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="sg-switch" checked />
+            <label class="form-check-label" for="sg-switch">Notifier le client par SMS</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="sg-radio" id="sg-radio" checked />
+            <label class="form-check-label" for="sg-radio">Paiement à la restitution</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ac-card__footer d-flex justify-content-end gap-2">
+      <button class="btn btn-outline-secondary">Annuler</button>
+      <button class="btn btn-primary">Enregistrer le véhicule</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- STATUTS                                                      -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">6. Statuts d'opération</h2>
+  <p class="ac-sg-intro">
+    L'élément le plus vu de toute l'application. Sur le Kanban de la file d'attente, un
+    employé doit lire l'état d'un véhicule d'un coup d'œil, à distance, sur un téléphone,
+    parfois en plein soleil. La pastille colorée n'est pas décorative : elle permet de
+    distinguer les statuts même en cas de daltonisme, là où la couleur seule échoue.
+  </p>
+
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="d-flex flex-wrap gap-3 mb-4">
+        @for (status of statuses; track status) {
+          <ac-status-badge [status]="status" />
+        }
+      </div>
+
+      <div class="ac-alert ac-alert--info">
+        <i class="bi bi-diagram-3"></i>
+        <div>
+          <strong>Progression normale :</strong>
+          En attente → Prise en charge → Inspection → En lavage → Contrôle → Prêt → Terminé.
+          <br />
+          « Annulé » est atteignable depuis tout état non terminal. Les transitions
+          autorisées seront verrouillées côté API au Lot&nbsp;8.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- STATISTIQUES                                                 -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">7. Indicateurs</h2>
+  <p class="ac-sg-intro">
+    Ce qu'un gérant voit en premier chaque matin. Le chiffre est très gros, le libellé
+    discret : l'information est le nombre, pas son intitulé.
+  </p>
+
+  <div class="row g-4">
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card
+        label="Chiffre d'affaires du jour" value="485 000 FCFA"
+        icon="bi-cash-stack" tone="success"
+        trend="+12 %" trendDirection="up" trendCaption="vs hier" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card
+        label="Véhicules traités" value="34"
+        icon="bi-car-front" tone="primary"
+        trend="+5" trendDirection="up" trendCaption="vs hier" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card
+        label="En cours" value="7"
+        icon="bi-hourglass-split" tone="warning"
+        trend="2 en attente" trendDirection="flat" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card
+        label="Nouveaux clients" value="3"
+        icon="bi-people" tone="neutral"
+        trend="-1" trendDirection="down" trendCaption="vs hier" />
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- TABLEAUX                                                     -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">8. Tableaux</h2>
+  <p class="ac-sg-intro">
+    La moitié des écrans du produit sont des tableaux. Sur mobile, le tableau défile
+    horizontalement <em>dans son conteneur</em> — jamais la page entière, ce qui donnerait
+    l'impression d'une mise en page cassée.
+  </p>
+
+  <div class="ac-card">
+    <div class="ac-card__header">
+      <h3 class="ac-card__title">Véhicules en station</h3>
+      <button class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Ajouter</button>
+    </div>
+
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Plaque</th>
+            <th>Véhicule</th>
+            <th>Client</th>
+            <th>Prestation</th>
+            <th>Employé</th>
+            <th>Statut</th>
+            <th class="ac-table__amount">Montant</th>
+            <th class="ac-table__actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (vehicle of demoVehicles; track vehicle.plate) {
+            <tr>
+              <td><span class="ac-plate">{{ vehicle.plate }}</span></td>
+              <td class="fw-semibold">{{ vehicle.model }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <ac-avatar [name]="vehicle.customer" size="sm" />
+                  <span>{{ vehicle.customer }}</span>
+                </div>
+              </td>
+              <td class="ac-text-secondary">{{ vehicle.service }}</td>
+              <td class="ac-text-secondary">{{ vehicle.employee }}</td>
+              <td><ac-status-badge [status]="vehicle.status" /></td>
+              <td class="ac-table__amount">{{ vehicle.amount }}</td>
+              <td class="ac-table__actions">
+                <button class="ac-btn-icon" aria-label="Voir la fiche">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="ac-btn-icon" aria-label="Options">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ac-card__footer d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <span class="ac-caption">4 véhicules sur 128</span>
+
+      <div class="ac-pagination">
+        <button class="ac-pagination__item" (click)="goToPage(currentPage() - 1)"
+                [disabled]="currentPage() === 1" aria-label="Page précédente">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        @for (page of [1, 2, 3, 4]; track page) {
+          <button class="ac-pagination__item" [class.is-active]="currentPage() === page"
+                  (click)="goToPage(page)">{{ page }}</button>
+        }
+        <button class="ac-pagination__item" (click)="goToPage(currentPage() + 1)"
+                [disabled]="currentPage() === 4" aria-label="Page suivante">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- NAVIGATION SECONDAIRE                                        -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">9. Navigation secondaire</h2>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="ac-card h-100">
+        <div class="ac-card__header"><h3 class="ac-card__title">Onglets</h3></div>
+        <div class="ac-card__body">
+          <div class="ac-tabs mb-4">
+            <button class="ac-tab" [class.is-active]="activeTab() === 'apercu'"
+                    (click)="selectTab('apercu')">Aperçu</button>
+            <button class="ac-tab" [class.is-active]="activeTab() === 'historique'"
+                    (click)="selectTab('historique')">Historique</button>
+            <button class="ac-tab" [class.is-active]="activeTab() === 'photos'"
+                    (click)="selectTab('photos')">Photos</button>
+            <button class="ac-tab" [class.is-active]="activeTab() === 'paiements'"
+                    (click)="selectTab('paiements')">Paiements</button>
+          </div>
+
+          <dl class="ac-detail-list">
+            <dt>Onglet actif</dt>
+            <dd class="fw-semibold">{{ activeTab() }}</dd>
+            <dt>Véhicule</dt>
+            <dd>Toyota Corolla</dd>
+            <dt>Plaque</dt>
+            <dd><span class="ac-plate">DK-1234-AA</span></dd>
+            <dt>Propriétaire</dt>
+            <dd>Mamadou Diallo</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="ac-card h-100">
+        <div class="ac-card__header"><h3 class="ac-card__title">Fil d'Ariane</h3></div>
+        <div class="ac-card__body">
+          <ol class="ac-breadcrumb mb-4">
+            <li><a href="#">Tableau de bord</a></li>
+            <li><a href="#">Véhicules</a></li>
+            <li>DK-1234-AA</li>
+          </ol>
+
+          <p class="ac-text-secondary mb-0">
+            Indique à l'utilisateur où il se trouve et comment revenir en arrière.
+            Indispensable dans les modules profonds : véhicule → inspection → photo.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- ÉTATS UX                                                     -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">10. États de l'interface</h2>
+  <p class="ac-sg-intro">
+    <strong>Un écran qui ne gère que le cas où tout va bien n'est pas un écran fini.</strong>
+    Chaque page du produit doit prévoir le chargement, l'absence de données et l'erreur.
+  </p>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="ac-card h-100">
+        <div class="ac-card__header"><h3 class="ac-card__title">Aucune donnée</h3></div>
+        <ac-empty-state
+          icon="bi-car-front"
+          title="Aucun véhicule enregistré"
+          text="Enregistrez votre premier véhicule pour commencer à suivre vos opérations."
+          actionLabel="Ajouter un véhicule" />
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="ac-card h-100">
+        <div class="ac-card__header"><h3 class="ac-card__title">Chargement</h3></div>
+        <div class="ac-card__body">
+          <p class="ac-text-secondary mb-4">
+            On affiche la forme de ce qui arrive plutôt qu'un sablier : l'attente
+            paraît plus courte et l'écran ne « saute » pas à l'arrivée des données.
+          </p>
+          <div class="ac-skeleton ac-skeleton--title"></div>
+          <div class="ac-skeleton ac-skeleton--text"></div>
+          <div class="ac-skeleton ac-skeleton--text" style="width: 85%"></div>
+          <div class="ac-skeleton ac-skeleton--text" style="width: 60%"></div>
+
+          <div class="d-flex align-items-center gap-2 mt-4">
+            <span class="spinner-border spinner-border-sm text-primary"></span>
+            <span class="ac-text-secondary">Chargement des véhicules…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="ac-card">
+        <div class="ac-card__header"><h3 class="ac-card__title">Messages</h3></div>
+        <div class="ac-card__body d-flex flex-column gap-3">
+          <div class="ac-alert ac-alert--success">
+            <i class="bi bi-check-circle-fill"></i>
+            <div><strong>Véhicule restitué.</strong> La sortie de DK-1234-AA a été enregistrée à 16h42.</div>
+          </div>
+          <div class="ac-alert ac-alert--info">
+            <i class="bi bi-info-circle-fill"></i>
+            <div><strong>Inspection en attente.</strong> Trois véhicules attendent une inspection d'entrée.</div>
+          </div>
+          <div class="ac-alert ac-alert--warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div><strong>Connexion instable.</strong> Les photos seront envoyées dès le retour du réseau.</div>
+          </div>
+          <div class="ac-alert ac-alert--danger">
+            <i class="bi bi-x-circle-fill"></i>
+            <div>
+              <strong>Restitution refusée.</strong> Le paiement de cette opération n'a pas été enregistré.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- AVATARS                                                      -->
+<!-- ============================================================ -->
+<section class="ac-sg-section">
+  <h2 class="ac-sg-title">11. Avatars</h2>
+  <p class="ac-sg-intro">
+    À défaut de photo, les initiales. C'est le cas le plus fréquent : un gérant qui
+    inscrit ses employés un lundi matin ne va pas photographier chacun d'eux.
+  </p>
+
+  <div class="ac-card">
+    <div class="ac-card__body d-flex align-items-center gap-4">
+      <div class="text-center">
+        <ac-avatar name="Mamadou Diallo" size="sm" />
+        <div class="ac-caption mt-2">Petit</div>
+      </div>
+      <div class="text-center">
+        <ac-avatar name="Fatou Ndiaye" />
+        <div class="ac-caption mt-2">Standard</div>
+      </div>
+      <div class="text-center">
+        <ac-avatar name="Aliou Sow" size="lg" />
+        <div class="ac-caption mt-2">Grand</div>
+      </div>
+      <div class="text-center">
+        <ac-avatar name="Cheikh" size="lg" />
+        <div class="ac-caption mt-2">Prénom seul</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- MODALE ET NOTIFICATION                                       -->
+<!-- ============================================================ -->
+@if (isModalOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeModal()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="sg-modal-title">
+    <div class="ac-modal__header">
+      <h3 class="mb-0" id="sg-modal-title">Confirmer la restitution</h3>
+      <button class="ac-btn-icon" (click)="closeModal()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="ac-modal__body">
+      <p>
+        Vous êtes sur le point de restituer le véhicule
+        <span class="ac-plate">DK-1234-AA</span> à <strong>Mamadou Diallo</strong>.
+      </p>
+
+      <dl class="ac-detail-list mt-4">
+        <dt>Prestation</dt>
+        <dd>Lavage premium</dd>
+        <dt>Montant</dt>
+        <dd class="fw-semibold">10 000 FCFA</dd>
+        <dt>Paiement</dt>
+        <dd><span class="ac-badge ac-badge--success">Encaissé</span></dd>
+      </dl>
+
+      <div class="ac-alert ac-alert--warning mt-4">
+        <i class="bi bi-shield-exclamation"></i>
+        <div>Cette action est définitive et sera enregistrée dans le journal d'audit.</div>
+      </div>
+    </div>
+
+    <div class="ac-modal__footer">
+      <button class="btn btn-outline-secondary" (click)="closeModal()">Annuler</button>
+      <button class="btn btn-primary" (click)="closeModal()">Confirmer la restitution</button>
+    </div>
+  </div>
+}
+
+@if (isToastVisible()) {
+  <div class="ac-toast-region">
+    <div class="ac-toast ac-toast--success">
+      <i class="bi bi-check-circle-fill" style="color: var(--ac-success)"></i>
+      <div>
+        <div class="ac-toast__title">Véhicule prêt</div>
+        <div class="ac-toast__text">DK-1234-AA a terminé le contrôle qualité.</div>
+      </div>
+    </div>
+  </div>
+}

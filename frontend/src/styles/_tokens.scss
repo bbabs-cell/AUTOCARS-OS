@@ -1,0 +1,255 @@
+// ==================================================================
+// AUTOCARE OS — JETONS DE DESIGN (design tokens)
+// ==================================================================
+//
+// C'EST LA SOURCE UNIQUE DE VÉRITÉ VISUELLE DU PROJET.
+//
+// Toute couleur, tout espacement, tout rayon utilisé dans
+// l'application vient d'ici. Aucun écran ne doit jamais écrire une
+// valeur en dur comme `color: #2563EB` ou `padding: 17px`.
+//
+// POURQUOI ?
+// Sur un produit de 20 modules construits sur plusieurs mois, c'est
+// la seule façon de garder une interface cohérente. Le jour où la
+// couleur principale change, on modifie UNE ligne ici et les
+// 20 modules suivent.
+//
+// On utilise des variables CSS natives (et non des variables Sass)
+// parce qu'elles restent lisibles dans l'inspecteur du navigateur :
+// tu peux voir et modifier `--ac-primary` en direct dans les
+// DevTools, ce qui est impossible avec une variable Sass compilée.
+// ==================================================================
+
+:root {
+
+  // ================================================================
+  // 1. COULEURS
+  // ================================================================
+
+  // --- Couleur principale ----------------------------------------
+  // Le bleu identifie l'ACTION et l'INFORMATION IMPORTANTE.
+  // Règle d'usage : il ne doit jamais envahir l'interface. Sur un
+  // écran type, moins de 10 % de la surface est bleue.
+  --ac-primary-50:  #eff6ff;
+  --ac-primary-100: #dbeafe;
+  --ac-primary-200: #bfdbfe;
+  --ac-primary-300: #93c5fd;
+  --ac-primary-400: #60a5fa;
+  --ac-primary:     #2563eb;   // couleur de référence du produit
+  --ac-primary-600: #1d4ed8;   // survol
+  --ac-primary-700: #1e40af;   // état actif (bouton enfoncé)
+
+  // --- Couleur d'accent ------------------------------------------
+  // Cyan/turquoise, utilisé avec parcimonie : graphiques secondaires,
+  // statut « en lavage », illustrations. Jamais pour une action
+  // principale, qui reste toujours bleue.
+  --ac-accent-50:  #ecfeff;
+  --ac-accent-100: #cffafe;
+  --ac-accent:     #06b6d4;
+  --ac-accent-600: #0891b2;
+
+  // --- Couleurs de sens ------------------------------------------
+  // Chacune existe en trois déclinaisons :
+  //   -50   fond très clair (badges, bandeaux)
+  //   base  bordures, icônes, texte sur fond clair
+  //   -700  texte lisible sur le fond -50
+  --ac-success-50:  #ecfdf5;
+  --ac-success:     #10b981;   // pastilles, icônes, bordures
+  --ac-success-600: #059669;
+  --ac-success-700: #047857;   // texte et boutons pleins (contraste 5.5)
+
+  --ac-warning-50:  #fffbeb;
+  --ac-warning:     #f59e0b;
+  --ac-warning-700: #b45309;
+
+  --ac-danger-50:   #fef2f2;
+  --ac-danger:      #ef4444;   // pastilles, icônes, bordures
+  --ac-danger-600:  #dc2626;   // boutons pleins (contraste 4.8)
+  --ac-danger-700:  #b91c1c;   // texte sur fond clair
+
+  --ac-info-50:     #eff6ff;
+  --ac-info:        #3b82f6;
+  --ac-info-700:    #1d4ed8;
+
+  // --- Neutres ----------------------------------------------------
+  // L'essentiel de l'interface est construit avec ces gris.
+  --ac-white:       #ffffff;
+  --ac-gray-50:     #f8fafc;
+  --ac-gray-100:    #f1f5f9;
+  --ac-gray-200:    #e2e8f0;
+  --ac-gray-300:    #cbd5e1;
+  --ac-gray-400:    #94a3b8;
+  --ac-gray-500:    #64748b;
+  --ac-gray-600:    #475569;
+  --ac-gray-700:    #334155;
+  --ac-gray-800:    #1e293b;
+  --ac-gray-900:    #111827;
+
+  // --- Rôles sémantiques ------------------------------------------
+  // Utilise TOUJOURS ces variables-là dans les composants, jamais
+  // --ac-gray-200 directement. Ainsi le rôle reste explicite :
+  // « bordure » a un sens, « gris 200 » n'en a pas.
+  --ac-background:      var(--ac-gray-50);    // fond de page
+  --ac-surface:         var(--ac-white);      // fond des cartes
+  --ac-surface-hover:   var(--ac-gray-50);    // survol dans une liste
+  --ac-surface-sunken:  var(--ac-gray-100);   // zones en creux
+  --ac-border:          var(--ac-gray-200);   // bordure standard
+  --ac-border-strong:   var(--ac-gray-300);   // bordure de champ
+  --ac-text:            var(--ac-gray-900);   // texte principal
+  --ac-text-secondary:  var(--ac-gray-600);   // texte secondaire
+  --ac-text-muted:      var(--ac-gray-500);   // texte discret
+  --ac-text-inverse:    var(--ac-white);      // texte sur fond foncé
+
+  // Gris le plus clair, réservé aux éléments DÉCORATIFS : icône de
+  // recherche, chevrons, séparateurs. Jamais pour du texte : son
+  // contraste sur fond clair est de 2.45, très en dessous du seuil
+  // d'accessibilité de 4.5 exigé pour un texte lisible.
+  --ac-icon-muted:      var(--ac-gray-400);
+
+  // ================================================================
+  // 2. STATUTS MÉTIER
+  // ================================================================
+  //
+  // Les huit statuts d'une opération (voir docs/database.md).
+  // Ce sont les couleurs les plus vues de toute l'application :
+  // sur le Kanban de la file d'attente, un employé doit lire l'état
+  // d'un véhicule d'un seul coup d'œil, à distance.
+  //
+  // La progression suit une logique de température :
+  //   gris (rien ne se passe) → bleus (en cours)
+  //   → orange (contrôle) → vert (prêt)
+  //
+  // Chaque statut a un fond clair et un texte foncé : le contraste
+  // dépasse 4.5:1, lisible même sur un écran de téléphone en plein
+  // soleil — condition de travail réelle de nos utilisateurs.
+
+  --ac-status-waiting-bg:        var(--ac-gray-100);
+  --ac-status-waiting-text:      var(--ac-gray-700);
+
+  --ac-status-in-progress-bg:    var(--ac-primary-50);
+  --ac-status-in-progress-text:  var(--ac-primary-700);
+
+  --ac-status-inspection-bg:     #ede9fe;
+  --ac-status-inspection-text:   #5b21b6;
+
+  --ac-status-washing-bg:        var(--ac-accent-50);
+  --ac-status-washing-text:      #0e7490;
+
+  --ac-status-quality-bg:        var(--ac-warning-50);
+  --ac-status-quality-text:      var(--ac-warning-700);
+
+  --ac-status-ready-bg:          var(--ac-success-50);
+  --ac-status-ready-text:        var(--ac-success-700);
+
+  --ac-status-completed-bg:      var(--ac-gray-100);
+  --ac-status-completed-text:    var(--ac-gray-600);
+
+  --ac-status-cancelled-bg:      var(--ac-danger-50);
+  --ac-status-cancelled-text:    var(--ac-danger-700);
+
+  // ================================================================
+  // 3. TYPOGRAPHIE
+  // ================================================================
+  //
+  // Manrope, hébergée avec l'application (pas de Google Fonts) :
+  // l'interface s'affiche correctement même sans connexion, et
+  // aucune donnée de nos utilisateurs n'est envoyée à un tiers.
+
+  --ac-font-sans: 'Manrope', -apple-system, BlinkMacSystemFont,
+                  'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  // Échelle typographique. Peu de tailles, volontairement : une
+  // hiérarchie claire vaut mieux qu'une infinité de nuances.
+  --ac-text-xs:   0.75rem;    // 12px — mentions légales, horodatages
+  --ac-text-sm:   0.8125rem;  // 13px — libellés, légendes
+  --ac-text-base: 0.9375rem;  // 15px — texte courant
+  --ac-text-md:   1rem;       // 16px — texte mis en avant
+  --ac-text-lg:   1.125rem;   // 18px — H4
+  --ac-text-xl:   1.25rem;    // 20px — H3
+  --ac-text-2xl:  1.5rem;     // 24px — H2
+  --ac-text-3xl:  2rem;       // 32px — H1
+  --ac-text-4xl:  2.5rem;     // 40px — chiffres clés du tableau de bord
+
+  --ac-weight-regular:  400;
+  --ac-weight-medium:   500;
+  --ac-weight-semibold: 600;
+  --ac-weight-bold:     700;
+
+  --ac-leading-tight:  1.25;  // titres
+  --ac-leading-normal: 1.5;   // texte courant
+  --ac-leading-loose:  1.7;   // paragraphes longs
+
+  // ================================================================
+  // 4. ESPACEMENTS
+  // ================================================================
+  //
+  // Échelle basée sur 4 px. On n'utilise QUE ces valeurs : c'est ce
+  // qui donne à l'interface son rythme régulier. Un padding de 17px
+  // choisi au hasard casse l'alignement de toute la page.
+
+  --ac-space-1:  0.25rem;  //  4px
+  --ac-space-2:  0.5rem;   //  8px
+  --ac-space-3:  0.75rem;  // 12px
+  --ac-space-4:  1rem;     // 16px  ← le plus utilisé
+  --ac-space-5:  1.25rem;  // 20px
+  --ac-space-6:  1.5rem;   // 24px  ← padding standard des cartes
+  --ac-space-8:  2rem;     // 32px
+  --ac-space-10: 2.5rem;   // 40px
+  --ac-space-12: 3rem;     // 48px
+  --ac-space-16: 4rem;     // 64px
+
+  // ================================================================
+  // 5. RAYONS
+  // ================================================================
+  // Arrondis modérés : assez pour paraître moderne, pas assez pour
+  // faire « jouet ». Le produit s'adresse à des professionnels.
+
+  --ac-radius-sm:   0.375rem;  //  6px — badges, petits boutons
+  --ac-radius:      0.5rem;    //  8px — boutons, champs
+  --ac-radius-lg:   0.75rem;   // 12px — cartes
+  --ac-radius-xl:   1rem;      // 16px — modales
+  --ac-radius-full: 9999px;    //      — pastilles, avatars
+
+  // ================================================================
+  // 6. OMBRES
+  // ================================================================
+  // Très légères, teintées de bleu-gris plutôt que de noir pur :
+  // une ombre noire sur fond clair paraît sale.
+  // Le cahier des charges interdit explicitement les ombres lourdes.
+
+  --ac-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --ac-shadow:    0 1px 3px rgba(15, 23, 42, 0.08),
+                  0 1px 2px rgba(15, 23, 42, 0.04);
+  --ac-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ac-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.10);
+
+  // Anneau de focus : visible au clavier, indispensable à
+  // l'accessibilité. On ne le supprime JAMAIS.
+  --ac-ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
+
+  // ================================================================
+  // 7. ANIMATIONS
+  // ================================================================
+  // Courtes. Une animation qu'on remarque est une animation ratée :
+  // elle doit rendre le changement compréhensible, pas décoratif.
+
+  --ac-transition-fast: 120ms ease;
+  --ac-transition:      180ms ease;
+
+  // ================================================================
+  // 8. MISE EN PAGE
+  // ================================================================
+
+  --ac-sidebar-width:           260px;
+  --ac-sidebar-width-collapsed: 72px;
+  --ac-topbar-height:           64px;
+  --ac-content-max-width:       1440px;
+
+  // Z-index centralisés. Les définir ici évite la guerre des
+  // `z-index: 9999` qui finit toujours par arriver.
+  --ac-z-sidebar: 100;
+  --ac-z-topbar:  90;
+  --ac-z-overlay: 200;
+  --ac-z-modal:   300;
+  --ac-z-toast:   400;
+}

@@ -1,19 +1,43 @@
 // ==================================================================
-// AUTOCARE OS — FEUILLE DE STYLE GLOBALE
+// AUTOCARE OS — POINT D'ENTRÉE DES STYLES
 // ==================================================================
 //
-// LOT 1 : on se contente d'importer Bootstrap pour disposer d'une
-// base fonctionnelle.
+// L'ORDRE DE CES IMPORTS EST IMPORTANT.
+// En CSS, à spécificité égale, c'est la dernière règle écrite qui
+// gagne. Cet ordre nous permet donc de surcharger Bootstrap sans
+// jamais recourir à `!important`.
 //
-// LOT 2 : ce fichier deviendra le point d'entree du design system.
-// On y personnalisera les variables Bootstrap AVANT son import
-// (couleur primaire #2563EB, police Manrope, rayons, ombres) pour que
-// l'application ne ressemble pas a du Bootstrap par defaut.
+//   1. Police       — doit être disponible avant tout affichage
+//   2. Jetons       — les variables CSS, utilisées par tout le reste
+//   3. Bootstrap    — sa grille et ses composants, déjà personnalisés
+//   4. Base         — typographie et accessibilité par-dessus
+//   5. Composants   — nos classes ac-*, qui ont le dernier mot
 // ==================================================================
 
-@use 'bootstrap/scss/bootstrap' as *;
+// --- 1. Manrope ----------------------------------------------------
+// Police hébergée avec l'application plutôt que chargée depuis
+// Google Fonts. Deux raisons :
+//   - l'interface s'affiche correctement même sans connexion, ce qui
+//     compte pour des stations où le réseau est irrégulier ;
+//   - aucune donnée de nos utilisateurs n'est envoyée à un tiers.
+// On ne charge que le sous-ensemble latin et les 4 graisses
+// réellement utilisées : inutile de faire télécharger le cyrillique.
+@use '@fontsource/manrope/latin-400.css';
+@use '@fontsource/manrope/latin-500.css';
+@use '@fontsource/manrope/latin-600.css';
+@use '@fontsource/manrope/latin-700.css';
+
+// --- 2. Jetons de design -------------------------------------------
+@use 'styles/tokens';
+
+// --- 3. Bootstrap personnalisé -------------------------------------
+@use 'styles/bootstrap-config';
+
+// --- 4. Styles de base ---------------------------------------------
+@use 'styles/base';
+
+// --- 5. Nos composants ---------------------------------------------
+@use 'styles/components';
+
+// --- Icônes ---------------------------------------------------------
 @use 'bootstrap-icons/font/bootstrap-icons.css';
-
-body {
-  background-color: #f8fafc; // couleur de fond definie au cahier des charges
-}

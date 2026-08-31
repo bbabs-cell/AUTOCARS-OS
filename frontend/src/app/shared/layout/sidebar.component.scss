@@ -1,0 +1,146 @@
+// Barre latérale — voir sidebar.component.ts
+
+.ac-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: var(--ac-sidebar-width);
+  height: 100vh;
+  background-color: var(--ac-surface);
+  border-right: 1px solid var(--ac-border);
+
+  // Fixe : la navigation reste accessible quand le contenu défile.
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--ac-z-sidebar);
+
+  // Sur mobile, la barre sort de l'écran par la gauche.
+  // On la déplace avec `transform` plutôt qu'avec `left` : le
+  // navigateur peut alors confier l'animation au processeur
+  // graphique, ce qui reste fluide même sur un téléphone modeste.
+  transition: transform var(--ac-transition);
+
+  @media (max-width: 991.98px) {
+    transform: translateX(-100%);
+    box-shadow: var(--ac-shadow-lg);
+
+    &.is-open { transform: translateX(0); }
+  }
+}
+
+// --- Identité -------------------------------------------------------
+
+.ac-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  height: var(--ac-topbar-height);
+  padding-inline: var(--ac-space-5);
+  border-bottom: 1px solid var(--ac-border);
+  flex-shrink: 0;
+}
+
+.ac-sidebar__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-primary);
+  color: var(--ac-text-inverse);
+  font-size: 1rem;
+}
+
+.ac-sidebar__brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-size: var(--ac-text-md);
+  letter-spacing: -0.01em;
+
+  strong { font-weight: var(--ac-weight-bold); color: var(--ac-text); }
+  span   { font-weight: var(--ac-weight-semibold); color: var(--ac-primary); }
+}
+
+// --- Navigation -----------------------------------------------------
+
+.ac-sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ac-space-4) var(--ac-space-3);
+}
+
+.ac-sidebar__group-label {
+  margin: var(--ac-space-5) var(--ac-space-3) var(--ac-space-2);
+  font-size: var(--ac-text-xs);
+  font-weight: var(--ac-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ac-text-muted);
+}
+
+.ac-sidebar__separator {
+  margin: var(--ac-space-4) var(--ac-space-3);
+  border: 0;
+  border-top: 1px solid var(--ac-border);
+}
+
+.ac-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-3) var(--ac-space-3);
+  margin-bottom: 2px;
+  border-radius: var(--ac-radius);
+  font-size: var(--ac-text-base);
+  font-weight: var(--ac-weight-medium);
+  color: var(--ac-text-secondary);
+  text-decoration: none;
+  transition: all var(--ac-transition-fast);
+
+  i {
+    font-size: 1.05rem;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(.is-disabled) {
+    background-color: var(--ac-gray-100);
+    color: var(--ac-text);
+    text-decoration: none;
+  }
+
+  // Module actif : fond bleu très clair et texte bleu.
+  // Pas de fond bleu plein, qui serait trop lourd sur une barre
+  // latérale claire — et le cahier des charges demande de la sobriété.
+  &.is-active {
+    background-color: var(--ac-primary-50);
+    color: var(--ac-primary-700);
+    font-weight: var(--ac-weight-semibold);
+  }
+
+  &.is-disabled {
+    color: var(--ac-text-muted);
+    cursor: not-allowed;
+  }
+}
+
+.ac-nav-item__soon {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  font-weight: var(--ac-weight-semibold);
+  color: var(--ac-gray-400);
+  background-color: var(--ac-gray-100);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--ac-radius-sm);
+}
+
+// --- Pied -----------------------------------------------------------
+
+.ac-sidebar__footer {
+  padding: var(--ac-space-3);
+  border-top: 1px solid var(--ac-border);
+  flex-shrink: 0;
+}

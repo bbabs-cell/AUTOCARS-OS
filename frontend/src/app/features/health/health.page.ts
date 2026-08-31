@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 
+import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { HealthService } from '../../core/services/health.service';
 import { HealthStatus } from '../../core/models/health.model';
 
@@ -29,6 +30,7 @@ import { HealthStatus } from '../../core/models/health.model';
  */
 @Component({
   selector: 'app-health-page',
+  imports: [PageHeaderComponent],
   templateUrl: './health.page.html',
 })
 export class HealthPage implements OnInit {
@@ -73,15 +75,15 @@ export class HealthPage implements OnInit {
     // status 0 = le navigateur n'a meme pas pu joindre le serveur
     if (error.status === 0) {
       return (
-        "Impossible de joindre l'API. Verifie que le serveur PHP tourne " +
-        '(commande : php -S localhost:8000 -t public router.php depuis backend/).'
+        "Impossible de joindre l'API. Vérifie que le serveur PHP est démarré " +
+        '(commande : php -S localhost:8000 -t public router.php, depuis le dossier backend/).'
       );
     }
 
     if (error.status === 503) {
       return (
-        "L'API repond mais la base de donnees est injoignable. " +
-        'Lance « php tools/check_db.php » depuis le dossier backend/.'
+        "L'API répond mais la base de données est injoignable. " +
+        'Lance « php tools/check_db.php » depuis le dossier backend/ pour en connaître la cause.'
       );
     }
 

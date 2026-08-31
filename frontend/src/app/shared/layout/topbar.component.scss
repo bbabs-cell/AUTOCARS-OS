@@ -1,0 +1,155 @@
+// En-tête de l'application — voir topbar.component.ts
+
+.ac-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  height: var(--ac-topbar-height);
+  padding-inline: var(--ac-space-4);
+  background-color: var(--ac-surface);
+  border-bottom: 1px solid var(--ac-border);
+  position: sticky;
+  top: 0;
+  z-index: var(--ac-z-topbar);
+
+  @media (min-width: 992px) {
+    padding-inline: var(--ac-space-6);
+  }
+}
+
+// --- Recherche ------------------------------------------------------
+
+.ac-topbar__search {
+  position: relative;
+  flex: 1;
+  max-width: 460px;
+
+  i {
+    position: absolute;
+    left: var(--ac-space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ac-icon-muted);
+    pointer-events: none;
+  }
+
+  .form-control {
+    padding-left: 2.25rem;
+    background-color: var(--ac-gray-50);
+    border-color: transparent;
+
+    &:focus {
+      background-color: var(--ac-surface);
+      border-color: var(--ac-primary);
+    }
+  }
+}
+
+// --- Actions --------------------------------------------------------
+
+.ac-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  margin-left: auto;
+}
+
+.ac-topbar__station {
+  align-items: center;
+  gap: var(--ac-space-2);
+  padding: var(--ac-space-2) var(--ac-space-3);
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-gray-50);
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-medium);
+  color: var(--ac-text-secondary);
+}
+
+// Pastille de notifications non lues
+.ac-topbar__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 17px;
+  height: 17px;
+  padding-inline: 4px;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-danger);
+  color: var(--ac-text-inverse);
+  font-size: 0.625rem;
+  font-weight: var(--ac-weight-bold);
+  line-height: 17px;
+  text-align: center;
+}
+
+// --- Profil ---------------------------------------------------------
+
+.ac-topbar__profile { position: relative; }
+
+.ac-topbar__profile-button {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  padding: var(--ac-space-1) var(--ac-space-2);
+  border: 0;
+  border-radius: var(--ac-radius);
+  background: none;
+  transition: background-color var(--ac-transition-fast);
+
+  &:hover { background-color: var(--ac-gray-100); }
+}
+
+.ac-topbar__profile-name {
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-semibold);
+  color: var(--ac-text);
+}
+
+.ac-topbar__profile-role {
+  font-size: var(--ac-text-xs);
+  color: var(--ac-text-secondary);
+}
+
+.ac-topbar__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: var(--ac-z-overlay);
+  min-width: 200px;
+  padding: var(--ac-space-2);
+  background-color: var(--ac-surface);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-lg);
+  box-shadow: var(--ac-shadow-lg);
+  animation: ac-menu-in var(--ac-transition-fast);
+}
+
+.ac-topbar__menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  width: 100%;
+  padding: var(--ac-space-2) var(--ac-space-3);
+  border: 0;
+  border-radius: var(--ac-radius-sm);
+  background: none;
+  font-size: var(--ac-text-base);
+  color: var(--ac-text);
+  text-align: left;
+
+  &:hover:not(:disabled) { background-color: var(--ac-gray-100); }
+  &:disabled { color: var(--ac-text-muted); cursor: not-allowed; }
+  &--danger:not(:disabled) { color: var(--ac-danger-700); }
+}
+
+// Couche invisible qui capte le clic extérieur au menu
+.ac-overlay-invisible {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--ac-z-overlay) - 1);
+}
+
+@keyframes ac-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

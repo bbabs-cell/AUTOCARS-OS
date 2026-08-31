@@ -1,64 +1,88 @@
 <!--
-  Page de verification de l'installation (Lot 1).
-  Le style reste volontairement minimal : le design system complet
-  arrive au Lot 2 et cette page sera alors mise a son standard.
+  Page de vérification de l'installation (Lot 1).
+  Mise au standard du design system au Lot 2.
 -->
-<div class="container py-5" style="max-width: 640px">
+<ac-page-header
+  title="Diagnostic"
+  subtitle="Vérifie que l'application, l'API et la base de données communiquent correctement."
+>
+  <button type="button" class="btn btn-outline-secondary" (click)="runCheck()" [disabled]="isLoading()">
+    <i class="bi bi-arrow-clockwise"></i> Relancer le test
+  </button>
+</ac-page-header>
 
-  <h1 class="h3 mb-1">AUTOCARE OS</h1>
-  <p class="text-secondary mb-4">Verification de l'installation</p>
+<div style="max-width: 720px">
 
-  <!-- ETAT 1 : chargement -->
+  <!-- ÉTAT 1 : chargement -->
   @if (isLoading()) {
-    <div class="card">
-      <div class="card-body d-flex align-items-center gap-3">
-        <span class="spinner-border spinner-border-sm" role="status"></span>
-        <span>Interrogation de l'API…</span>
+    <div class="ac-card">
+      <div class="ac-card__body d-flex align-items-center gap-3">
+        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+        <span class="ac-text-secondary">Interrogation de l'API…</span>
       </div>
     </div>
   }
 
-  <!-- ETAT 2 : succes -->
+  <!-- ÉTAT 2 : succès -->
   @if (!isLoading() && health(); as status) {
-    <div class="card border-success">
-      <div class="card-body">
-        <h2 class="h5 text-success mb-3">Connexion etablie</h2>
+    <div class="ac-card">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">
+          <i class="bi bi-check-circle-fill me-2" style="color: var(--ac-success)"></i>
+          Connexion établie
+        </h2>
+        <span class="ac-badge ac-badge--success">
+          <span class="ac-badge__dot"></span> Opérationnel
+        </span>
+      </div>
 
-        <dl class="row mb-0 small">
-          <dt class="col-5">Application</dt>
-          <dd class="col-7">{{ status.application }}</dd>
+      <div class="ac-card__body">
+        <dl class="ac-detail-list">
+          <dt>Application</dt>
+          <dd>{{ status.application }}</dd>
 
-          <dt class="col-5">Base de donnees</dt>
-          <dd class="col-7">{{ status.database }}</dd>
+          <dt>Base de données</dt>
+          <dd>{{ status.database }}</dd>
 
           @if (status.php_version) {
-            <dt class="col-5">Version PHP</dt>
-            <dd class="col-7">{{ status.php_version }}</dd>
+            <dt>Version PHP</dt>
+            <dd class="ac-numeric">{{ status.php_version }}</dd>
           }
 
           @if (status.database_name) {
-            <dt class="col-5">Nom de la base</dt>
-            <dd class="col-7">{{ status.database_name }}</dd>
+            <dt>Nom de la base</dt>
+            <dd><code class="ac-code">{{ status.database_name }}</code></dd>
           }
 
-          <dt class="col-5">Horodatage</dt>
-          <dd class="col-7">{{ status.timestamp }}</dd>
+          <dt>Horodatage</dt>
+          <dd class="ac-numeric ac-text-secondary">{{ status.timestamp }}</dd>
         </dl>
       </div>
     </div>
   }
 
-  <!-- ETAT 3 : erreur -->
+  <!-- ÉTAT 3 : erreur -->
   @if (!isLoading() && errorMessage(); as message) {
-    <div class="card border-danger">
-      <div class="card-body">
-        <h2 class="h5 text-danger mb-2">Connexion impossible</h2>
-        <p class="mb-3">{{ message }}</p>
-        <button type="button" class="btn btn-outline-danger btn-sm" (click)="runCheck()">
-          Reessayer
+    <div class="ac-card">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">
+          <i class="bi bi-x-circle-fill me-2" style="color: var(--ac-danger)"></i>
+          Connexion impossible
+        </h2>
+      </div>
+
+      <div class="ac-card__body">
+        <div class="ac-alert ac-alert--danger">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <div>{{ message }}</div>
+        </div>
+      </div>
+
+      <div class="ac-card__footer d-flex justify-content-end">
+        <button type="button" class="btn btn-primary" (click)="runCheck()">
+          <i class="bi bi-arrow-clockwise"></i> Réessayer
         </button>
       </div>
     </div>
   }
-
 </div>

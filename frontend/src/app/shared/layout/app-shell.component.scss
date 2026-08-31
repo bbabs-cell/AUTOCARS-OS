@@ -1,0 +1,41 @@
+// Coque de l'application — voir app-shell.component.ts
+
+.ac-shell {
+  min-height: 100vh;
+  background-color: var(--ac-background);
+}
+
+.ac-shell__main {
+  // La barre latérale est en `position: fixed` : elle ne pousse pas
+  // le contenu. On décale donc celui-ci de sa largeur, sur grand
+  // écran uniquement.
+  @media (min-width: 992px) {
+    margin-left: var(--ac-sidebar-width);
+  }
+}
+
+.ac-shell__content {
+  padding: var(--ac-space-5) var(--ac-space-4);
+
+  @media (min-width: 992px) {
+    padding: var(--ac-space-8) var(--ac-space-6);
+  }
+}
+
+.ac-shell__container {
+  max-width: var(--ac-content-max-width);
+  margin-inline: auto;
+}
+
+.ac-shell__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--ac-z-sidebar) - 1);
+  background-color: rgba(15, 23, 42, 0.45);
+  animation: ac-overlay-in var(--ac-transition);
+}
+
+@keyframes ac-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

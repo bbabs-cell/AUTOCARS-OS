@@ -1,0 +1,24 @@
+<div class="ac-shell">
+
+  <ac-sidebar [isOpen]="isSidebarOpen()" (navigate)="closeSidebar()" />
+
+  <!--
+    Voile sombre affiché derrière la barre latérale sur mobile.
+    Il assombrit le contenu pour signaler qu'il n'est plus actif, et
+    un clic dessus referme le menu — le geste que tout le monde
+    tente en premier.
+  -->
+  @if (isSidebarOpen()) {
+    <div class="ac-shell__overlay d-lg-none" (click)="closeSidebar()"></div>
+  }
+
+  <div class="ac-shell__main">
+    <ac-topbar (toggleSidebar)="toggleSidebar()" />
+
+    <main class="ac-shell__content">
+      <div class="ac-shell__container">
+        <router-outlet />
+      </div>
+    </main>
+  </div>
+</div>
