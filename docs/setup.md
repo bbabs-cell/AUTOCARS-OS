@@ -209,6 +209,14 @@ Ouvre **http://localhost:4200**.
 
 ---
 
+> **Note** : `frontend/angular.json` contient `"cli": { "analytics": false }`.
+> Sans ce réglage, Angular demande à chaque nouveau poste s'il peut envoyer
+> des statistiques d'usage à Google, puis **écrit la réponse dans
+> `angular.json`** — ce qui crée une modification locale et bloque le
+> prochain `git pull`. Le réglage est donc figé dans le dépôt.
+
+---
+
 ## 5. Résultat attendu
 
 La page affiche **« Connexion établie »** avec le nom de ta base.
