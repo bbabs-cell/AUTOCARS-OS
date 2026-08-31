@@ -1,0 +1,33 @@
+# ==================================================================
+# AUTOCARE OS - Configuration Apache du dossier public/
+# ==================================================================
+# Ce fichier sert quand l'API tourne sous Apache (XAMPP, Laragon,
+# WAMP, ou un hebergement mutualise).
+# Il est ignore par le serveur integre de PHP (php -S), qui utilise
+# a la place le fichier backend/router.php.
+# ==================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Si le fichier demande existe reellement (une image par exemple),
+    # on le sert tel quel.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Sinon, TOUTE requete est envoyee a index.php.
+    # C'est ce qui permet d'avoir des URL propres comme
+    # /api/vehicles/42 au lieu de /index.php?route=vehicles&id=42
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Empeche Apache d'afficher la liste des fichiers du dossier
+Options -Indexes
+
+# Interdit l'acces direct aux fichiers sensibles, par precaution.
+# Ils ne sont normalement pas dans public/, mais une erreur de
+# manipulation est vite arrivee.
+<FilesMatch "^\.env|composer\.(json|lock)$">
+    Require all denied
+</FilesMatch>

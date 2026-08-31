@@ -1,0 +1,35 @@
+# ============================================================
+# AUTOCARE OS — fichiers exclus du dépôt Git
+# ============================================================
+
+# --- SECRETS : ne JAMAIS committer -------------------------
+# Le fichier .env contient les identifiants de la base de
+# donnees et les cles de securite. Seul .env.example est suivi.
+.env
+.env.*
+!.env.example
+
+# --- Dependances -------------------------------------------
+/backend/vendor/
+/frontend/node_modules/
+
+# --- Fichiers generes --------------------------------------
+/frontend/dist/
+/frontend/.angular/
+/frontend/coverage/
+
+# --- Donnees utilisateur (photos d'inspection, logs) --------
+# Les photos envoyees par les utilisateurs n'ont rien a faire
+# dans Git : elles sont volumineuses et souvent personnelles.
+/backend/storage/uploads/*
+!/backend/storage/uploads/.gitkeep
+/backend/storage/logs/*
+!/backend/storage/logs/.gitkeep
+
+# --- Systeme / editeurs ------------------------------------
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

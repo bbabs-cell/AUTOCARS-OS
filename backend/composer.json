@@ -1,0 +1,26 @@
+{
+    "name": "autocare/backend",
+    "description": "AUTOCARE OS - API REST (PHP 8.4, sans framework)",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Autocare\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    },
+    "scripts": {
+        "serve": "php -S localhost:8000 -t public",
+        "check-db": "php tools/check_db.php"
+    }
+}
