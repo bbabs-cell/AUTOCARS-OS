@@ -30,10 +30,12 @@
   <div class="ac-topbar__actions">
 
     <!-- Station courante : essentiel dès qu'un client gère plusieurs sites -->
-    <span class="ac-topbar__station d-none d-md-inline-flex">
-      <i class="bi bi-geo-alt" aria-hidden="true"></i>
-      {{ stationName }}
-    </span>
+    @if (stationName()) {
+      <span class="ac-topbar__station d-none d-md-inline-flex">
+        <i class="bi bi-geo-alt" aria-hidden="true"></i>
+        {{ stationName() }}
+      </span>
+    }
 
     <!-- Notifications -->
     <button type="button" class="ac-btn-icon position-relative" aria-label="Notifications">

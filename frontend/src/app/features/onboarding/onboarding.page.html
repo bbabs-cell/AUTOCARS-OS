@@ -1,0 +1,381 @@
+<div class="ac-onboarding">
+
+  <!-- Progression : l'utilisateur doit toujours savoir où il en est
+       et combien il reste. Une installation dont on ne voit pas la
+       fin donne envie de l'abandonner. -->
+  <div class="ac-onboarding__progress">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <span class="ac-label">Étape {{ step() }} sur {{ totalSteps }}</span>
+      @if (step() > 1 && step() < totalSteps) {
+        <button type="button" class="btn btn-link btn-sm p-0" (click)="goToStep(totalSteps)">
+          Passer la configuration
+        </button>
+      }
+    </div>
+    <div class="ac-onboarding__bar">
+      <span [style.width.%]="progress()"></span>
+    </div>
+  </div>
+
+  @if (errorMessage(); as message) {
+    <div class="ac-alert ac-alert--danger mb-4">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <div>{{ message }}</div>
+    </div>
+  }
+
+  <!-- ============================================================ -->
+  <!-- 1. BIENVENUE                                                 -->
+  <!-- ============================================================ -->
+  @if (step() === 1) {
+    <div class="text-center">
+      <div class="ac-onboarding__icon"><i class="bi bi-droplet-fill"></i></div>
+
+      <h1 class="mb-3">Bienvenue{{ userName() ? ', ' + userName() : '' }}</h1>
+      <p class="ac-onboarding__lead">
+        Quelques minutes suffisent pour préparer votre station. Nous allons
+        renseigner vos informations, votre catalogue de prestations et votre
+        équipe.
+      </p>
+
+      <div class="ac-card text-start mt-5 mb-5">
+        <div class="ac-card__body">
+          <p class="ac-label mb-3">Ce que nous allons faire</p>
+          <ul class="ac-onboarding__steps">
+            <li><i class="bi bi-shop"></i> Les informations de votre station</li>
+            <li><i class="bi bi-droplet"></i> Vos prestations et leurs tarifs</li>
+            <li><i class="bi bi-people"></i> Votre équipe <span class="ac-text-muted">(facultatif)</span></li>
+            <li><i class="bi bi-clock"></i> Vos horaires d'ouverture</li>
+          </ul>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary ac-btn-field" (click)="goToStep(2)">
+        Commencer <i class="bi bi-arrow-right"></i>
+      </button>
+    </div>
+  }
+
+  <!-- ============================================================ -->
+  <!-- 2. LA STATION                                                -->
+  <!-- ============================================================ -->
+  @if (step() === 2) {
+    <h1 class="mb-2">Votre station</h1>
+    <p class="ac-onboarding__lead mb-5">
+      Ces informations apparaîtront sur les reçus remis à vos clients.
+    </p>
+
+    <form [formGroup]="stationForm" (ngSubmit)="saveStation()" novalidate>
+      <div class="ac-card mb-4">
+        <div class="ac-card__body">
+          <div class="mb-4">
+            <label for="station-name" class="form-label">Nom de la station</label>
+            <input
+              id="station-name" type="text" class="form-control"
+              formControlName="name" (blur)="suggestCode()"
+              placeholder="Station Dakar Plateau"
+              [class.is-invalid]="stationForm.controls.name.touched && stationForm.controls.name.invalid"
+            />
+            @if (stationForm.controls.name.touched && stationForm.controls.name.invalid) {
+              <div class="invalid-feedback d-block">Le nom est obligatoire.</div>
+            }
+          </div>
+
+          <div class="mb-4">
+            <label for="station-code" class="form-label">Code de la station</label>
+            <input
+              id="station-code" type="text" class="form-control ac-onboarding__code"
+              formControlName="code" maxlength="10" placeholder="DKP"
+              [class.is-invalid]="fieldErrors()['code']"
+            />
+            <span class="ac-caption">
+              2 à 10 lettres ou chiffres. Il apparaît sur les références remises
+              aux clients&nbsp;: <strong>DKP</strong>-2608-0042.
+            </span>
+            @if (fieldErrors()['code']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label for="station-address" class="form-label">
+                Adresse <span class="ac-text-muted fw-normal">(facultatif)</span>
+              </label>
+              <input id="station-address" type="text" class="form-control"
+                     formControlName="address" placeholder="Avenue Léopold Sédar Senghor" />
+            </div>
+            <div class="col-md-4">
+              <label for="station-city" class="form-label">Ville</label>
+              <input id="station-city" type="text" class="form-control"
+                     formControlName="city" placeholder="Dakar" />
+            </div>
+            <div class="col-md-6">
+              <label for="station-phone" class="form-label">Téléphone</label>
+              <input id="station-phone" type="tel" class="form-control"
+                     formControlName="phone" placeholder="+221 33 821 12 34" />
+              @if (fieldErrors()['phone']; as error) {
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between gap-3">
+        <button type="button" class="btn btn-outline-secondary" (click)="goToStep(1)">
+          <i class="bi bi-arrow-left"></i> Retour
+        </button>
+        <button type="submit" class="btn btn-primary ac-btn-field" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            Continuer <i class="bi bi-arrow-right"></i>
+          }
+        </button>
+      </div>
+    </form>
+  }
+
+  <!-- ============================================================ -->
+  <!-- 3. LES PRESTATIONS                                           -->
+  <!-- ============================================================ -->
+  @if (step() === 3) {
+    <h1 class="mb-2">Vos prestations</h1>
+    <p class="ac-onboarding__lead mb-5">
+      Cochez celles que vous proposez. Les tarifs indiqués sont des points de
+      départ&nbsp;: vous les modifierez à tout moment.
+    </p>
+
+    <div class="ac-onboarding__services mb-4">
+      @for (suggestion of suggestions(); track suggestion.name; let i = $index) {
+        <button
+          type="button"
+          class="ac-service-card"
+          [class.is-selected]="suggestion.selected"
+          (click)="toggleSuggestion(i)"
+          [attr.aria-pressed]="suggestion.selected"
+        >
+          <span class="ac-service-card__check">
+            @if (suggestion.selected) { <i class="bi bi-check-lg"></i> }
+          </span>
+
+          <span class="ac-service-card__body">
+            <span class="ac-service-card__name">{{ suggestion.name }}</span>
+            <span class="ac-service-card__desc">{{ suggestion.description }}</span>
+            <span class="ac-service-card__meta">
+              <strong>{{ suggestion.price | acAmount }}</strong>
+              <span class="ac-text-muted">· {{ suggestion.duration_minutes | acDuration }}</span>
+            </span>
+          </span>
+        </button>
+      }
+    </div>
+
+    <p class="ac-caption mb-4">
+      {{ selectedCount() }} prestation(s) sélectionnée(s). Vous pourrez en
+      ajouter d'autres depuis le menu Prestations.
+    </p>
+
+    <div class="d-flex justify-content-between gap-3">
+      <button type="button" class="btn btn-outline-secondary" (click)="goToStep(2)">
+        <i class="bi bi-arrow-left"></i> Retour
+      </button>
+      <button type="button" class="btn btn-primary ac-btn-field"
+              (click)="saveServices()" [disabled]="isSaving()">
+        @if (isSaving()) {
+          <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+        } @else {
+          Continuer <i class="bi bi-arrow-right"></i>
+        }
+      </button>
+    </div>
+  }
+
+  <!-- ============================================================ -->
+  <!-- 4. L'ÉQUIPE                                                  -->
+  <!-- ============================================================ -->
+  @if (step() === 4) {
+    <h1 class="mb-2">Votre équipe</h1>
+    <p class="ac-onboarding__lead mb-5">
+      Ajoutez les personnes qui utiliseront AUTOCARE OS. Vous pouvez aussi
+      passer cette étape et le faire plus tard.
+    </p>
+
+    @if (team().length > 0) {
+      <div class="ac-card mb-4">
+        <div class="ac-card__header"><h2 class="ac-card__title">Membres ajoutés</h2></div>
+        <div class="ac-card__body d-flex flex-column gap-3">
+          @for (member of team(); track member.id) {
+            <div class="d-flex align-items-center gap-3">
+              <span class="ac-badge ac-badge--neutral">{{ member.role }}</span>
+              <span class="fw-semibold">{{ member.full_name }}</span>
+              <span class="ac-text-secondary small">{{ member.email }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <form [formGroup]="memberForm" (ngSubmit)="addMember()" novalidate>
+      <div class="ac-card mb-4">
+        <div class="ac-card__body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label for="m-first" class="form-label">Prénom</label>
+              <input id="m-first" type="text" class="form-control" formControlName="first_name" />
+            </div>
+            <div class="col-sm-6">
+              <label for="m-last" class="form-label">Nom</label>
+              <input id="m-last" type="text" class="form-control" formControlName="last_name" />
+            </div>
+            <div class="col-md-7">
+              <label for="m-email" class="form-label">Adresse e-mail</label>
+              <input id="m-email" type="email" class="form-control" formControlName="email" />
+              @if (fieldErrors()['email']; as error) {
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              }
+            </div>
+            <div class="col-md-5">
+              <label for="m-role" class="form-label">Rôle</label>
+              <select id="m-role" class="form-select" formControlName="role">
+                <option value="EMPLOYEE">Employé</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Administrateur</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label for="m-password" class="form-label">Mot de passe provisoire</label>
+              <input id="m-password" type="text" class="form-control" formControlName="password"
+                     autocomplete="off" placeholder="Au moins 10 caractères" />
+              <span class="ac-caption">
+                Communiquez-le à la personne. Elle pourra le changer depuis son profil.
+              </span>
+              @if (fieldErrors()['password']; as error) {
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="ac-card__footer d-flex justify-content-end">
+          <button type="submit" class="btn btn-outline-secondary" [disabled]="isSaving()">
+            <i class="bi bi-plus-lg"></i> Ajouter ce membre
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div class="d-flex justify-content-between gap-3">
+      <button type="button" class="btn btn-outline-secondary" (click)="goToStep(3)">
+        <i class="bi bi-arrow-left"></i> Retour
+      </button>
+      <button type="button" class="btn btn-primary ac-btn-field" (click)="goToStep(5)">
+        @if (team().length === 0) { Passer cette étape } @else { Continuer }
+        <i class="bi bi-arrow-right"></i>
+      </button>
+    </div>
+  }
+
+  <!-- ============================================================ -->
+  <!-- 5. LES HORAIRES                                              -->
+  <!-- ============================================================ -->
+  @if (step() === 5) {
+    <h1 class="mb-2">Vos horaires</h1>
+    <p class="ac-onboarding__lead mb-5">
+      Ils serviront à proposer des créneaux de réservation à vos clients.
+    </p>
+
+    <form [formGroup]="hoursForm" (ngSubmit)="saveHours()" novalidate>
+      <div class="ac-card mb-4">
+        <div class="ac-card__body">
+          <div class="row g-4" style="max-width: 420px">
+            <div class="col-6">
+              <label for="opens" class="form-label">Ouverture</label>
+              <input id="opens" type="time" class="form-control" formControlName="opens_at" />
+            </div>
+            <div class="col-6">
+              <label for="closes" class="form-label">Fermeture</label>
+              <input id="closes" type="time" class="form-control" formControlName="closes_at" />
+            </div>
+          </div>
+
+          <div class="ac-alert ac-alert--info mt-4">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>
+              <strong>Moyens de paiement.</strong> AUTOCARE OS enregistre les
+              encaissements en espèces, mobile money, carte ou virement. Aucun
+              fournisseur n'est connecté&nbsp;: votre caissier saisit ce qu'il a
+              reçu. Une intégration automatique pourra être ajoutée plus tard.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between gap-3">
+        <button type="button" class="btn btn-outline-secondary" (click)="goToStep(4)">
+          <i class="bi bi-arrow-left"></i> Retour
+        </button>
+        <button type="submit" class="btn btn-primary ac-btn-field" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            Continuer <i class="bi bi-arrow-right"></i>
+          }
+        </button>
+      </div>
+    </form>
+  }
+
+  <!-- ============================================================ -->
+  <!-- 6. C'EST PRÊT                                                -->
+  <!-- ============================================================ -->
+  @if (step() === 6) {
+    <div class="text-center">
+      <div class="ac-onboarding__icon ac-onboarding__icon--success">
+        <i class="bi bi-check-lg"></i>
+      </div>
+
+      <h1 class="mb-3">Votre station est prête</h1>
+      <p class="ac-onboarding__lead">
+        Vous pouvez maintenant enregistrer votre premier véhicule.
+      </p>
+
+      <div class="row g-3 mt-4 mb-5 text-start">
+        <div class="col-sm-4">
+          <div class="ac-card h-100">
+            <div class="ac-card__body">
+              <span class="ac-stat__label">Station</span>
+              <p class="fw-semibold mb-0 mt-1">{{ station()?.name }}</p>
+              <span class="ac-caption">Code {{ station()?.code }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="ac-card h-100">
+            <div class="ac-card__body">
+              <span class="ac-stat__label">Prestations</span>
+              <p class="ac-stat__value mb-0 mt-1">{{ services().length || selectedCount() }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="ac-card h-100">
+            <div class="ac-card__body">
+              <span class="ac-stat__label">Équipe</span>
+              <p class="ac-stat__value mb-0 mt-1">{{ team().length + 1 }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary ac-btn-field" (click)="finish()"
+              [disabled]="isSaving()">
+        @if (isSaving()) {
+          <span class="spinner-border spinner-border-sm"></span> Finalisation…
+        } @else {
+          Accéder à mon tableau de bord <i class="bi bi-arrow-right"></i>
+        }
+      </button>
+    </div>
+  }
+</div>

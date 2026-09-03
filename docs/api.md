@@ -294,11 +294,72 @@ oubliée saute aux yeux à la relecture.
 
 ---
 
+## Configuration de la station
+
+Toutes ces routes exigent une authentification (🔒) et une permission
+précise, déclarée dans `backend/config/routes.php`.
+
+### Installation guidée
+
+| Route | Permission | Rôle |
+|---|---|---|
+| `GET /api/onboarding/status` | `onboarding.view` | Où en est l'installation |
+| `POST /api/onboarding/complete` | `stations.update` | La marquer terminée |
+
+`complete` renvoie `422` si aucune prestation n'existe : sans
+catalogue, le gérant arriverait sur un produit où rien ne fonctionne.
+
+### Stations
+
+| Route | Permission |
+|---|---|
+| `GET /api/stations` | `stations.view` |
+| `GET /api/stations/{id}` | `stations.view` |
+| `PUT /api/stations/{id}` | `stations.update` |
+
+Le `code` doit contenir 2 à 10 lettres ou chiffres, sans espace : il
+apparaît dans les références remises aux clients (`DKP-2608-0042`).
+Les horaires sont acceptés et renvoyés au format `HH:MM`.
+
+### Prestations
+
+| Route | Permission |
+|---|---|
+| `GET /api/services` | `services.view` |
+| `GET /api/services/{id}` | `services.view` |
+| `POST /api/services` | `services.create` |
+| `PUT /api/services/{id}` | `services.update` |
+| `PUT /api/services/{id}/status` | `services.update` |
+
+`GET /api/services?only_active=1` ne renvoie que les prestations
+proposables au comptoir.
+
+**Il n'existe pas de route de suppression.** Une prestation est
+référencée par toutes les opérations passées : la supprimer trouerait
+l'historique. `PUT .../status` bascule entre `ACTIVE` et `INACTIVE`.
+
+Le prix est un **entier en FCFA**. « 10 000 FCFA » ou « 10.5 » sont
+refusés avec un `422` — mieux vaut un refus clair qu'une conversion
+silencieuse en 10.
+
+### Équipe
+
+| Route | Permission |
+|---|---|
+| `GET /api/team` | `employees.view` |
+| `POST /api/team` | `employees.create` |
+
+La création d'un membre insère l'utilisateur **et** son rattachement à
+une station dans une seule transaction : un compte sans rattachement
+n'aurait aucun rôle, donc aucun droit — il pourrait se connecter sans
+rien pouvoir faire.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 5 | `/api/stations`, `/api/services` |
 | 6 | `/api/customers`, `/api/vehicles` |
 | 7 | `/api/inspections`, `/api/inspections/{id}/photos` |
 | 8 | `/api/operations`, `/api/queue` |

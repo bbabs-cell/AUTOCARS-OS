@@ -1,0 +1,181 @@
+<ac-page-header
+  title="Prestations"
+  [subtitle]="services().length + ' prestation(s) au catalogue'"
+>
+  @if (canCreate()) {
+    <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <i class="bi bi-plus-lg"></i> Ajouter une prestation
+    </button>
+  }
+</ac-page-header>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<!-- ÉTAT 1 : chargement -->
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 80%"></div>
+    </div>
+  </div>
+}
+
+<!-- ÉTAT 2 : aucune prestation -->
+@if (!isLoading() && services().length === 0) {
+  <div class="ac-card">
+    <ac-empty-state
+      icon="bi-droplet"
+      title="Aucune prestation au catalogue"
+      text="Ajoutez vos prestations pour pouvoir enregistrer des véhicules et facturer vos clients."
+      [actionLabel]="canCreate() ? 'Ajouter une prestation' : ''"
+      (action)="openCreate()"
+    />
+  </div>
+}
+
+<!-- ÉTAT 3 : la liste -->
+@if (!isLoading() && services().length > 0) {
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Prestation</th>
+            <th>Catégorie</th>
+            <th>Durée</th>
+            <th class="ac-table__amount">Prix</th>
+            <th>Statut</th>
+            @if (canEdit()) { <th class="ac-table__actions">Actions</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (service of services(); track service.id) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ service.name }}</div>
+                @if (service.description) {
+                  <div class="ac-caption">{{ service.description }}</div>
+                }
+              </td>
+              <td class="ac-text-secondary">{{ service.category || '—' }}</td>
+              <td class="ac-text-secondary">{{ service.duration_minutes | acDuration }}</td>
+              <td class="ac-table__amount">{{ service.price | acAmount }}</td>
+              <td>
+                <span
+                  class="ac-badge"
+                  [class.ac-badge--success]="service.status === 'ACTIVE'"
+                  [class.ac-badge--neutral]="service.status !== 'ACTIVE'"
+                >
+                  <span class="ac-badge__dot"></span>
+                  {{ service.status === 'ACTIVE' ? 'Active' : 'Désactivée' }}
+                </span>
+              </td>
+              @if (canEdit()) {
+                <td class="ac-table__actions">
+                  <button type="button" class="ac-btn-icon" (click)="openEdit(service)"
+                          [attr.aria-label]="'Modifier ' + service.name">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button type="button" class="ac-btn-icon" (click)="toggleStatus(service)"
+                          [attr.aria-label]="(service.status === 'ACTIVE' ? 'Désactiver ' : 'Activer ') + service.name">
+                    <i class="bi" [class.bi-toggle-on]="service.status === 'ACTIVE'"
+                       [class.bi-toggle-off]="service.status !== 'ACTIVE'"></i>
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="ac-caption mt-3">
+    Une prestation ne se supprime pas : elle se désactive. Les opérations
+    passées y font référence, et sa disparition trouerait votre historique.
+  </p>
+}
+
+<!-- Formulaire de création / modification -->
+@if (isFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="service-form-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="service-form-title">
+        {{ editing() ? 'Modifier la prestation' : 'Nouvelle prestation' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closeForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="ac-modal__body">
+        <div class="mb-4">
+          <label for="svc-name" class="form-label">Nom</label>
+          <input id="svc-name" type="text" class="form-control" formControlName="name"
+                 placeholder="Lavage premium"
+                 [class.is-invalid]="fieldErrors()['name']" />
+          @if (fieldErrors()['name']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="svc-desc" class="form-label">
+            Description <span class="ac-text-muted fw-normal">(facultatif)</span>
+          </label>
+          <textarea id="svc-desc" class="form-control" rows="2" formControlName="description"
+                    placeholder="Extérieur, intérieur, tableau de bord, cire."></textarea>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-4">
+            <label for="svc-price" class="form-label">Prix (FCFA)</label>
+            <input id="svc-price" type="number" class="form-control ac-numeric"
+                   formControlName="price" min="0" step="500"
+                   [class.is-invalid]="fieldErrors()['price']" />
+            @if (fieldErrors()['price']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+          <div class="col-sm-4">
+            <label for="svc-duration" class="form-label">Durée (min)</label>
+            <input id="svc-duration" type="number" class="form-control ac-numeric"
+                   formControlName="duration_minutes" min="1" step="5"
+                   [class.is-invalid]="fieldErrors()['duration_minutes']" />
+            @if (fieldErrors()['duration_minutes']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+          <div class="col-sm-4">
+            <label for="svc-category" class="form-label">Catégorie</label>
+            <input id="svc-category" type="text" class="form-control" formControlName="category"
+                   placeholder="Lavage" />
+          </div>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">
+          Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            {{ editing() ? 'Enregistrer' : 'Créer la prestation' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

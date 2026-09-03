@@ -1,6 +1,7 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 
 import { AuthService } from '../../core/services/auth.service';
+import { CatalogService } from '../../core/services/catalog.service';
 import { AvatarComponent } from '../ui/avatar.component';
 
 /**
@@ -30,8 +31,22 @@ export class TopbarComponent {
   readonly toggleSidebar = output<void>();
 
   private readonly auth = inject(AuthService);
+  private readonly catalog = inject(CatalogService);
 
   protected readonly isProfileMenuOpen = signal(false);
+
+  /**
+   * Nom de la station affiché en haut à droite.
+   *
+   * Il était écrit en dur jusqu'au lot 5 — ce qui affichait
+   * « Station principale » alors que le gérant venait de la renommer.
+   * Un libellé faux est pire qu'un libellé absent : il fait douter du
+   * reste de l'écran.
+   *
+   * On charge la première station au démarrage. Le sélecteur pour les
+   * entreprises multi-stations arrive au lot 17.
+   */
+  protected readonly stationName = signal('');
 
   protected readonly userName = computed(() => this.auth.user()?.full_name ?? '');
 
@@ -48,10 +63,18 @@ export class TopbarComponent {
     return role ? labels[role] : '';
   });
 
-  // Provisoire : viendra du module stations (lot 17) et du centre de
-  // notifications (lot 15).
-  protected readonly stationName = 'Station principale';
+  // Provisoire : viendra du centre de notifications (lot 15).
   protected readonly unreadNotifications = 3;
+
+  constructor() {
+    // Un employé n'a pas le droit de lister les stations : l'appel
+    // échouerait avec un 403. On n'affiche alors simplement rien,
+    // plutôt que de laisser une erreur remonter dans la console.
+    this.catalog.stations().subscribe({
+      next: (stations) => this.stationName.set(stations[0]?.name ?? ''),
+      error: () => this.stationName.set(''),
+    });
+  }
 
   protected logout(): void {
     this.closeProfileMenu();

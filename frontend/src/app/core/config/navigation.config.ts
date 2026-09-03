@@ -64,7 +64,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
     items: [
       { label: 'Clients',     icon: 'people',        route: null, lot: 6 },
       { label: 'Employés',    icon: 'person-badge',  route: null, lot: 12 },
-      { label: 'Prestations', icon: 'droplet',       route: null, lot: 5 },
     ],
   },
   {
@@ -100,6 +99,7 @@ export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
  * ce qui ne l'est pas encore.
  */
 export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
-  { label: 'Design system', icon: 'palette',      route: '/styleguide', lot: 2 },
-  { label: 'Diagnostic',    icon: 'activity',     route: '/health',     lot: 1 },
+  { label: 'Prestations',   icon: 'droplet',  route: '/services',   lot: 5 },
+  { label: 'Design system', icon: 'palette',  route: '/styleguide', lot: 2 },
+  { label: 'Diagnostic',    icon: 'activity', route: '/health',     lot: 1 },
 ];

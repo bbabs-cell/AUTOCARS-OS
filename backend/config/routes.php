@@ -30,6 +30,10 @@ declare(strict_types=1);
 use Autocare\Core\Router;
 use Autocare\Http\Controllers\AuthController;
 use Autocare\Http\Controllers\HealthController;
+use Autocare\Http\Controllers\OnboardingController;
+use Autocare\Http\Controllers\ServiceController;
+use Autocare\Http\Controllers\StationController;
+use Autocare\Http\Controllers\TeamController;
 
 return static function (Router $router): void {
 
@@ -49,8 +53,41 @@ return static function (Router $router): void {
     // Profil de l'utilisateur connecté : première route protégée.
     $router->get('/api/auth/me', [AuthController::class, 'me'], ['auth' => true]);
 
+    // --- Installation guidée ----------------------------------------
+    $router->get('/api/onboarding/status',    [OnboardingController::class, 'status'],
+        ['auth' => true, 'permission' => 'onboarding.view']);
+    $router->post('/api/onboarding/complete', [OnboardingController::class, 'complete'],
+        ['auth' => true, 'permission' => 'stations.update']);
+
+    // --- Stations ----------------------------------------------------
+    $router->get('/api/stations',      [StationController::class, 'index'],
+        ['auth' => true, 'permission' => 'stations.view']);
+    $router->get('/api/stations/{id}', [StationController::class, 'show'],
+        ['auth' => true, 'permission' => 'stations.view']);
+    $router->put('/api/stations/{id}', [StationController::class, 'update'],
+        ['auth' => true, 'permission' => 'stations.update']);
+
+    // --- Prestations --------------------------------------------------
+    // Un employé peut LIRE le catalogue (il doit savoir ce qu'il fait
+    // sur un véhicule) mais pas le modifier.
+    $router->get('/api/services',      [ServiceController::class, 'index'],
+        ['auth' => true, 'permission' => 'services.view']);
+    $router->get('/api/services/{id}', [ServiceController::class, 'show'],
+        ['auth' => true, 'permission' => 'services.view']);
+    $router->post('/api/services',     [ServiceController::class, 'store'],
+        ['auth' => true, 'permission' => 'services.create']);
+    $router->put('/api/services/{id}', [ServiceController::class, 'update'],
+        ['auth' => true, 'permission' => 'services.update']);
+    $router->put('/api/services/{id}/status', [ServiceController::class, 'toggleStatus'],
+        ['auth' => true, 'permission' => 'services.update']);
+
+    // --- Équipe -------------------------------------------------------
+    $router->get('/api/team',  [TeamController::class, 'index'],
+        ['auth' => true, 'permission' => 'employees.view']);
+    $router->post('/api/team', [TeamController::class, 'store'],
+        ['auth' => true, 'permission' => 'employees.create']);
+
     // --- Les routes suivantes arriveront aux prochains lots --------
-    // Lot 5 : /api/stations, /api/services
     // Lot 6 : /api/customers, /api/vehicles
     // Lot 7 : /api/inspections
     // Lot 8 : /api/operations, /api/queue

@@ -30,6 +30,7 @@ describe('AuthService', () => {
       full_name: 'Mamadou Diallo',
       role: 'ADMIN',
       station_ids: [1],
+      onboarding_completed: true,
     },
   };
 

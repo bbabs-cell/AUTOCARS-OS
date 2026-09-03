@@ -17,6 +17,13 @@ export interface AuthUser {
   full_name: string;
   role: UserRole;
   station_ids: number[];
+
+  /**
+   * L'installation guidée de l'entreprise est-elle terminée ?
+   * Détermine si l'utilisateur est conduit vers l'installation ou
+   * vers l'application.
+   */
+  onboarding_completed: boolean;
 }
 
 /**

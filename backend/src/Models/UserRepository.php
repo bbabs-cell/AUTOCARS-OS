@@ -135,6 +135,22 @@ final class UserRepository
         return ['role' => $highest, 'station_ids' => $stationIds];
     }
 
+    /**
+     * L'installation guidée de l'entreprise est-elle terminée ?
+     * Renvoyé avec le profil : le frontend s'en sert pour décider s'il
+     * doit conduire l'utilisateur vers l'installation ou vers l'app.
+     */
+    public function onboardingCompleted(int $organizationId): bool
+    {
+        $statement = $this->db->prepare(
+            'SELECT onboarding_completed_at FROM organizations WHERE id = :id'
+        );
+
+        $statement->execute(['id' => $organizationId]);
+
+        return $statement->fetchColumn() !== null;
+    }
+
     public function touchLastLogin(int $userId): void
     {
         $this->db

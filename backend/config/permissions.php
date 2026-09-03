@@ -52,9 +52,13 @@ return [
         'payments.*',
         'cash.*',
         'services.view',
+        // Un manager ajuste les prix de sa station : c'est une
+        // décision d'exploitation quotidienne, pas de structure.
+        'services.update',
         'employees.view',
         'reports.view',
         'stations.view',
+        'onboarding.view',
     ],
 
     /**
@@ -77,5 +81,9 @@ return [
         'operations.update_status',
         'inspections.view',
         'inspections.create',
+        // Un employé consulte le catalogue : il doit savoir ce qu'il
+        // fait sur un véhicule. Les prix restent masqués par
+        // l'interface, mais lire un nom de prestation est légitime.
+        'services.view',
     ],
 ];

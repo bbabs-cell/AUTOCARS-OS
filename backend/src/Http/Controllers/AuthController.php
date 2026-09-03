@@ -306,6 +306,8 @@ final class AuthController
             'full_name'       => $user->fullName,
             'role'            => $user->role,
             'station_ids'     => $user->stationIds,
+            'onboarding_completed' => (new UserRepository())
+                ->onboardingCompleted($user->organizationId),
         ]);
     }
 
@@ -457,6 +459,7 @@ final class AuthController
                 'full_name'       => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
                 'role'            => $membership['role'],
                 'station_ids'     => $membership['station_ids'],
+                'onboarding_completed' => $users->onboardingCompleted($organizationId),
             ],
         ], $message, $status);
     }

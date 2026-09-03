@@ -1,0 +1,167 @@
+// Installation guidée — voir onboarding.page.ts
+
+.ac-onboarding {
+  max-width: 680px;
+  margin-inline: auto;
+  padding-block: var(--ac-space-6);
+}
+
+// --- Progression ----------------------------------------------------
+
+.ac-onboarding__progress {
+  margin-bottom: var(--ac-space-10);
+}
+
+.ac-onboarding__bar {
+  height: 4px;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-gray-200);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background-color: var(--ac-primary);
+    border-radius: var(--ac-radius-full);
+    transition: width var(--ac-transition);
+  }
+}
+
+// --- Étapes d'accueil et de fin --------------------------------------
+
+.ac-onboarding__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: var(--ac-space-6);
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-primary-50);
+  color: var(--ac-primary);
+  font-size: 2rem;
+
+  &--success {
+    background-color: var(--ac-success-50);
+    color: var(--ac-success-700);
+  }
+}
+
+.ac-onboarding__lead {
+  font-size: var(--ac-text-md);
+  color: var(--ac-text-secondary);
+  max-width: 56ch;
+  margin-inline: auto;
+}
+
+// Sur les étapes de formulaire, le texte est aligné à gauche : centrer
+// un paragraphe au-dessus d'un formulaire casse la lecture.
+.ac-onboarding h1 + .ac-onboarding__lead,
+form .ac-onboarding__lead {
+  margin-inline: 0;
+}
+
+.ac-onboarding__steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ac-space-3);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--ac-space-3);
+  }
+
+  i {
+    width: 24px;
+    color: var(--ac-primary);
+  }
+}
+
+.ac-onboarding__code {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: var(--ac-weight-semibold);
+  max-width: 200px;
+}
+
+// --- Choix des prestations -------------------------------------------
+
+.ac-onboarding__services {
+  display: grid;
+  gap: var(--ac-space-3);
+
+  @media (min-width: 576px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.ac-service-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-4);
+  text-align: left;
+  background-color: var(--ac-surface);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-lg);
+  transition: all var(--ac-transition-fast);
+
+  &:hover { border-color: var(--ac-border-strong); }
+
+  // Sélection marquée par la BORDURE et la coche, pas par un fond
+  // saturé : six cartes bleues d'un coup satureraient l'écran.
+  &.is-selected {
+    border-color: var(--ac-primary);
+    background-color: var(--ac-primary-50);
+  }
+}
+
+.ac-service-card__check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border: 2px solid var(--ac-border-strong);
+  border-radius: var(--ac-radius-sm);
+  background-color: var(--ac-surface);
+  color: var(--ac-text-inverse);
+  font-size: 0.8rem;
+
+  .is-selected & {
+    background-color: var(--ac-primary);
+    border-color: var(--ac-primary);
+  }
+}
+
+.ac-service-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ac-service-card__name {
+  font-weight: var(--ac-weight-semibold);
+}
+
+.ac-service-card__desc {
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-secondary);
+}
+
+.ac-service-card__meta {
+  display: flex;
+  align-items: baseline;
+  // Sans cet écart, « 5 000 FCFA » et « · 30 min » se collent :
+  // le point médian semble appartenir au montant.
+  gap: var(--ac-space-2);
+  margin-top: var(--ac-space-2);
+  font-size: var(--ac-text-sm);
+}
