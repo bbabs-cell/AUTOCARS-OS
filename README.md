@@ -110,7 +110,7 @@ suivant.
 **Phase B — Cœur du MVP**
 - [x] **Lot 4** — Authentification, multi-tenant, permissions : 43 tests de sécurité
 - [x] **Lot 5** — Onboarding station et prestations : 30 tests d'API par HTTP réel
-- [ ] Lot 6 — Clients et véhicules
+- [x] **Lot 6** — Clients et véhicules : recherche au comptoir, plaques normalisées
 - [ ] Lot 7 — Inspection, photos, restitution
 - [ ] Lot 8 — File d'attente et opérations
 - [ ] Lot 9 — Paiements et caisse

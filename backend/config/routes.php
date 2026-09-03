@@ -29,11 +29,13 @@ declare(strict_types=1);
 
 use Autocare\Core\Router;
 use Autocare\Http\Controllers\AuthController;
+use Autocare\Http\Controllers\CustomerController;
 use Autocare\Http\Controllers\HealthController;
 use Autocare\Http\Controllers\OnboardingController;
 use Autocare\Http\Controllers\ServiceController;
 use Autocare\Http\Controllers\StationController;
 use Autocare\Http\Controllers\TeamController;
+use Autocare\Http\Controllers\VehicleController;
 
 return static function (Router $router): void {
 
@@ -87,8 +89,32 @@ return static function (Router $router): void {
     $router->post('/api/team', [TeamController::class, 'store'],
         ['auth' => true, 'permission' => 'employees.create']);
 
+    // --- Clients ------------------------------------------------------
+    // La vérification de doublon est déclarée AVANT /api/customers/{id} :
+    // sinon « check-phone » serait interprété comme un identifiant.
+    // Le routeur teste les routes dans l'ordre de déclaration.
+    $router->get('/api/customers/check-phone', [CustomerController::class, 'checkPhone'],
+        ['auth' => true, 'permission' => 'customers.view']);
+    $router->get('/api/customers',      [CustomerController::class, 'index'],
+        ['auth' => true, 'permission' => 'customers.view']);
+    $router->get('/api/customers/{id}', [CustomerController::class, 'show'],
+        ['auth' => true, 'permission' => 'customers.view']);
+    $router->post('/api/customers',     [CustomerController::class, 'store'],
+        ['auth' => true, 'permission' => 'customers.create']);
+    $router->put('/api/customers/{id}', [CustomerController::class, 'update'],
+        ['auth' => true, 'permission' => 'customers.update']);
+
+    // --- Véhicules ----------------------------------------------------
+    $router->get('/api/vehicles',      [VehicleController::class, 'index'],
+        ['auth' => true, 'permission' => 'vehicles.view']);
+    $router->get('/api/vehicles/{id}', [VehicleController::class, 'show'],
+        ['auth' => true, 'permission' => 'vehicles.view']);
+    $router->post('/api/vehicles',     [VehicleController::class, 'store'],
+        ['auth' => true, 'permission' => 'vehicles.create']);
+    $router->put('/api/vehicles/{id}', [VehicleController::class, 'update'],
+        ['auth' => true, 'permission' => 'vehicles.update']);
+
     // --- Les routes suivantes arriveront aux prochains lots --------
-    // Lot 6 : /api/customers, /api/vehicles
     // Lot 7 : /api/inspections
     // Lot 8 : /api/operations, /api/queue
     // Lot 9 : /api/payments

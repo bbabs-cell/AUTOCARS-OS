@@ -1,0 +1,132 @@
+<ol class="ac-breadcrumb mb-4">
+  <li><a routerLink="/vehicles">Véhicules</a></li>
+  <li>{{ vehicle()?.plate_display ?? '…' }}</li>
+</ol>
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 70%"></div>
+    </div>
+  </div>
+}
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>
+      {{ message }}
+      <a routerLink="/vehicles" class="d-block mt-2">Retour à la liste des véhicules</a>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && vehicle(); as v) {
+  <div class="ac-page-header">
+    <div>
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <span class="ac-plate" style="font-size: var(--ac-text-md)">{{ v.plate_display }}</span>
+        <span class="ac-badge ac-badge--neutral">{{ typeLabels[v.vehicle_type] }}</span>
+      </div>
+      <h1 class="ac-page-header__title">{{ v.brand }} {{ v.model }}</h1>
+      <p class="ac-page-header__subtitle">
+        @if (v.color) { {{ v.color }} · }
+        Enregistré {{ v.created_at | acRelativeDate }}
+      </p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Colonne principale : L'HISTORIQUE -->
+    <div class="col-lg-8">
+      <div class="ac-card">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Historique</h2>
+          @if (history().length > 0) {
+            <span class="ac-caption">{{ history().length }} passage(s)</span>
+          }
+        </div>
+
+        @if (history().length === 0) {
+          <ac-empty-state
+            icon="bi-clock-history"
+            title="Aucun passage enregistré"
+            text="L'historique se remplira dès la première prise en charge de ce véhicule. Chaque opération, inspection et paiement y figurera."
+          />
+        } @else {
+          <div class="ac-table-wrapper">
+            <table class="ac-table">
+              <thead>
+                <tr>
+                  <th>Référence</th>
+                  <th>Prestation</th>
+                  <th>Employé</th>
+                  <th>Statut</th>
+                  <th class="ac-table__amount">Montant</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of history(); track entry.id) {
+                  <tr>
+                    <td class="ac-numeric fw-semibold">{{ entry.reference }}</td>
+                    <td>{{ entry.service_name }}</td>
+                    <td class="ac-text-secondary ac-nowrap">{{ entry.employee_name || '—' }}</td>
+                    <td><ac-status-badge [status]="asStatus(entry.status)" /></td>
+                    <td class="ac-table__amount">{{ entry.price | acAmount }}</td>
+                    <td class="ac-text-secondary ac-nowrap">{{ entry.created_at | acRelativeDate }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Colonne latérale : propriétaire et détails -->
+    <div class="col-lg-4">
+      <div class="ac-card mb-4">
+        <div class="ac-card__header"><h2 class="ac-card__title">Propriétaire</h2></div>
+        <div class="ac-card__body">
+          <p class="fw-semibold mb-1">{{ v.customer_name }}</p>
+          <p class="ac-numeric ac-text-secondary mb-3">{{ v.customer_phone }}</p>
+          <a [routerLink]="['/customers', v.customer_id]" class="btn btn-outline-secondary btn-sm">
+            Voir la fiche client <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="ac-card">
+        <div class="ac-card__header"><h2 class="ac-card__title">Détails</h2></div>
+        <div class="ac-card__body">
+          <dl class="ac-detail-list mb-0">
+            <dt>Plaque</dt>
+            <dd class="ac-numeric">{{ v.plate_display }}</dd>
+
+            <dt>Type</dt>
+            <dd>{{ typeLabels[v.vehicle_type] }}</dd>
+
+            @if (v.color) {
+              <dt>Couleur</dt>
+              <dd>{{ v.color }}</dd>
+            }
+
+            <dt>Passages</dt>
+            <dd>{{ v.operation_count }}</dd>
+
+            <dt>Dernier passage</dt>
+            <dd>{{ v.last_operation_at | acRelativeDate }}</dd>
+
+            @if (v.notes) {
+              <dt>Notes</dt>
+              <dd>{{ v.notes }}</dd>
+            }
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+}

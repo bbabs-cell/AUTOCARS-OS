@@ -1,0 +1,132 @@
+<ol class="ac-breadcrumb mb-4">
+  <li><a routerLink="/customers">Clients</a></li>
+  <li>{{ customer()?.full_name ?? '…' }}</li>
+</ol>
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text"></div>
+    </div>
+  </div>
+}
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>
+      {{ message }}
+      <a routerLink="/customers" class="d-block mt-2">Retour à la liste des clients</a>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && customer(); as c) {
+  <div class="ac-page-header">
+    <div class="d-flex align-items-center gap-4">
+      <ac-avatar [name]="c.full_name" size="lg" />
+      <div>
+        <h1 class="ac-page-header__title">{{ c.full_name }}</h1>
+        <p class="ac-page-header__subtitle ac-numeric">{{ c.phone }}</p>
+      </div>
+    </div>
+
+    <div class="ac-page-header__actions">
+      <a [routerLink]="['/vehicles']" [queryParams]="{ customer_id: c.id }"
+         class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Ajouter un véhicule
+      </a>
+    </div>
+  </div>
+
+  <!-- Les quatre chiffres qui décident du traitement réservé au client -->
+  <div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card label="Véhicules" [value]="c.vehicle_count.toString()"
+                    icon="bi-car-front" tone="primary" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card label="Visites" [value]="c.visit_count.toString()"
+                    icon="bi-arrow-repeat" tone="neutral" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card label="Total dépensé" [value]="c.total_spent | acAmount"
+                    icon="bi-cash-stack" tone="success" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <ac-stat-card label="Dernière visite" [value]="c.last_visit_at | acRelativeDate"
+                    icon="bi-clock-history" tone="neutral" />
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="ac-card">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Véhicules</h2>
+          <span class="ac-caption">{{ vehicles().length }}</span>
+        </div>
+
+        @if (vehicles().length === 0) {
+          <ac-empty-state
+            icon="bi-car-front"
+            title="Aucun véhicule rattaché"
+            text="Rattachez un véhicule à ce client pour pouvoir enregistrer une prestation."
+          />
+        } @else {
+          <div class="ac-table-wrapper">
+            <table class="ac-table">
+              <thead>
+                <tr>
+                  <th>Plaque</th>
+                  <th>Véhicule</th>
+                  <th>Type</th>
+                  <th class="ac-table__actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (vehicle of vehicles(); track vehicle.id) {
+                  <tr [routerLink]="['/vehicles', vehicle.id]" style="cursor: pointer">
+                    <td><span class="ac-plate">{{ vehicle.plate_display }}</span></td>
+                    <td class="fw-semibold">{{ vehicle.brand }} {{ vehicle.model }}</td>
+                    <td class="ac-text-secondary">{{ typeLabels[vehicle.vehicle_type] }}</td>
+                    <td class="ac-table__actions">
+                      <i class="bi bi-chevron-right" style="color: var(--ac-icon-muted)"></i>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="ac-card">
+        <div class="ac-card__header"><h2 class="ac-card__title">Coordonnées</h2></div>
+        <div class="ac-card__body">
+          <dl class="ac-detail-list mb-0">
+            <dt>Téléphone</dt>
+            <dd class="ac-numeric">{{ c.phone }}</dd>
+
+            <dt>E-mail</dt>
+            <dd>{{ c.email || '—' }}</dd>
+
+            <dt>Adresse</dt>
+            <dd>{{ c.address || '—' }}</dd>
+
+            <dt>Client depuis</dt>
+            <dd>{{ c.created_at | acRelativeDate }}</dd>
+
+            @if (c.notes) {
+              <dt>Notes</dt>
+              <dd>{{ c.notes }}</dd>
+            }
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+}

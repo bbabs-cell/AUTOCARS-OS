@@ -59,6 +59,30 @@ export const routes: Routes = [
         redirectTo: 'services',
       },
       {
+        path: 'customers',
+        title: 'Clients — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/customers/customers.page').then((m) => m.CustomersPage),
+      },
+      {
+        path: 'customers/:id',
+        title: 'Fiche client — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/customers/customer-detail.page').then((m) => m.CustomerDetailPage),
+      },
+      {
+        path: 'vehicles',
+        title: 'Véhicules — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/vehicles/vehicles.page').then((m) => m.VehiclesPage),
+      },
+      {
+        path: 'vehicles/:id',
+        title: 'Fiche véhicule — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/vehicles/vehicle-detail.page').then((m) => m.VehicleDetailPage),
+      },
+      {
         path: 'services',
         title: 'Prestations — AUTOCARE OS',
         loadComponent: () =>

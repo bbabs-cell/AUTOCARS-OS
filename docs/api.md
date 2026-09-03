@@ -356,11 +356,63 @@ rien pouvoir faire.
 
 ---
 
+## Clients et véhicules
+
+### Clients
+
+| Route | Permission |
+|---|---|
+| `GET /api/customers?search=` | `customers.view` |
+| `GET /api/customers/check-phone?phone=` | `customers.view` |
+| `GET /api/customers/{id}` | `customers.view` |
+| `POST /api/customers` | `customers.create` |
+| `PUT /api/customers/{id}` | `customers.update` |
+
+**La recherche est la fonction principale**, pas la liste. Elle porte
+sur le nom, le prénom et le téléphone. Le numéro peut être tapé sans
+indicatif ni espaces : `776112233` retrouve `+221 77 611 22 33`.
+
+`check-phone` sert à **avertir** d'un doublon pendant la saisie, pas à
+l'interdire. Le téléphone n'est volontairement pas unique en base : un
+couple partage souvent un numéro, et refuser l'enregistrement en pleine
+affluence serait pire que le doublon.
+
+`GET /api/customers/{id}` renvoie le client, ses compteurs (véhicules,
+visites, total dépensé, dernière visite) et ses véhicules.
+
+### Véhicules
+
+| Route | Permission |
+|---|---|
+| `GET /api/vehicles?search=&customer_id=` | `vehicles.view` |
+| `GET /api/vehicles/{id}` | `vehicles.view` |
+| `POST /api/vehicles` | `vehicles.create` |
+| `PUT /api/vehicles/{id}` | `vehicles.update` |
+
+**Les plaques sont normalisées.** `dk 1234 aa`, `DK-1234-AA` et
+`dk.1234.aa` sont stockées `DK1234AA` et désignent le même véhicule.
+Sans cela, la base contiendrait plusieurs fiches pour une seule
+voiture et l'historique — raison d'être du produit — serait éparpillé.
+
+L'API renvoie les deux formes :
+
+```json
+{ "plate_number": "DK1234AA", "plate_display": "DK-1234-AA" }
+```
+
+Le format national **n'est pas** imposé : un véhicule immatriculé en
+Gambie ou au Mali doit pouvoir être servi. On vérifie seulement que la
+plaque est exploitable — 5 à 12 caractères mêlant lettres et chiffres.
+
+`GET /api/vehicles/{id}` renvoie le véhicule, son propriétaire et son
+**historique complet** : c'est l'écran qu'on ouvre en cas de litige.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 6 | `/api/customers`, `/api/vehicles` |
 | 7 | `/api/inspections`, `/api/inspections/{id}/photos` |
 | 8 | `/api/operations`, `/api/queue` |
 | 9 | `/api/payments`, `/api/cash-registers` |

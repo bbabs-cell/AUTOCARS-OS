@@ -771,3 +771,17 @@
   color: var(--ac-primary-700);
   font-size: var(--ac-text-sm);
 }
+
+
+// ==================================================================
+// SAISIE D'UNE PLAQUE
+// ==================================================================
+// Une plaque se relit caractère par caractère pour être vérifiée
+// contre le pare-chocs. Majuscules et interlettrage aéré réduisent
+// les confusions classiques : 0/O, 1/I, 8/B.
+
+.ac-plate-input {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: var(--ac-weight-semibold);
+}

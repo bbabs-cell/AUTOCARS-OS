@@ -1,0 +1,214 @@
+<ac-page-header
+  title="Véhicules"
+  [subtitle]="hasSearch() ? vehicles().length + ' résultat(s)' : vehicles().length + ' véhicule(s)'"
+>
+  <button type="button" class="btn btn-primary" (click)="openCreate()">
+    <i class="bi bi-plus-lg"></i> Nouveau véhicule
+  </button>
+</ac-page-header>
+
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <label for="vehicle-search" class="form-label">Rechercher un véhicule</label>
+    <div class="position-relative">
+      <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3"
+         style="color: var(--ac-icon-muted)" aria-hidden="true"></i>
+      <input
+        id="vehicle-search"
+        type="search"
+        class="form-control ps-5"
+        placeholder="Plaque, marque, modèle ou nom du propriétaire…"
+        [value]="searchTerm()"
+        (input)="onSearch($any($event.target).value)"
+        autocomplete="off"
+      />
+    </div>
+    <span class="ac-caption">
+      La plaque peut être tapée comme vous voulez : DK-1234-AA, dk1234aa ou DK 1234 AA.
+    </span>
+  </div>
+</div>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 75%"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 60%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && vehicles().length === 0) {
+  <div class="ac-card">
+    @if (hasSearch()) {
+      <ac-empty-state
+        icon="bi-search"
+        title="Aucun véhicule trouvé"
+        text="Vérifiez la plaque. Si ce véhicule vient pour la première fois, enregistrez-le."
+        actionLabel="Enregistrer ce véhicule"
+        (action)="openCreate()"
+      />
+    } @else {
+      <ac-empty-state
+        icon="bi-car-front"
+        title="Aucun véhicule enregistré"
+        text="Enregistrez votre premier véhicule pour commencer à suivre vos opérations."
+        actionLabel="Nouveau véhicule"
+        (action)="openCreate()"
+      />
+    }
+  </div>
+}
+
+@if (!isLoading() && vehicles().length > 0) {
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Plaque</th>
+            <th>Véhicule</th>
+            <th>Type</th>
+            <th>Propriétaire</th>
+            <th>Passages</th>
+            <th>Dernier passage</th>
+            <th class="ac-table__actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (vehicle of vehicles(); track vehicle.id) {
+            <tr [routerLink]="['/vehicles', vehicle.id]" style="cursor: pointer">
+              <td><span class="ac-plate">{{ vehicle.plate_display }}</span></td>
+              <td>
+                <div class="fw-semibold">{{ vehicle.brand }} {{ vehicle.model }}</div>
+                @if (vehicle.color) {
+                  <div class="ac-caption">{{ vehicle.color }}</div>
+                }
+              </td>
+              <td class="ac-text-secondary">{{ typeLabels[vehicle.vehicle_type] }}</td>
+              <td>
+                <div>{{ vehicle.customer_name }}</div>
+                <div class="ac-caption ac-numeric">{{ vehicle.customer_phone }}</div>
+              </td>
+              <td>{{ vehicle.operation_count }}</td>
+              <td class="ac-text-secondary ac-nowrap">{{ vehicle.last_operation_at | acRelativeDate }}</td>
+              <td class="ac-table__actions">
+                <button type="button" class="ac-btn-icon" (click)="openEdit(vehicle, $event)"
+                        [attr.aria-label]="'Modifier ' + vehicle.plate_display">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<!-- Formulaire -->
+@if (isFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="vehicle-form-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="vehicle-form-title">
+        {{ editing() ? 'Modifier le véhicule' : 'Nouveau véhicule' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closeForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="ac-modal__body">
+        <div class="mb-4">
+          <label for="v-plate" class="form-label">Plaque d'immatriculation</label>
+          <input id="v-plate" type="text" class="form-control ac-plate-input"
+                 formControlName="plate_number" placeholder="DK-1234-AA" autocomplete="off"
+                 [class.is-invalid]="fieldErrors()['plate_number']" />
+          <span class="ac-caption">
+            Peu importe la façon de l'écrire : elle sera enregistrée sous une forme unique.
+          </span>
+          @if (fieldErrors()['plate_number']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="v-customer" class="form-label">Propriétaire</label>
+          <select id="v-customer" class="form-select" formControlName="customer_id"
+                  [class.is-invalid]="fieldErrors()['customer_id']">
+            <option [value]="0" disabled>Choisir un client…</option>
+            @for (customer of customers(); track customer.id) {
+              <option [value]="customer.id">{{ customer.full_name }} — {{ customer.phone }}</option>
+            }
+          </select>
+          @if (customers().length === 0) {
+            <span class="ac-caption">
+              Aucun client enregistré.
+              <a routerLink="/customers">Créez d'abord le client</a>, puis revenez ici.
+            </span>
+          }
+          @if (fieldErrors()['customer_id']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label for="v-brand" class="form-label">Marque</label>
+            <input id="v-brand" type="text" class="form-control" formControlName="brand"
+                   placeholder="Toyota" />
+          </div>
+          <div class="col-sm-6">
+            <label for="v-model" class="form-label">Modèle</label>
+            <input id="v-model" type="text" class="form-control" formControlName="model"
+                   placeholder="Corolla" />
+          </div>
+          <div class="col-sm-6">
+            <label for="v-type" class="form-label">Type</label>
+            <select id="v-type" class="form-select" formControlName="vehicle_type">
+              @for (type of types; track type) {
+                <option [value]="type">{{ typeLabels[type] }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label for="v-color" class="form-label">
+              Couleur <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <input id="v-color" type="text" class="form-control" formControlName="color"
+                   placeholder="Gris" />
+          </div>
+          <div class="col-12">
+            <label for="v-notes" class="form-label">
+              Notes <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <textarea id="v-notes" class="form-control" rows="2" formControlName="notes"
+                      placeholder="Rétroviseur droit fêlé depuis mars."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">Annuler</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            {{ editing() ? 'Enregistrer' : 'Créer le véhicule' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

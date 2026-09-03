@@ -17,8 +17,13 @@
 -- =================================================================
 
 -- --- L'entreprise cliente ----------------------------------------
-INSERT INTO organizations (id, name, slug, phone, email, country_code, currency_code, timezone)
-VALUES (1, 'Groupe Diallo Auto', 'diallo-auto', '+221338211234', 'contact@dialloauto.sn', 'SN', 'XOF', 'Africa/Dakar');
+-- onboarding_completed_at est renseigné : cette entreprise a des
+-- stations, des prestations, des clients et des véhicules — son
+-- installation EST terminée. Sans cette date, se connecter avec un
+-- compte de démonstration renverrait vers l'installation guidée d'une
+-- station déjà configurée, ce qui n'a aucun sens.
+INSERT INTO organizations (id, name, slug, phone, email, country_code, currency_code, timezone, onboarding_completed_at)
+VALUES (1, 'Groupe Diallo Auto', 'diallo-auto', '+221338211234', 'contact@dialloauto.sn', 'SN', 'XOF', 'Africa/Dakar', '2026-08-01 09:00:00');
 
 -- --- Les utilisateurs --------------------------------------------
 -- Trois rôles pour pouvoir tester les permissions dès le lot 4.
@@ -53,21 +58,26 @@ INSERT INTO services (id, organization_id, name, description, category, price, d
 (5, 1, 'Detailing complet',   'Traitement complet intérieur et extérieur.',       'Detailing',35000, 240);
 
 -- --- Les clients --------------------------------------------------
-INSERT INTO customers (id, organization_id, first_name, last_name, phone, email) VALUES
-(1, 1, 'Cheikh',  'Fall',   '+221776112233', 'cheikh.fall@example.sn'),
-(2, 1, 'Fatou',   'Ndiaye', '+221776223344', NULL),
-(3, 1, 'Aminata', 'Sarr',   '+221776334455', 'a.sarr@example.sn'),
-(4, 1, 'Ibrahima','Gueye',  '+221776445566', NULL);
+-- created_at est renseigné explicitement : sans cela, MySQL daterait
+-- tout de « maintenant », et l'interface afficherait « client depuis
+-- à l'instant » à côté d'un historique de plusieurs mois. Une
+-- démonstration incohérente donne l'impression d'un produit qui se
+-- trompe.
+INSERT INTO customers (id, organization_id, first_name, last_name, phone, email, created_at) VALUES
+(1, 1, 'Cheikh',  'Fall',   '+221776112233', 'cheikh.fall@example.sn', '2026-02-14 10:20:00'),
+(2, 1, 'Fatou',   'Ndiaye', '+221776223344', NULL,                     '2026-04-02 15:45:00'),
+(3, 1, 'Aminata', 'Sarr',   '+221776334455', 'a.sarr@example.sn',      '2026-06-19 08:30:00'),
+(4, 1, 'Ibrahima','Gueye',  '+221776445566', NULL,                     '2026-08-25 17:10:00');
 
 -- --- Les véhicules ------------------------------------------------
 -- Plaques stockées normalisées : majuscules, sans séparateur.
 -- L'affichage remet les tirets (DK1234AA devient DK-1234-AA).
-INSERT INTO vehicles (id, organization_id, customer_id, plate_number, brand, model, color, vehicle_type) VALUES
-(1, 1, 1, 'DK1234AA', 'Toyota',  'Corolla', 'Gris',  'CAR'),
-(2, 1, 2, 'DK5678BC', 'Hyundai', 'Tucson',  'Blanc', 'SUV'),
-(3, 1, 3, 'DK9087DE', 'Renault', 'Duster',  'Noir',  'SUV'),
-(4, 1, 4, 'TH4412CD', 'Peugeot', '208',     'Rouge', 'CAR'),
-(5, 1, 1, 'DK2201FG', 'Toyota',  'Hilux',   'Blanc', 'PICKUP');
+INSERT INTO vehicles (id, organization_id, customer_id, plate_number, brand, model, color, vehicle_type, created_at) VALUES
+(1, 1, 1, 'DK1234AA', 'Toyota',  'Corolla', 'Gris',  'CAR',    '2026-02-14 10:25:00'),
+(2, 1, 2, 'DK5678BC', 'Hyundai', 'Tucson',  'Blanc', 'SUV',    '2026-04-02 15:50:00'),
+(3, 1, 3, 'DK9087DE', 'Renault', 'Duster',  'Noir',  'SUV',    '2026-06-19 08:35:00'),
+(4, 1, 4, 'TH4412CD', 'Peugeot', '208',     'Rouge', 'CAR',    '2026-08-25 17:15:00'),
+(5, 1, 1, 'DK2201FG', 'Toyota',  'Hilux',   'Blanc', 'PICKUP', '2026-05-11 11:00:00');
 
 -- --- Les opérations -----------------------------------------------
 -- Quatre véhicules à différents stades du parcours, pour que la file
@@ -76,19 +86,19 @@ INSERT INTO vehicles (id, organization_id, customer_id, plate_number, brand, mod
 INSERT INTO operations
     (id, organization_id, station_id, vehicle_id, customer_id, service_id, assigned_user_id,
      reference, status, priority, price, started_at, completed_at, released_at,
-     released_by_user_id, created_by_user_id) VALUES
+     released_by_user_id, created_by_user_id, created_at) VALUES
 -- Terminée et restituée : le parcours complet, celui du §41.
 (1, 1, 1, 1, 1, 2, 3, 'DKP-2608-0001', 'COMPLETED', 0, 10000,
- '2026-08-30 08:15:00', '2026-08-30 09:20:00', '2026-08-30 09:45:00', 2, 2),
+ '2026-08-30 08:15:00', '2026-08-30 09:20:00', '2026-08-30 09:45:00', 2, 2, '2026-08-30 08:10:00'),
 -- Prête, en attente que le client vienne la chercher.
 (2, 1, 1, 4, 4, 1, 3, 'DKP-2608-0002', 'READY', 0, 5000,
- '2026-08-31 08:05:00', '2026-08-31 08:40:00', NULL, NULL, 2),
+ '2026-08-31 08:05:00', '2026-08-31 08:40:00', NULL, NULL, 2, '2026-08-31 08:00:00'),
 -- En cours de lavage.
 (3, 1, 1, 2, 2, 3, 4, 'DKP-2608-0003', 'WASHING', 0, 7500,
- '2026-08-31 09:10:00', NULL, NULL, NULL, 2),
+ '2026-08-31 09:10:00', NULL, NULL, NULL, 2, '2026-08-31 09:05:00'),
 -- Dans la file, personne d'assigné, priorité élevée (client pressé).
 (4, 1, 1, 3, 3, 5, NULL, 'DKP-2608-0004', 'WAITING', 10, 35000,
- NULL, NULL, NULL, NULL, 2);
+ NULL, NULL, NULL, NULL, 2, '2026-08-31 09:40:00');
 
 -- --- Les inspections d'entrée -------------------------------------
 INSERT INTO inspections

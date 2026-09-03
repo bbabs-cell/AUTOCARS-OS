@@ -75,8 +75,12 @@ return [
         'dashboard.view',
         'vehicles.view',
         'vehicles.create',
+        // Corriger une plaque mal saisie fait partie du travail au
+        // comptoir. La suppression, elle, reste hors de portée.
+        'vehicles.update',
         'customers.view',
         'customers.create',
+        'customers.update',
         'operations.view',
         'operations.update_status',
         'inspections.view',

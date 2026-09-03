@@ -82,9 +82,20 @@ h4, .ac-h4 {
 // Chiffres alignés en colonne dans les tableaux et les montants.
 // Sans cela, « 1 111 » est plus étroit que « 9 999 » et les colonnes
 // de prix paraissent bancales.
+//
+// Le `nowrap` compte autant : une référence coupée en
+// « DKP-2608- / 0001 » ou un montant en « 10 000 / FCFA » se relit
+// mal et se recopie de travers. Ces valeurs se lisent d'un bloc.
 .ac-numeric {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
+  white-space: nowrap;
+}
+
+// Pour tout le reste qui ne doit pas être coupé : un nom d'employé,
+// une date relative, un libellé de statut.
+.ac-nowrap {
+  white-space: nowrap;
 }
 
 // --- Liens --------------------------------------------------------

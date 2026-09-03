@@ -1,0 +1,232 @@
+<ac-page-header
+  title="Clients"
+  [subtitle]="hasSearch() ? customers().length + ' résultat(s)' : customers().length + ' client(s)'"
+>
+  <button type="button" class="btn btn-primary" (click)="openCreate()">
+    <i class="bi bi-plus-lg"></i> Nouveau client
+  </button>
+</ac-page-header>
+
+<!-- La recherche est la fonction principale : elle est en haut,
+     large, et cherche pendant la frappe. -->
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <label for="customer-search" class="form-label">Rechercher un client</label>
+    <div class="position-relative">
+      <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3"
+         style="color: var(--ac-icon-muted)" aria-hidden="true"></i>
+      <input
+        id="customer-search"
+        type="search"
+        class="form-control ps-5"
+        placeholder="Nom, prénom ou numéro de téléphone…"
+        [value]="searchTerm()"
+        (input)="onSearch($any($event.target).value)"
+        autocomplete="off"
+      />
+    </div>
+    <span class="ac-caption">
+      Le numéro peut être tapé sans indicatif ni espaces : 77 611 22 33 ou 776112233.
+    </span>
+  </div>
+</div>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 75%"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 60%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && customers().length === 0) {
+  <div class="ac-card">
+    @if (hasSearch()) {
+      <ac-empty-state
+        icon="bi-search"
+        title="Aucun client trouvé"
+        text="Vérifiez l'orthographe ou le numéro. Si ce client vient pour la première fois, enregistrez-le."
+        actionLabel="Enregistrer ce client"
+        (action)="openCreate()"
+      />
+    } @else {
+      <ac-empty-state
+        icon="bi-people"
+        title="Aucun client enregistré"
+        text="Enregistrez votre premier client pour pouvoir lui rattacher un véhicule."
+        actionLabel="Nouveau client"
+        (action)="openCreate()"
+      />
+    }
+  </div>
+}
+
+@if (!isLoading() && customers().length > 0) {
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Téléphone</th>
+            <th>Véhicules</th>
+            <th>Visites</th>
+            <th class="ac-table__amount">Dépenses</th>
+            <th>Dernière visite</th>
+            <th class="ac-table__actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (customer of customers(); track customer.id) {
+            <tr [routerLink]="['/customers', customer.id]" style="cursor: pointer">
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  <ac-avatar [name]="customer.full_name" size="sm" />
+                  <span class="fw-semibold">{{ customer.full_name }}</span>
+                </div>
+              </td>
+              <td class="ac-numeric">{{ customer.phone }}</td>
+              <td>{{ customer.vehicle_count }}</td>
+              <td>{{ customer.visit_count }}</td>
+              <td class="ac-table__amount">{{ customer.total_spent | acAmount }}</td>
+              <td class="ac-text-secondary ac-nowrap">{{ customer.last_visit_at | acRelativeDate }}</td>
+              <td class="ac-table__actions">
+                <button type="button" class="ac-btn-icon" (click)="openEdit(customer, $event)"
+                        [attr.aria-label]="'Modifier ' + customer.full_name">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<!-- Formulaire -->
+@if (isFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="customer-form-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="customer-form-title">
+        {{ editing() ? 'Modifier le client' : 'Nouveau client' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closeForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="ac-modal__body">
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <label for="c-first" class="form-label">Prénom</label>
+            <input id="c-first" type="text" class="form-control" formControlName="first_name"
+                   [class.is-invalid]="form.controls.first_name.touched && form.controls.first_name.invalid" />
+            @if (form.controls.first_name.touched && form.controls.first_name.invalid) {
+              <div class="invalid-feedback d-block">Le prénom est obligatoire.</div>
+            }
+          </div>
+          <div class="col-sm-6">
+            <label for="c-last" class="form-label">Nom</label>
+            <input id="c-last" type="text" class="form-control" formControlName="last_name"
+                   [class.is-invalid]="form.controls.last_name.touched && form.controls.last_name.invalid" />
+            @if (fieldErrors()['last_name']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="c-phone" class="form-label">Téléphone</label>
+          <input id="c-phone" type="tel" class="form-control ac-numeric" formControlName="phone"
+                 placeholder="+221 77 000 00 00"
+                 (input)="onPhoneChange($any($event.target).value)"
+                 [class.is-invalid]="fieldErrors()['phone']" />
+          <span class="ac-caption">
+            C'est par ce numéro que vous retrouverez ce client dans six mois.
+          </span>
+          @if (fieldErrors()['phone']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+
+          <!--
+            AVERTISSEMENT, PAS BLOCAGE.
+            Un couple partage souvent un numéro. On signale le doublon
+            possible et on propose la fiche existante, mais on laisse
+            l'employé décider : refuser l'enregistrement en pleine
+            affluence serait pire que le doublon.
+          -->
+          @if (phoneMatches().length > 0 && !editing()) {
+            <div class="ac-alert ac-alert--warning mt-3">
+              <i class="bi bi-info-circle-fill"></i>
+              <div>
+                <strong>Ce numéro est déjà enregistré.</strong>
+                <div class="mt-2 d-flex flex-column gap-2">
+                  @for (match of phoneMatches(); track match.id) {
+                    <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+                            (click)="useExisting(match)">
+                      <i class="bi bi-arrow-right"></i>
+                      Ouvrir la fiche de <strong>{{ match.full_name }}</strong>
+                    </button>
+                  }
+                </div>
+                <span class="ac-caption d-block mt-2">
+                  Vous pouvez tout de même créer une nouvelle fiche — plusieurs
+                  personnes peuvent partager un numéro.
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="c-email" class="form-label">
+              E-mail <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <input id="c-email" type="email" class="form-control" formControlName="email" />
+            @if (fieldErrors()['email']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+          <div class="col-md-6">
+            <label for="c-address" class="form-label">
+              Adresse <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <input id="c-address" type="text" class="form-control" formControlName="address" />
+          </div>
+          <div class="col-12">
+            <label for="c-notes" class="form-label">
+              Notes <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <textarea id="c-notes" class="form-control" rows="2" formControlName="notes"
+                      placeholder="Préfère être appelé avant 10h."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">Annuler</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            {{ editing() ? 'Enregistrer' : 'Créer le client' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

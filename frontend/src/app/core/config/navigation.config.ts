@@ -54,7 +54,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
     label: 'Opérations',
     items: [
       { label: "File d'attente", icon: 'kanban',        route: null, lot: 8 },
-      { label: 'Véhicules',      icon: 'car-front',     route: null, lot: 6 },
       { label: 'Réservations',   icon: 'calendar-week', route: null, lot: 13 },
       { label: 'Sécurité',       icon: 'shield-check',  route: null, lot: 7 },
     ],
@@ -62,7 +61,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
   {
     label: 'Gestion',
     items: [
-      { label: 'Clients',     icon: 'people',        route: null, lot: 6 },
       { label: 'Employés',    icon: 'person-badge',  route: null, lot: 12 },
     ],
   },
@@ -99,6 +97,8 @@ export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
  * ce qui ne l'est pas encore.
  */
 export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
+  { label: 'Véhicules',     icon: 'car-front', route: '/vehicles',  lot: 6 },
+  { label: 'Clients',       icon: 'people',    route: '/customers', lot: 6 },
   { label: 'Prestations',   icon: 'droplet',  route: '/services',   lot: 5 },
   { label: 'Design system', icon: 'palette',  route: '/styleguide', lot: 2 },
   { label: 'Diagnostic',    icon: 'activity', route: '/health',     lot: 1 },
