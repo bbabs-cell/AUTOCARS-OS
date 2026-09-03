@@ -23,6 +23,9 @@
 # dans Git : elles sont volumineuses et souvent personnelles.
 /backend/storage/uploads/*
 !/backend/storage/uploads/.gitkeep
+# Le .htaccess du dossier, lui, fait partie du code : c'est une
+# protection, pas une donnee.
+!/backend/storage/uploads/.htaccess
 /backend/storage/logs/*
 !/backend/storage/logs/.gitkeep
 

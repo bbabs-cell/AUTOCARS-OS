@@ -125,6 +125,72 @@ foreach ($files as $file) {
     }
 }
 
+// ------------------------------------------------------------------
+// LES FICHIERS DES PHOTOS DE DÉMONSTRATION
+// ------------------------------------------------------------------
+// Le script SQL a inséré les LIGNES des photos ; il ne peut pas
+// écrire de fichiers. On les fabrique ici, puis on recalcule les
+// empreintes SHA-256 pour qu'elles correspondent au contenu réel.
+//
+// POURQUOI SE DONNER CETTE PEINE ?
+// Parce qu'une empreinte factice enseignerait exactement le contraire
+// de ce que le produit affirme : que le fichier est vérifiable. Une
+// donnée de démonstration qui ment sur son propre fonctionnement est
+// pire qu'une donnée absente.
+echo "\nPhotos de démonstration :\n";
+
+$photos = $connection->query(
+    'SELECT id, file_path, position FROM inspection_photos ORDER BY id'
+)->fetchAll();
+
+$uploadRoot = dirname(__DIR__) . '/storage/uploads';
+$written    = 0;
+
+if (!function_exists('imagewebp')) {
+    echo "  [IGNORÉ] L'extension GD n'expose pas le WebP sur ce PHP.\n";
+    echo "           Les fiches s'afficheront, les aperçus resteront vides.\n";
+} else {
+    $updateHash = $connection->prepare(
+        'UPDATE inspection_photos SET file_hash = :hash, file_size = :size WHERE id = :id'
+    );
+
+    foreach ($photos as $photo) {
+        $absolute  = $uploadRoot . '/' . $photo['file_path'];
+        $directory = dirname($absolute);
+
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        // Une image unie avec sa légende : on voit tout de suite de
+        // quelle prise de vue il s'agit, sans faire croire à une
+        // vraie photo de véhicule.
+        $image = imagecreatetruecolor(640, 480);
+        imagefilledrectangle($image, 0, 0, 639, 479, imagecolorallocate($image, 226, 232, 240));
+        imagestring(
+            $image,
+            5,
+            30,
+            220,
+            'DEMO - ' . $photo['position'],
+            imagecolorallocate($image, 100, 116, 139)
+        );
+        imagewebp($image, $absolute, 82);
+        imagedestroy($image);
+
+        $updateHash->execute([
+            'hash' => hash_file('sha256', $absolute),
+            'size' => filesize($absolute),
+            'id'   => $photo['id'],
+        ]);
+        $updateHash->closeCursor();
+
+        $written++;
+    }
+
+    echo "  {$written} fichier(s) écrit(s) dans storage/uploads, empreintes recalculées.\n";
+}
+
 // Récapitulatif, pour vérifier d'un coup d'œil que tout est arrivé.
 echo "\nContenu de la base :\n";
 

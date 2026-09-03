@@ -14,16 +14,20 @@ declare(strict_types=1);
  * que de faire échouer l'ensemble.
  *
  * POURQUOI UN LANCEUR ?
- * Parce qu'à quatre fichiers, on finit par n'en lancer que deux — et
+ * Parce qu'à six fichiers, on finit par n'en lancer que deux — et
  * ce sont toujours les deux mêmes. Une seule commande, et on sait où
  * on en est.
  */
 
 $tests = [
-    'schema_test.php'   => 'Schéma de base de données',
-    'security_test.php' => 'Isolation et permissions',
-    'api_test.php'      => 'API — installation et prestations',
-    'api_crm_test.php'  => 'API — clients et véhicules',
+    'schema_test.php'        => 'Schéma de base de données',
+    'security_test.php'      => 'Isolation et permissions',
+    // Sans base ni serveur : quelques millisecondes, donc on le lance
+    // à chaque modification du parcours.
+    'state_machine_test.php' => 'Machine à états des opérations',
+    'api_test.php'            => 'API — installation et prestations',
+    'api_crm_test.php'        => 'API — clients et véhicules',
+    'api_operations_test.php' => 'API — opérations et inspections',
 ];
 
 $directory = __DIR__;

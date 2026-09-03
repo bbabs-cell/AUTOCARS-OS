@@ -90,6 +90,10 @@ protection sur une route.
 | `Services` *(Lot 4+)* | Les règles métier (« peut-on restituer ce véhicule ? ») | connaître HTTP |
 | `Models` *(Lot 3+)* | Lire et écrire en base | décider des règles métier |
 
+Deux classes de `Core/` méritent d'être lues avant tout le reste :
+`TenantRepository`, qui rend l'oubli du filtre d'entreprise impossible,
+et `PhotoStorage`, qui concentre le traitement des fichiers envoyés.
+
 Cette séparation permet de tester une règle métier sans lancer de
 serveur HTTP.
 
@@ -179,11 +183,65 @@ caisse qu'un gérant doit pouvoir équilibrer au franc près.
 
 ---
 
-## 9. Ce qui n'est pas encore décidé
+## 9. La machine à états des opérations
+
+Le parcours d'un véhicule est déclaré **une seule fois**, dans
+`backend/config/operation_status.php` : les transitions autorisées,
+les libellés français, les conditions supplémentaires et les jalons à
+horodater.
+
+Trois consommateurs lisent cette même table :
+
+| Qui | Pour quoi |
+|---|---|
+| `OperationController` | Appliquer la règle, et refuser sinon |
+| Le frontend, via `GET /api/operations/statuses` | N'afficher que les boutons utilisables |
+| `tests/state_machine_test.php` | Vérifier la cohérence, sans base ni serveur |
+
+**Pourquoi pas des `if` dans le contrôleur ?** Parce que trois copies
+d'une même règle finissent toujours par diverger — en général le jour
+où l'une des trois est corrigée seule.
+
+La classe `OperationStatus` sépare deux questions qui se ressemblent :
+
+- `canTransition()` — « ce passage existe-t-il sur le plan ? » Logique
+  pure, testable sans base de données.
+- `guardFor()` — « ce passage a-t-il une condition en plus ? » Rend le
+  nom de la condition (inspection enregistrée, paiement encaissé) ; le
+  contrôleur va alors interroger la base.
+
+Cette séparation permet de tester toute la mécanique du parcours en
+quelques millisecondes — et un test rapide est un test qu'on lance.
+
+---
+
+## 10. Le stockage des photos
+
+`Core/PhotoStorage` est la seule classe qui touche à un fichier envoyé
+par un utilisateur. Elle est volontairement isolée : c'est le code le
+plus sensible du projet, et il doit se relire d'un bloc.
+
+Les fichiers vivent dans `backend/storage/uploads/`, hors du dossier
+web. Aucune URL n'y mène ; `GET /api/photos/{id}` vérifie
+l'organisation avant de servir un octet. Le détail des six protections
+est dans `docs/security.md` §7.
+
+**Conséquence côté frontend** : un navigateur n'envoie pas l'en-tête
+`Authorization` sur une balise `<img>`. Le client télécharge donc le
+fichier en `blob` et fabrique une URL locale. C'est un détour assumé —
+le seul moyen de garder les preuves derrière une vérification de
+droits.
+
+---
+
+## 11. Ce qui n'est pas encore décidé
 
 - L'hébergement de production (impacte le déploiement, Lot 22).
-- Le stockage des photos à grande échelle : disque local au départ,
-  stockage objet si le volume l'exige (décision au Lot 7).
+- Le stockage des photos à grande échelle : disque local pour le
+  moment. `PhotoStorage` est l'unique point de contact avec le
+  système de fichiers, donc le passage à un stockage objet ne touchera
+  que cette classe. La décision se prendra sur des volumes réels, pas
+  par anticipation.
 - Les fournisseurs de paiement : **aucune intégration ne sera codée
   tant qu'un compte marchand réel n'existe pas.** Les paiements sont
   saisis manuellement au MVP, l'architecture reste prête à accueillir

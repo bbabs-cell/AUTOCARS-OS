@@ -1,0 +1,551 @@
+<ol class="ac-breadcrumb mb-4">
+  <li><a routerLink="/operations">Accueil</a></li>
+  <li>{{ operation()?.reference ?? '…' }}</li>
+</ol>
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 70%"></div>
+    </div>
+  </div>
+}
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--success mb-4">
+    <i class="bi bi-check-circle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (!isLoading() && operation(); as op) {
+  <div class="ac-page-header">
+    <div>
+      <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
+        <span class="ac-plate" style="font-size: var(--ac-text-md)">{{ op.plate_display }}</span>
+        <ac-status-badge [status]="op.status" />
+        @if (op.priority > 0) {
+          <span class="ac-badge ac-badge--warning">Prioritaire</span>
+        }
+      </div>
+      <h1 class="ac-page-header__title ac-numeric">{{ op.reference }}</h1>
+      <p class="ac-page-header__subtitle">
+        {{ op.brand }} {{ op.model }} · {{ op.customer_name }} ·
+        arrivé {{ op.created_at | acRelativeDate }}
+      </p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- ============================================================
+         COLONNE PRINCIPALE : LE PARCOURS ET L'INSPECTION
+         ============================================================ -->
+    <div class="col-lg-8">
+
+      <!-- 1. Faire avancer le dossier -->
+      @if (op.status !== 'COMPLETED' && op.status !== 'CANCELLED') {
+        <div class="ac-card mb-4">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Étape suivante</h2>
+          </div>
+          <div class="ac-card__body">
+
+            <!--
+              L'inspection d'entrée bloque le lavage, et l'écran le dit
+              AVANT que l'employé clique. Découvrir un refus après coup
+              donne l'impression d'un logiciel capricieux ; l'annoncer
+              d'avance en fait une consigne.
+            -->
+            @if (needsEntryInspection()) {
+              <div class="ac-alert ac-alert--warning mb-3">
+                <i class="bi bi-shield-exclamation"></i>
+                <div>
+                  <strong>L'inspection d'entrée n'est pas faite.</strong>
+                  Le lavage ne pourra pas démarrer tant que l'état d'arrivée du
+                  véhicule n'est pas constaté. C'est ce constat qui protège la
+                  station si le client conteste une rayure à la restitution.
+                </div>
+              </div>
+            }
+
+            <div class="d-flex gap-2 flex-wrap">
+              @if (isReadyToRelease()) {
+                <button type="button" class="btn btn-primary" (click)="openReleasePanel()">
+                  <i class="bi bi-key"></i> Restituer le véhicule
+                </button>
+              } @else if (nextStep(); as step) {
+                <button type="button" class="btn btn-primary"
+                        [disabled]="isChangingStatus()"
+                        (click)="advance(step)">
+                  @if (isChangingStatus()) {
+                    <span class="spinner-border spinner-border-sm"></span>
+                  }
+                  @switch (step) {
+                    @case ('IN_PROGRESS') { <i class="bi bi-play-fill"></i> Prendre en charge }
+                    @case ('INSPECTION') { <i class="bi bi-clipboard-check"></i> Passer à l'inspection }
+                    @case ('WASHING') { <i class="bi bi-droplet"></i> Commencer le lavage }
+                    @case ('QUALITY_CHECK') { <i class="bi bi-search"></i> Passer au contrôle qualité }
+                    @case ('READY') { <i class="bi bi-check2-all"></i> Contrôle validé, véhicule prêt }
+                    @default { Étape suivante }
+                  }
+                </button>
+              }
+
+              <!--
+                Le contrôle qualité est le seul point du parcours qui
+                offre deux issues. Un contrôle qui ne peut que valider
+                n'est pas un contrôle.
+              -->
+              @if (canReturnToWashing()) {
+                <button type="button" class="btn btn-outline-secondary"
+                        [disabled]="isChangingStatus()"
+                        (click)="advance('WASHING')">
+                  <i class="bi bi-arrow-counterclockwise"></i> Renvoyer au lavage
+                </button>
+              }
+
+              @if (canCancel()) {
+                <button type="button" class="btn btn-outline-danger ms-auto"
+                        [disabled]="isChangingStatus()"
+                        (click)="cancel()">
+                  Annuler le dossier
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- 2. L'inspection d'entrée -->
+      <div class="ac-card mb-4">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Inspection d'entrée</h2>
+          @if (entryInspection()) {
+            <span class="ac-badge ac-badge--success">
+              <span class="ac-badge__dot" aria-hidden="true"></span> Enregistrée
+            </span>
+          }
+        </div>
+
+        @if (!entryInspection()) {
+          <form [formGroup]="inspectionForm" (ngSubmit)="submitInspection()" novalidate>
+            <div class="ac-card__body">
+              <p class="ac-text-secondary mb-4">
+                Constatez l'état du véhicule <strong>avant</strong> toute intervention.
+                Ce constat ne pourra plus être modifié : c'est ce qui lui donne sa valeur.
+              </p>
+
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label for="i-fuel" class="form-label">Niveau de carburant</label>
+                  <select id="i-fuel" class="form-select" formControlName="fuel_level">
+                    @for (level of fuelLevels; track level) {
+                      <option [value]="level">{{ fuelLabels[level] }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="col-sm-6">
+                  <label for="i-mileage" class="form-label">
+                    Kilométrage <span class="ac-text-muted fw-normal">(facultatif)</span>
+                  </label>
+                  <input id="i-mileage" type="number" inputmode="numeric" class="form-control"
+                         formControlName="mileage" placeholder="84500"
+                         [class.is-invalid]="fieldErrors()['mileage']" />
+                  @if (fieldErrors()['mileage']; as error) {
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                  }
+                </div>
+
+                <div class="col-12">
+                  <div class="form-check">
+                    <input id="i-damage" type="checkbox" class="form-check-input"
+                           formControlName="has_damage" />
+                    <label for="i-damage" class="form-check-label">
+                      Le véhicule présente déjà des dommages
+                    </label>
+                  </div>
+                </div>
+
+                @if (inspectionForm.controls.has_damage.value) {
+                  <div class="col-12">
+                    <label for="i-damage-notes" class="form-label">Description des dommages</label>
+                    <textarea id="i-damage-notes" class="form-control" rows="3"
+                              formControlName="damage_notes"
+                              placeholder="Rayure de 10 cm sur la portière arrière droite. Pare-chocs avant enfoncé côté gauche."
+                              [class.is-invalid]="fieldErrors()['damage_notes']"></textarea>
+                    <span class="ac-caption">
+                      Soyez précis sur l'endroit et la taille. « Il y avait une rayure »
+                      ne prouve rien trois semaines plus tard.
+                    </span>
+                    @if (fieldErrors()['damage_notes']; as error) {
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                    }
+                  </div>
+                }
+
+                <div class="col-12">
+                  <label for="i-items" class="form-label">
+                    Objets laissés dans le véhicule
+                    <span class="ac-text-muted fw-normal">(facultatif)</span>
+                  </label>
+                  <input id="i-items" type="text" class="form-control" formControlName="items_left"
+                         placeholder="Siège enfant, chargeur de téléphone" />
+                  <span class="ac-caption">
+                    Sujet de litige fréquent, et le plus facile à éviter.
+                  </span>
+                </div>
+
+                <div class="col-12">
+                  <label for="i-observations" class="form-label">
+                    Observations <span class="ac-text-muted fw-normal">(facultatif)</span>
+                  </label>
+                  <textarea id="i-observations" class="form-control" rows="2"
+                            formControlName="observations"
+                            placeholder="Vitre arrière gauche descendue, ne remonte pas."></textarea>
+                </div>
+
+                <div class="col-12">
+                  <div class="form-check">
+                    <input id="i-present" type="checkbox" class="form-check-input"
+                           formControlName="customer_present" />
+                    <label for="i-present" class="form-check-label">
+                      Le client est présent et a vu le constat
+                    </label>
+                  </div>
+                </div>
+
+                @if (inspectionForm.controls.customer_present.value) {
+                  <div class="col-sm-8">
+                    <label for="i-signature" class="form-label">Nom du client</label>
+                    <input id="i-signature" type="text" class="form-control"
+                           formControlName="signature_name" placeholder="Ndèye Sarr"
+                           [class.is-invalid]="fieldErrors()['signature_name']" />
+                    <span class="ac-caption">
+                      Son nom saisi ici vaut accord sur l'état constaté.
+                    </span>
+                    @if (fieldErrors()['signature_name']; as error) {
+                      <div class="invalid-feedback d-block">{{ error }}</div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="ac-card__footer d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary" [disabled]="isSavingInspection()">
+                @if (isSavingInspection()) {
+                  <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+                } @else {
+                  Enregistrer l'état du véhicule
+                }
+              </button>
+            </div>
+          </form>
+        } @else {
+          @if (entryInspection(); as inspection) {
+            <div class="ac-card__body">
+              <dl class="row mb-0">
+                <dt class="col-sm-4 ac-text-secondary fw-normal">Carburant</dt>
+                <dd class="col-sm-8">
+                  {{ inspection.fuel_level ? fuelLabels[inspection.fuel_level] : '—' }}
+                </dd>
+
+                <dt class="col-sm-4 ac-text-secondary fw-normal">Kilométrage</dt>
+                <dd class="col-sm-8 ac-numeric">{{ inspection.mileage ?? '—' }}</dd>
+
+                <dt class="col-sm-4 ac-text-secondary fw-normal">Dommages constatés</dt>
+                <dd class="col-sm-8">
+                  @if (inspection.has_damage) {
+                    <span class="ac-badge ac-badge--warning">Oui</span>
+                    <div class="mt-2">{{ inspection.damage_notes }}</div>
+                  } @else {
+                    Aucun
+                  }
+                </dd>
+
+                @if (inspection.items_left) {
+                  <dt class="col-sm-4 ac-text-secondary fw-normal">Objets laissés</dt>
+                  <dd class="col-sm-8">{{ inspection.items_left }}</dd>
+                }
+
+                @if (inspection.observations) {
+                  <dt class="col-sm-4 ac-text-secondary fw-normal">Observations</dt>
+                  <dd class="col-sm-8">{{ inspection.observations }}</dd>
+                }
+
+                <dt class="col-sm-4 ac-text-secondary fw-normal">Validé par le client</dt>
+                <dd class="col-sm-8 mb-0">
+                  @if (inspection.customer_present) {
+                    {{ inspection.signature_name }}
+                  } @else {
+                    Client absent au moment du constat
+                  }
+                </dd>
+              </dl>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- 3. Les photos -->
+      @if (entryInspection()) {
+        <div class="ac-card mb-4">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Photos de l'état d'arrivée</h2>
+            <span class="ac-caption">{{ photosTaken() }} / 5</span>
+          </div>
+          <div class="ac-card__body">
+            <p class="ac-text-secondary mb-4">
+              Quatre faces et l'intérieur. Un litige porte presque toujours sur
+              le côté qu'on n'a pas photographié.
+            </p>
+
+            <div class="row g-3">
+              @for (tile of photoTiles(); track tile.position) {
+                <div class="col-6 col-md-4">
+                  <label class="ac-photo-tile"
+                         [class.ac-photo-tile--filled]="tile.photo !== null">
+
+                    @if (tile.objectUrl) {
+                      <img [src]="tile.objectUrl" [alt]="tile.label" class="ac-photo-tile__image" />
+                    } @else if (tile.isUploading) {
+                      <span class="spinner-border spinner-border-sm"></span>
+                      <span class="ac-caption mt-2">Envoi…</span>
+                    } @else if (tile.photo) {
+                      <i class="bi bi-image ac-photo-tile__icon"></i>
+                    } @else {
+                      <i class="bi bi-camera ac-photo-tile__icon"></i>
+                    }
+
+                    <span class="ac-photo-tile__label">{{ tile.label }}</span>
+
+                    <!--
+                      capture="environment" ouvre directement l'appareil
+                      photo ARRIÈRE sur un téléphone, sans passer par la
+                      galerie. Trois gestes économisés, cinq fois par
+                      véhicule : c'est ce qui décide un employé à faire
+                      la procédure ou à la sauter.
+                    -->
+                    <input type="file" accept="image/*" capture="environment"
+                           class="visually-hidden"
+                           [attr.aria-label]="'Photographier : ' + tile.label"
+                           [disabled]="tile.isUploading"
+                           (change)="onPhotoSelected(tile.position, $event)" />
+                  </label>
+
+                  @if (tile.error; as error) {
+                    <div class="ac-caption" style="color: var(--ac-danger-700)">{{ error }}</div>
+                  } @else if (tile.photo) {
+                    <div class="ac-caption">{{ formatBytes(tile.photo.file_size) }}</div>
+                  }
+                </div>
+              }
+            </div>
+
+            <p class="ac-caption mt-3 mb-0">
+              Les photos sont réduites avant l'envoi pour ne pas faire attendre,
+              puis ré-enregistrées par le serveur. Elles ne sont jamais supprimées.
+            </p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ============================================================
+         COLONNE LATÉRALE : LE DOSSIER
+         ============================================================ -->
+    <div class="col-lg-4">
+      <div class="ac-card mb-4">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Le dossier</h2>
+        </div>
+        <div class="ac-card__body">
+          <dl class="row mb-0">
+            <dt class="col-5 ac-text-secondary fw-normal">Prestation</dt>
+            <dd class="col-7">{{ op.service_name }}</dd>
+
+            <dt class="col-5 ac-text-secondary fw-normal">Montant</dt>
+            <dd class="col-7 ac-numeric fw-semibold">{{ op.price | acAmount }}</dd>
+
+            <dt class="col-5 ac-text-secondary fw-normal">Réglé</dt>
+            <dd class="col-7">
+              @if (op.is_settled) {
+                <span class="ac-badge ac-badge--success">
+                  <span class="ac-badge__dot" aria-hidden="true"></span> Oui
+                </span>
+              } @else {
+                <span class="ac-badge ac-badge--warning">
+                  <span class="ac-badge__dot" aria-hidden="true"></span>
+                  {{ op.paid_amount | acAmount }} sur {{ op.price | acAmount }}
+                </span>
+              }
+            </dd>
+
+            <dt class="col-5 ac-text-secondary fw-normal">Client</dt>
+            <dd class="col-7">
+              <a [routerLink]="['/customers', op.customer_id]">{{ op.customer_name }}</a>
+              <div class="ac-caption ac-numeric">{{ op.customer_phone }}</div>
+            </dd>
+
+            <dt class="col-5 ac-text-secondary fw-normal">Véhicule</dt>
+            <dd class="col-7">
+              <a [routerLink]="['/vehicles', op.vehicle_id]">{{ op.plate_display }}</a>
+            </dd>
+
+            <dt class="col-5 ac-text-secondary fw-normal">Employé</dt>
+            <dd class="col-7">{{ op.assigned_name ?? 'Non assigné' }}</dd>
+
+            <dt class="col-5 ac-text-secondary fw-normal">Station</dt>
+            <dd class="col-7 mb-0">{{ op.station_name }}</dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Les jalons du parcours -->
+      <div class="ac-card mb-4">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Déroulé</h2>
+        </div>
+        <div class="ac-card__body">
+          <dl class="row mb-0">
+            <dt class="col-6 ac-text-secondary fw-normal">Arrivée</dt>
+            <dd class="col-6 ac-nowrap">{{ op.created_at | acRelativeDate }}</dd>
+
+            <dt class="col-6 ac-text-secondary fw-normal">Prise en charge</dt>
+            <dd class="col-6 ac-nowrap">{{ op.started_at ? (op.started_at | acRelativeDate) : '—' }}</dd>
+
+            <dt class="col-6 ac-text-secondary fw-normal">Prêt</dt>
+            <dd class="col-6 ac-nowrap">{{ op.completed_at ? (op.completed_at | acRelativeDate) : '—' }}</dd>
+
+            <dt class="col-6 ac-text-secondary fw-normal">Restitué</dt>
+            <dd class="col-6 mb-0 ac-nowrap">{{ op.released_at ? (op.released_at | acRelativeDate) : '—' }}</dd>
+          </dl>
+        </div>
+      </div>
+
+      @if (op.notes) {
+        <div class="ac-card">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Notes</h2>
+          </div>
+          <div class="ac-card__body">{{ op.notes }}</div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ============================================================
+       LA RESTITUTION
+       ============================================================ -->
+  @if (isReleasePanelOpen()) {
+    <div class="ac-modal-backdrop" (click)="closeReleasePanel()"></div>
+
+    <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="release-title">
+      <div class="ac-modal__header">
+        <h2 class="mb-0 h5" id="release-title">Remise du véhicule</h2>
+        <button type="button" class="ac-btn-icon" (click)="closeReleasePanel()" aria-label="Fermer">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form [formGroup]="releaseForm" (ngSubmit)="submitRelease()" novalidate>
+        <div class="ac-modal__body">
+
+          <!-- La liste de vérification, avant de saisir quoi que ce soit -->
+          <ul class="list-unstyled mb-4">
+            @for (item of checklist(); track item.key) {
+              <li class="d-flex gap-2 align-items-start mb-2">
+                @if (item.passed) {
+                  <i class="bi bi-check-circle-fill" style="color: var(--ac-success-700)"></i>
+                } @else if (item.blocking) {
+                  <i class="bi bi-exclamation-circle-fill" style="color: var(--ac-warning-700)"></i>
+                } @else {
+                  <i class="bi bi-dash-circle" style="color: var(--ac-icon-muted)"></i>
+                }
+                <div>
+                  {{ item.label }}
+                  <div class="ac-caption">{{ item.detail }}</div>
+                </div>
+              </li>
+            }
+          </ul>
+
+          <!--
+            Ressaisir la référence et la plaque est le seul contrôle
+            qui porte sur le monde réel et non sur la base. Il oblige à
+            regarder la voiture avant de remettre les clés. Deux Toyota
+            blanches le même matin, ça arrive tous les jours.
+          -->
+          <div class="mb-3">
+            <label for="r-reference" class="form-label">Référence figurant sur le reçu du client</label>
+            <input id="r-reference" type="text" class="form-control ac-numeric"
+                   formControlName="reference" placeholder="DKP-2609-0042" autocomplete="off" />
+          </div>
+
+          <div class="mb-3">
+            <label for="r-plate" class="form-label">Plaque du véhicule que vous sortez</label>
+            <input id="r-plate" type="text" class="form-control ac-plate-input"
+                   formControlName="plate_number" placeholder="DK-1234-AA" autocomplete="off" />
+            <span class="ac-caption">
+              Lisez-la sur la voiture, pas sur l'écran.
+            </span>
+          </div>
+
+          @if (needsOverride()) {
+            @if (canOverridePayment()) {
+              <div class="mb-3">
+                <label for="r-override" class="form-label">
+                  Motif de la remise sans règlement
+                </label>
+                <textarea id="r-override" class="form-control" rows="2"
+                          formControlName="override_reason"
+                          placeholder="Client habituel, règlement en fin de mois."></textarea>
+                <span class="ac-caption">
+                  Votre nom et ce motif seront conservés dans le journal du dossier.
+                </span>
+              </div>
+            } @else {
+              <div class="ac-alert ac-alert--warning">
+                <i class="bi bi-lock-fill"></i>
+                <div>
+                  Cette prestation n'est pas réglée. Seul un responsable peut
+                  autoriser la remise du véhicule.
+                </div>
+              </div>
+            }
+          }
+
+          @if (releaseError(); as message) {
+            <div class="ac-alert ac-alert--danger">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <div>{{ message }}</div>
+            </div>
+          }
+        </div>
+
+        <div class="ac-modal__footer">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeReleasePanel()">
+            Annuler
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isReleasing()">
+            @if (isReleasing()) {
+              <span class="spinner-border spinner-border-sm"></span> Vérification…
+            } @else {
+              Remettre les clés
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+}

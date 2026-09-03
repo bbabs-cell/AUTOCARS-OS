@@ -7,6 +7,8 @@ import { RelativeDatePipe } from '../../shared/pipes/relative-date.pipe';
 import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge.component';
 import { CrmService } from '../../core/services/crm.service';
+import { OperationService } from '../../core/services/operation.service';
+import { InspectionHistoryEntry } from '../../core/models/operation.model';
 import { OperationStatus } from '../../core/models/operation-status.model';
 import {
   VEHICLE_TYPE_LABELS,
@@ -28,9 +30,17 @@ import {
  * place principale, et non les caractéristiques du véhicule — celles-ci
  * ne changent jamais, l'historique si.
  *
- * L'historique est vide au lot 6 : les opérations arrivent au lot 8.
- * L'écran est construit dès maintenant pour être prêt le jour où les
- * données existeront, et pour montrer l'état vide correctement.
+ * DEUX HISTORIQUES, ET C'EST VOULU :
+ *
+ *   LES PASSAGES répondent à « qu'a-t-on fait, quand, et pour
+ *   combien ». C'est la question commerciale.
+ *
+ *   LES ÉTATS CONSTATÉS répondent à « dans quel état est-il arrivé,
+ *   et qui l'a constaté ». C'est la question du litige, et c'est
+ *   celle qui fait vendre le produit.
+ *
+ * Les mélanger dans un seul tableau obligerait à lire toute la liste
+ * pour trouver la ligne utile. Séparés, on va droit au bon endroit.
  */
 @Component({
   selector: 'app-vehicle-detail-page',
@@ -54,9 +64,18 @@ export class VehicleDetailPage {
 
   protected readonly vehicle = signal<Vehicle | null>(null);
   protected readonly history = signal<VehicleHistoryEntry[]>([]);
+  protected readonly inspections = signal<InspectionHistoryEntry[]>([]);
+
+  private readonly operations = inject(OperationService);
 
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+
+    // Chargé séparément : un échec sur les états constatés ne doit
+    // pas empêcher d'afficher la fiche du véhicule.
+    this.operations
+      .vehicleInspections(id)
+      .subscribe((result) => this.inspections.set(result.inspections));
 
     this.crm.vehicle(id).subscribe({
       next: (result) => {

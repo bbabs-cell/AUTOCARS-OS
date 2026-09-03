@@ -53,10 +53,26 @@ export const routes: Routes = [
     children: [
       {
         // L'enfant vide indispensable, voir l'explication ci-dessus.
-        // Deviendra le tableau de bord au lot 10.
+        // Deviendra le tableau de bord au lot 10. En attendant, on
+        // arrive sur l'écran d'accueil des véhicules : c'est celui
+        // qu'un employé ouvre en premier le matin.
         path: '',
         pathMatch: 'full',
-        redirectTo: 'services',
+        redirectTo: 'operations',
+      },
+      {
+        path: 'operations',
+        title: 'Accueil — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/operations/operations.page').then((m) => m.OperationsPage),
+      },
+      {
+        path: 'operations/:id',
+        title: 'Dossier — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/operations/operation-detail.page').then(
+            (m) => m.OperationDetailPage,
+          ),
       },
       {
         path: 'customers',

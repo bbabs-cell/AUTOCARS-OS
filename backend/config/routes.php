@@ -31,7 +31,9 @@ use Autocare\Core\Router;
 use Autocare\Http\Controllers\AuthController;
 use Autocare\Http\Controllers\CustomerController;
 use Autocare\Http\Controllers\HealthController;
+use Autocare\Http\Controllers\InspectionController;
 use Autocare\Http\Controllers\OnboardingController;
+use Autocare\Http\Controllers\OperationController;
 use Autocare\Http\Controllers\ServiceController;
 use Autocare\Http\Controllers\StationController;
 use Autocare\Http\Controllers\TeamController;
@@ -114,8 +116,54 @@ return static function (Router $router): void {
     $router->put('/api/vehicles/{id}', [VehicleController::class, 'update'],
         ['auth' => true, 'permission' => 'vehicles.update']);
 
+    // --- Opérations ---------------------------------------------------
+    // « statuses » est déclaré AVANT « {id} » : les deux motifs ont le
+    // même nombre de segments, et le routeur retient le premier qui
+    // correspond. Dans l'autre ordre, /api/operations/statuses serait
+    // compris comme le dossier d'identifiant « statuses ».
+    $router->get('/api/operations/statuses', [OperationController::class, 'statuses'],
+        ['auth' => true, 'permission' => 'operations.view']);
+    $router->get('/api/operations',      [OperationController::class, 'index'],
+        ['auth' => true, 'permission' => 'operations.view']);
+    $router->post('/api/operations',     [OperationController::class, 'store'],
+        ['auth' => true, 'permission' => 'operations.create']);
+    $router->get('/api/operations/{id}', [OperationController::class, 'show'],
+        ['auth' => true, 'permission' => 'operations.view']);
+
+    // Le changement de statut a sa propre permission : un employé fait
+    // avancer un dossier, mais ne le crée pas forcément.
+    $router->put('/api/operations/{id}/status', [OperationController::class, 'changeStatus'],
+        ['auth' => true, 'permission' => 'operations.update_status']);
+
+    // La restitution est une action à part, avec sa procédure de
+    // vérification. Elle n'emprunte PAS la route de changement de
+    // statut : ce serait contourner la liste de contrôle du comptoir.
+    $router->get('/api/operations/{id}/release-check', [OperationController::class, 'releaseCheck'],
+        ['auth' => true, 'permission' => 'operations.view']);
+    $router->post('/api/operations/{id}/release',      [OperationController::class, 'release'],
+        ['auth' => true, 'permission' => 'operations.release']);
+
+    // --- Inspections ---------------------------------------------------
+    // Une inspection se rattache toujours à un dossier : son URL le dit.
+    $router->post('/api/operations/{id}/inspections', [InspectionController::class, 'store'],
+        ['auth' => true, 'permission' => 'inspections.create']);
+    $router->get('/api/inspections/{id}',             [InspectionController::class, 'show'],
+        ['auth' => true, 'permission' => 'inspections.view']);
+    $router->post('/api/inspections/{id}/photos',     [InspectionController::class, 'uploadPhoto'],
+        ['auth' => true, 'permission' => 'inspections.create']);
+
+    // L'historique des états constatés d'un véhicule : l'écran qu'on
+    // ouvre en cas de litige.
+    $router->get('/api/vehicles/{id}/inspections', [InspectionController::class, 'forVehicle'],
+        ['auth' => true, 'permission' => 'inspections.view']);
+
+    // La seule route de l'API qui renvoie un fichier et non du JSON.
+    // Les photos vivant hors du dossier web, c'est le seul chemin qui
+    // y mène — et il vérifie les droits avant de servir un octet.
+    $router->get('/api/photos/{id}', [InspectionController::class, 'servePhoto'],
+        ['auth' => true, 'permission' => 'inspections.view']);
+
     // --- Les routes suivantes arriveront aux prochains lots --------
-    // Lot 7 : /api/inspections
-    // Lot 8 : /api/operations, /api/queue
+    // Lot 8 : /api/queue (file d'attente et Kanban)
     // Lot 9 : /api/payments
 };

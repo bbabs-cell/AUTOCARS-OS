@@ -84,6 +84,60 @@
           </div>
         }
       </div>
+
+      <!-- LES ÉTATS CONSTATÉS — l'onglet du litige -->
+      <div class="ac-card mt-4">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">États constatés</h2>
+          @if (inspections().length > 0) {
+            <span class="ac-caption">{{ inspections().length }} inspection(s)</span>
+          }
+        </div>
+
+        @if (inspections().length === 0) {
+          <ac-empty-state
+            icon="bi-shield-check"
+            title="Aucun état constaté"
+            text="Chaque inspection d'entrée sera listée ici, avec ses photos et le nom de la personne qui l'a réalisée. C'est ce qui répond à « cette rayure y était-elle avant ? »."
+          />
+        } @else {
+          <div class="ac-table-wrapper">
+            <table class="ac-table">
+              <thead>
+                <tr>
+                  <th>Dossier</th>
+                  <th>Moment</th>
+                  <th>Constat</th>
+                  <th>Photos</th>
+                  <th>Constaté par</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (inspection of inspections(); track inspection.id) {
+                  <tr>
+                    <td class="ac-numeric fw-semibold ac-nowrap">{{ inspection.operation_reference }}</td>
+                    <td class="ac-text-secondary">
+                      {{ inspection.type === 'ENTRY' ? 'Arrivée' : 'Sortie' }}
+                    </td>
+                    <td>
+                      @if (inspection.has_damage) {
+                        <span class="ac-badge ac-badge--warning">Dommage</span>
+                        <div class="ac-caption">{{ inspection.damage_notes }}</div>
+                      } @else {
+                        <span class="ac-text-secondary">Rien à signaler</span>
+                      }
+                    </td>
+                    <td class="ac-numeric">{{ inspection.photo_count }}</td>
+                    <td class="ac-text-secondary">{{ inspection.performed_by_name }}</td>
+                    <td class="ac-text-secondary ac-nowrap">{{ inspection.performed_at | acRelativeDate }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
     </div>
 
     <!-- Colonne latérale : propriétaire et détails -->

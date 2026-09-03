@@ -121,21 +121,54 @@ d'une autre organisation et vérifieront que l'API refuse.
 
 ## 7. Upload de photos
 
-Les photos d'inspection ont une valeur de **preuve** en cas de litige.
+Accepter un fichier envoyé par un utilisateur est **l'opération la
+plus dangereuse d'une application web**. Tout le traitement est
+concentré dans une seule classe, `backend/src/Core/PhotoStorage.php`,
+pour qu'il soit relu d'un bloc plutôt qu'éparpillé.
 
-- Stockées dans `backend/storage/uploads/`, **hors du dossier web** :
-  aucune URL directe n'y donne accès. Un endpoint PHP vérifie les
-  droits avant de servir le fichier.
-- Le nom fourni par l'utilisateur n'est **jamais** utilisé (il peut
-  contenir `../../` ou une extension piégée). On génère un nom
-  aléatoire.
-- Vérification du **type MIME réel** avec `finfo`, pas de l'extension :
-  un fichier `.jpg` peut contenir du PHP.
-- Taille et dimensions limitées.
-- Photos **jamais supprimées**, seulement archivées : une preuve
-  effaçable ne vaut rien.
+**Six protections, appliquées dans cet ordre :**
 
-🔜 Lot 7.
+| # | Protection | Ce qu'elle empêche |
+|---|---|---|
+| 1 | `is_uploaded_file()` | Lire un fichier du serveur via un chemin fabriqué |
+| 2 | Taille ≤ 12 Mo | Saturer le disque |
+| 3 | Type réel lu par `finfo` | `payload.php` renommé `photo.jpg` |
+| 4 | Garde ≤ 50 M pixels | La « bombe de décompression » : quelques ko compressés, des Go à décoder |
+| 5 | **Ré-encodage complet** | Toute charge cachée dans les métadonnées |
+| 6 | Nom généré, écriture hors du web | `../../` dans le nom, `.jpg.php`, accès par URL directe |
+
+**La protection n°5 est la plus forte.** Une image peut contenir du
+code PHP dans ses métadonnées. Décoder les pixels puis les réécrire
+dans un fichier neuf détruit tout ce qui n'est pas de l'image : rien
+ne survit. C'est vérifié par un test qui insère une charge dans un
+segment `COM` d'un JPEG, envoie l'image, retélécharge le fichier
+stocké et constate que la charge a disparu.
+
+**Autres décisions :**
+
+- Conversion en **WebP à 2048 px** : une photo de téléphone fait 3 à
+  5 Mo ; cinq par inspection, sur une connexion mobile, c'est
+  plusieurs minutes d'attente — et un employé qui abandonne la
+  procédure. Une procédure abandonnée ne protège personne.
+- L'**orientation EXIF est appliquée avant** le ré-encodage, qui
+  détruit ces métadonnées : sinon les photos prises à la verticale
+  s'afficheraient couchées.
+- Empreinte **SHA-256** du fichier final stockée en base. Si le
+  fichier sur le disque est remplacé, l'empreinte ne correspond plus
+  et la substitution devient détectable
+  (`PhotoStorage::verifyIntegrity()`, comparaison en temps constant).
+- Fichiers dans `backend/storage/uploads/`, **hors du dossier web**,
+  avec un `.htaccess` en ceinture et bretelles. `GET /api/photos/{id}`
+  vérifie l'organisation avant de servir le moindre octet ; une photo
+  d'une autre entreprise répond `404`, comme si elle n'existait pas.
+- Photos **jamais supprimées**, seulement archivées (`status =
+  ARCHIVED`) : une preuve effaçable ne vaut rien.
+
+**La compression côté navigateur n'est pas une protection.** Elle
+existe pour le temps d'attente et s'exécute chez le client, donc se
+contourne trivialement. Tout ce qui compte est revérifié côté serveur.
+
+✅ Lot 7.
 
 ---
 
@@ -199,5 +232,7 @@ la question centrale en cas de litige sur un véhicule.
 | Jetons courts + rotation | ✅ Lot 4 |
 | Limitation des tentatives de connexion | ✅ Lot 4 |
 | Envoi d'e-mail (mot de passe oublié) | 🔜 Lot 15 |
-| Upload sécurisé | 🔜 Lot 7 |
+| Upload sécurisé | ✅ Lot 7 |
+| Machine à états vérifiée côté serveur | ✅ Lot 7 |
+| Procédure de restitution contrôlée | ✅ Lot 7 |
 | Audit de sécurité complet | 🔜 Lot 21 |

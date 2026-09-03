@@ -15,8 +15,18 @@ application qui fonctionne.
 | MySQL | 8.0 | `mysql --version` |
 
 Extensions PHP requises : `pdo_mysql`, `mbstring`, `json`, `fileinfo`,
-`gd` (pour les photos, Lot 7).
-Vérifie-les avec `php -m`.
+`gd` **avec le support WebP**, et `exif` (redressement des photos
+prises à la verticale). Vérifie-les avec `php -m`.
+
+Pour confirmer que GD sait écrire du WebP :
+
+```bash
+php -r "var_dump(function_exists('imagewebp'));"
+```
+
+Sans WebP, l'envoi des photos d'inspection échouera : c'est le format
+dans lequel elles sont ré-enregistrées. Sous Laragon et XAMPP,
+l'extension `gd` livrée d'origine le gère.
 
 > **Windows** : XAMPP ou Laragon fournissent PHP + MySQL en une
 > installation. Après l'installation, ajoute le dossier `php` à ton
@@ -239,10 +249,33 @@ Angular (4200) → HttpClient → API PHP (8000) → MySQL
 | `Class "Autocare\Core\Env" not found` | Autoloader absent | `composer install` (ou `composer dump-autoload`) dans `backend/` |
 | `could not find driver` | Extension `pdo_mysql` désactivée | Décommente `extension=pdo_mysql` dans `php.ini`, puis redémarre |
 | Angular refuse de démarrer | Version de Node trop ancienne | `node -v` doit être ≥ 20.19 |
+| « L'enregistrement de la photo a échoué » | GD sans support WebP | `php -r "var_dump(function_exists('imagewebp'));"` doit afficher `true` ; sinon active `extension=gd` dans `php.ini` |
+| Les aperçus de photos restent vides | Le dossier `backend/storage/uploads/` n'est pas inscriptible | Donne les droits d'écriture au dossier ; sur Windows c'est rarement le problème |
+| Photos de démonstration absentes | Le jeu de démonstration a été chargé avant le Lot 7 | Relance `php tools/migrate.php --fresh` puis `php tools/seed.php` : les fichiers sont écrits par le seed |
 
 ---
 
-## 7. Les deux commandes du quotidien
+## 7. Lancer les tests
+
+Depuis `backend/`, avec le serveur PHP démarré dans un autre terminal :
+
+```bash
+php tests/run_all.php
+```
+
+Les tests d'API sont ignorés proprement si le serveur ne répond pas —
+ils ne font pas échouer l'ensemble. Les tests de schéma et la machine
+à états, eux, tournent sans serveur.
+
+Côté frontend, depuis `frontend/` :
+
+```bash
+npm test
+```
+
+---
+
+## 8. Les deux commandes du quotidien
 
 ```bash
 # Terminal 1

@@ -409,12 +409,159 @@ plaque est exploitable — 5 à 12 caractères mêlant lettres et chiffres.
 
 ---
 
+## Opérations
+
+Une **opération** est le passage d'un véhicule en station : un
+véhicule, un client, une prestation, une date. Tout le produit tourne
+autour d'elle.
+
+| Route | Permission |
+|---|---|
+| `GET /api/operations/statuses` | `operations.view` |
+| `GET /api/operations?active=1&search=&station_id=` | `operations.view` |
+| `GET /api/operations/{id}` | `operations.view` |
+| `POST /api/operations` | `operations.create` |
+| `PUT /api/operations/{id}/status` | `operations.update_status` |
+| `GET /api/operations/{id}/release-check` | `operations.view` |
+| `POST /api/operations/{id}/release` | `operations.release` |
+
+### La machine à états
+
+Une opération ne change pas de statut librement. Le parcours est
+déclaré dans `backend/config/operation_status.php`, à un seul endroit,
+et appliqué par le serveur :
+
+```
+WAITING → IN_PROGRESS → INSPECTION → WASHING → QUALITY_CHECK → READY → COMPLETED
+                                       ↑             │
+                                       └─────────────┘   (contrôle refusé)
+```
+
+`CANCELLED` est atteignable depuis tout statut non terminal.
+`COMPLETED` et `CANCELLED` sont finaux.
+
+**Trois règles ne peuvent pas être contournées**, même en appelant
+l'API directement :
+
+1. **L'inspection d'entrée est obligatoire.** Il n'existe aucune
+   transition `IN_PROGRESS → WASHING`, et `INSPECTION → WASHING` exige
+   qu'une inspection soit réellement enregistrée. Sans état constaté à
+   l'arrivée, la station perd systématiquement l'arbitrage d'un litige.
+2. **Le contrôle qualité est obligatoire**, et peut renvoyer au
+   lavage. Un contrôle qui ne peut que valider n'est pas un contrôle.
+3. **La restitution exige un règlement**, ou une dérogation d'un
+   responsable — tracée nominativement dans le journal d'audit.
+
+`GET /api/operations/statuses` expose cette machine au frontend pour
+qu'il n'affiche que les boutons utilisables. C'est un **confort
+d'affichage** : le serveur revérifie chaque transition.
+
+### Ouverture d'un dossier
+
+```json
+POST /api/operations
+{ "vehicle_id": 12, "service_id": 3, "station_id": 1, "priority": 0 }
+```
+
+- Le **client n'est pas lu dans la requête** : il est déduit du
+  véhicule. Un formulaire modifié ne peut donc pas rattacher un
+  dossier au client de quelqu'un d'autre.
+- Le **prix est figé** à l'ouverture, recopié du catalogue. Un
+  changement de tarif le mois suivant ne réécrit pas le passé.
+- Un **second dossier ouvert sur le même véhicule** est refusé (`409`) :
+  deux dossiers, c'est deux inspections contradictoires.
+- La référence est générée au format `CODE-AAMM-NNNN`
+  (`DKP-2609-0042`) : code de station, année et mois, compteur mensuel.
+  On n'expose pas l'identifiant de la base, qui révélerait le volume
+  d'activité.
+
+### Restitution
+
+`POST /api/operations/{id}/release` est une route **à part**, avec sa
+propre procédure. Un simple changement de statut vers `COMPLETED` est
+refusé (`403`) : ce serait contourner les contrôles du comptoir.
+
+```json
+{ "reference": "DKP-2609-0042", "plate_number": "DK-1234-AA",
+  "override_reason": "Client habituel, règlement en fin de mois." }
+```
+
+Quatre vérifications, dans cet ordre :
+
+1. le dossier est `READY` — sinon `409` ;
+2. la référence présentée correspond — sinon `422` ;
+3. la plaque saisie correspond au véhicule — sinon `422` ;
+4. la prestation est réglée — sinon `402 Payment Required`, sauf
+   `override_reason` fourni **par un porteur de**
+   `operations.override_payment` (`403` sinon).
+
+Ressaisir la plaque peut sembler redondant puisqu'elle est à l'écran.
+C'est le seul contrôle qui porte sur le **monde réel** et non sur la
+base : il oblige à regarder la voiture avant de remettre les clés.
+
+---
+
+## Inspections et photos
+
+| Route | Permission |
+|---|---|
+| `POST /api/operations/{id}/inspections` | `inspections.create` |
+| `GET /api/inspections/{id}` | `inspections.view` |
+| `POST /api/inspections/{id}/photos` | `inspections.create` |
+| `GET /api/vehicles/{id}/inspections` | `inspections.view` |
+| `GET /api/photos/{id}` | `inspections.view` |
+
+**Une inspection ne se modifie pas.** Il n'y a ni `PUT` ni `DELETE` :
+un constat réécrivable après coup ne prouve rien, et c'est précisément
+au moment du litige que quelqu'un voudrait le corriger. Une erreur de
+saisie se rattrape par une observation dans l'inspection de sortie.
+
+Deux inspections au maximum par dossier (`ENTRY`, `EXIT`), garanties
+par une contrainte d'unicité. Une inspection d'entrée enregistrée fait
+automatiquement passer le dossier à `INSPECTION`.
+
+Deux validations métier valent d'être connues :
+
+- cocher « dommage constaté » **sans le décrire** est refusé : « il y
+  avait une rayure » ne dit ni où, ni laquelle ;
+- déclarer le client présent **sans son nom** est refusé : c'est ce nom
+  qui transforme un constat interne en constat contradictoire.
+
+### Envoi d'une photo
+
+`POST /api/inspections/{id}/photos` est la **seule route qui ne reçoit
+pas du JSON** : elle attend un envoi `multipart/form-data` avec les
+champs `photo` (le fichier) et `position` (`FRONT`, `REAR`, `LEFT`,
+`RIGHT`, `INTERIOR`, `DAMAGE`, `OTHER`).
+
+Encoder une image en base64 dans du JSON l'alourdirait d'un tiers —
+sur une connexion mobile, ce tiers se compte en secondes d'attente.
+
+Les photos s'envoient **une par une**. Sur une connexion qui coupe, un
+envoi groupé perd tout ; envoyée séparément, chaque photo est acquise
+dès qu'elle est passée.
+
+Le traitement serveur est décrit dans `docs/security.md` §7.
+
+### Lecture d'une photo
+
+`GET /api/photos/{id}` est la **seule route qui renvoie un fichier**
+et non du JSON. Elle existe parce que les fichiers sont stockés hors
+du dossier web : sans elle, aucune URL n'y mènerait.
+
+⚠️ Elle exige l'en-tête `Authorization` comme toutes les autres. Un
+navigateur **n'envoie pas cet en-tête sur une balise `<img>`** : le
+frontend télécharge donc le fichier puis fabrique une URL locale
+(`URL.createObjectURL`). C'est le prix à payer pour que les preuves ne
+soient pas accessibles à quiconque devine une adresse.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 7 | `/api/inspections`, `/api/inspections/{id}/photos` |
-| 8 | `/api/operations`, `/api/queue` |
+| 8 | `/api/queue` (file d'attente et Kanban) |
 | 9 | `/api/payments`, `/api/cash-registers` |
 
 ---

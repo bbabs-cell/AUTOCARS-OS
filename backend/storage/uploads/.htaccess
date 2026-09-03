@@ -1,0 +1,10 @@
+# Ceinture ET bretelles.
+#
+# Ce dossier est DÉJÀ hors du dossier web (public/) : aucune URL n'y
+# mène. Ce fichier ne sert donc à rien... tant que personne ne
+# déplace le stockage ni ne configure un hôte virtuel dont la racine
+# remonte trop haut.
+#
+# C'est précisément le genre d'erreur qu'on fait un vendredi soir en
+# production. Trois lignes pour qu'elle ne coûte rien.
+Deny from all

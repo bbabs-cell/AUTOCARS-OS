@@ -81,8 +81,18 @@ return [
         'customers.view',
         'customers.create',
         'customers.update',
+        // L'accueil d'un véhicule au comptoir est le travail de
+        // l'employé : lui refuser la création de dossier obligerait à
+        // déranger un responsable à chaque arrivée.
+        'operations.create',
         'operations.view',
         'operations.update_status',
+        // Il rend les clés — c'est lui qui est au comptoir. La
+        // procédure de vérification l'encadre, et la dérogation de
+        // paiement (operations.override_payment) reste hors de portée :
+        // un employé ne peut pas s'autoriser lui-même à laisser
+        // partir un véhicule impayé.
+        'operations.release',
         'inspections.view',
         'inspections.create',
         // Un employé consulte le catalogue : il doit savoir ce qu'il

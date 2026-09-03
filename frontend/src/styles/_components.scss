@@ -785,3 +785,91 @@
   letter-spacing: 0.08em;
   font-weight: var(--ac-weight-semibold);
 }
+
+
+// ==================================================================
+// PRISE DE PHOTO D'INSPECTION
+// ==================================================================
+// Une tuile par prise de vue. Le <label> enveloppe un <input file>
+// masqué : cliquer n'importe où sur la tuile ouvre l'appareil photo.
+//
+// POURQUOI DE GRANDES TUILES ?
+// Parce que ce geste se fait debout, dehors, un téléphone dans une
+// main et parfois des clés dans l'autre. Une cible de 48 px se rate ;
+// une tuile de 120 px, non. C'est la même raison qui fait que les
+// boutons d'un distributeur ne sont pas de la taille d'un timbre.
+
+.ac-photo-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ac-space-1);
+
+  width: 100%;
+  min-height: 120px;
+  padding: var(--ac-space-3);
+
+  border: 1px dashed var(--ac-border);
+  border-radius: var(--ac-radius-md);
+  background-color: var(--ac-gray-50);
+
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--ac-transition), background-color var(--ac-transition);
+}
+
+.ac-photo-tile:hover {
+  border-color: var(--ac-primary);
+  background-color: var(--ac-primary-50);
+}
+
+// Le focus doit rester visible : la tuile se parcourt au clavier
+// comme n'importe quel champ de formulaire.
+.ac-photo-tile:focus-within {
+  outline: 2px solid var(--ac-primary);
+  outline-offset: 2px;
+}
+
+// Une prise de vue déjà faite : trait plein, plus de pointillés.
+// La différence se lit d'un coup d'œil, sans avoir à compter.
+.ac-photo-tile--filled {
+  border-style: solid;
+  border-color: var(--ac-success-700);
+  background-color: var(--ac-surface);
+}
+
+.ac-photo-tile__icon {
+  font-size: 1.75rem;
+  color: var(--ac-icon-muted);
+}
+
+.ac-photo-tile__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Le libellé reste lisible par-dessus la photo : bandeau sombre en
+// bas de tuile, comme sur une galerie.
+.ac-photo-tile__label {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  margin-top: auto;
+  padding: 0.125rem var(--ac-space-2);
+  border-radius: var(--ac-radius-sm);
+  background-color: rgb(17 24 39 / 65%);
+  color: #fff;
+  font-size: var(--ac-text-xs);
+  text-align: center;
+}
+
+// Sans image de fond, le bandeau sombre serait inutilement lourd.
+.ac-photo-tile:not(.ac-photo-tile--filled) .ac-photo-tile__label {
+  background-color: transparent;
+  color: var(--ac-text-secondary);
+}

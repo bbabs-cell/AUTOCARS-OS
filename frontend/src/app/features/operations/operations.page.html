@@ -1,0 +1,273 @@
+<ac-page-header
+  title="Accueil"
+  [subtitle]="onlyActive() ? 'Les véhicules actuellement en station' : 'Tous les dossiers, y compris restitués'"
+>
+  <button type="button" class="btn btn-primary" (click)="openForm()">
+    <i class="bi bi-plus-lg"></i> Accueillir un véhicule
+  </button>
+</ac-page-header>
+
+<!--
+  Trois chiffres, pas huit.
+  Le comptoir a besoin de savoir combien attendent, combien sont en
+  cours et combien peuvent partir. Le détail par statut est dans la
+  liste juste en dessous.
+-->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-4">
+    <div class="ac-card h-100">
+      <div class="ac-card__body">
+        <div class="ac-caption">En attente</div>
+        <div class="ac-numeric fw-bold" style="font-size: var(--ac-text-2xl)">{{ waiting() }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-4">
+    <div class="ac-card h-100">
+      <div class="ac-card__body">
+        <div class="ac-caption">En cours de traitement</div>
+        <div class="ac-numeric fw-bold" style="font-size: var(--ac-text-2xl)">{{ inStation() }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="ac-card h-100">
+      <div class="ac-card__body">
+        <div class="ac-caption">Prêts à restituer</div>
+        <div class="ac-numeric fw-bold" style="font-size: var(--ac-text-2xl)">{{ ready() }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <label for="operation-search" class="form-label">Rechercher un dossier</label>
+    <div class="position-relative">
+      <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3"
+         style="color: var(--ac-icon-muted)" aria-hidden="true"></i>
+      <input
+        id="operation-search"
+        type="search"
+        class="form-control ps-5"
+        placeholder="Référence, plaque ou nom du client…"
+        [value]="searchTerm()"
+        (input)="onSearch($any($event.target).value)"
+        autocomplete="off"
+      />
+    </div>
+    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+      <span class="ac-caption">
+        La référence figure sur le reçu remis au client : DKP-2609-0042.
+      </span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="toggleScope()">
+        @if (onlyActive()) {
+          <i class="bi bi-clock-history"></i> Voir aussi les dossiers clos
+        } @else {
+          <i class="bi bi-funnel"></i> N'afficher que ce qui est en cours
+        }
+      </button>
+    </div>
+  </div>
+</div>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 75%"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 60%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && operations().length === 0) {
+  <div class="ac-card">
+    @if (hasSearch()) {
+      <ac-empty-state
+        icon="bi-search"
+        title="Aucun dossier trouvé"
+        text="Vérifiez la référence ou la plaque. Si le véhicule vient d'arriver, accueillez-le."
+        actionLabel="Accueillir un véhicule"
+        (action)="openForm()"
+      />
+    } @else if (onlyActive()) {
+      <ac-empty-state
+        icon="bi-check2-circle"
+        title="Aucun véhicule en station"
+        text="Tout est traité. Le prochain véhicule qui se présente s'enregistre ici."
+        actionLabel="Accueillir un véhicule"
+        (action)="openForm()"
+      />
+    } @else {
+      <ac-empty-state
+        icon="bi-folder"
+        title="Aucun dossier"
+        text="Le premier véhicule accueilli ouvrira le premier dossier de votre station."
+        actionLabel="Accueillir un véhicule"
+        (action)="openForm()"
+      />
+    }
+  </div>
+}
+
+@if (!isLoading() && operations().length > 0) {
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Véhicule</th>
+            <th>Client</th>
+            <th>Prestation</th>
+            <th>Statut</th>
+            <th>Montant</th>
+            <th>Arrivé</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (operation of operations(); track operation.id) {
+            <tr [routerLink]="['/operations', operation.id]" style="cursor: pointer">
+              <td>
+                <span class="ac-numeric fw-semibold ac-nowrap">{{ operation.reference }}</span>
+                @if (operation.priority > 0) {
+                  <span class="ac-badge ac-badge--warning ms-2">Prioritaire</span>
+                }
+              </td>
+              <td>
+                <span class="ac-plate">{{ operation.plate_display }}</span>
+                <div class="ac-caption">{{ operation.brand }} {{ operation.model }}</div>
+              </td>
+              <td>
+                <div>{{ operation.customer_name }}</div>
+                <div class="ac-caption ac-numeric">{{ operation.customer_phone }}</div>
+              </td>
+              <td class="ac-text-secondary">{{ operation.service_name }}</td>
+              <td><ac-status-badge [status]="operation.status" /></td>
+              <td class="ac-numeric ac-nowrap">
+                {{ operation.price | acAmount }}
+                @if (!operation.is_settled && operation.status !== 'CANCELLED') {
+                  <div class="ac-caption" style="color: var(--ac-warning-700)">Non réglé</div>
+                }
+              </td>
+              <td class="ac-text-secondary ac-nowrap">{{ operation.created_at | acRelativeDate }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<!-- Accueil d'un véhicule -->
+@if (isFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="operation-form-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="operation-form-title">Accueillir un véhicule</h2>
+      <button type="button" class="ac-btn-icon" (click)="closeForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="ac-modal__body">
+        <div class="mb-4">
+          <label for="o-vehicle" class="form-label">Véhicule</label>
+          <select id="o-vehicle" class="form-select" formControlName="vehicle_id"
+                  [class.is-invalid]="fieldErrors()['vehicle_id']">
+            <option [value]="0" disabled>Choisir un véhicule…</option>
+            @for (vehicle of vehicles(); track vehicle.id) {
+              <option [value]="vehicle.id">
+                {{ vehicle.plate_display }} — {{ vehicle.brand }} {{ vehicle.model }} ({{ vehicle.customer_name }})
+              </option>
+            }
+          </select>
+          <span class="ac-caption">
+            Le client est déduit du véhicule : pas besoin de le ressaisir.
+            @if (vehicles().length === 0) {
+              <a routerLink="/vehicles">Enregistrez d'abord le véhicule</a>, puis revenez ici.
+            }
+          </span>
+          @if (fieldErrors()['vehicle_id']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="o-service" class="form-label">Prestation</label>
+          <select id="o-service" class="form-select" formControlName="service_id"
+                  (change)="onServiceChange($any($event.target).value)"
+                  [class.is-invalid]="fieldErrors()['service_id']">
+            <option [value]="0" disabled>Choisir une prestation…</option>
+            @for (service of services(); track service.id) {
+              <option [value]="service.id">{{ service.name }}</option>
+            }
+          </select>
+          @if (fieldErrors()['service_id']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <!--
+          Le prix est annoncé MAINTENANT, et figé à l'ouverture.
+          C'est ce qui évite la discussion la plus pénible du
+          comptoir : celle qui a lieu au moment de payer.
+        -->
+        @if (selectedService(); as service) {
+          <div class="ac-alert ac-alert--info mb-4">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>
+              <strong class="ac-numeric">{{ service.price | acAmount }}</strong>
+              · environ {{ service.duration_minutes }} minutes.
+              <div class="ac-caption">
+                Ce prix est enregistré sur le dossier. Un changement de tarif plus tard
+                ne le modifiera pas.
+              </div>
+            </div>
+          </div>
+        }
+
+        <div class="mb-4">
+          <label for="o-priority" class="form-label">Priorité</label>
+          <select id="o-priority" class="form-select" formControlName="priority">
+            <option [value]="0">Normale</option>
+            <option [value]="1">Client pressé</option>
+            <option [value]="2">Urgente</option>
+          </select>
+          <span class="ac-caption">
+            Fait remonter le véhicule dans la file sans toucher aux heures d'arrivée.
+          </span>
+        </div>
+
+        <div>
+          <label for="o-notes" class="form-label">
+            Notes <span class="ac-text-muted fw-normal">(facultatif)</span>
+          </label>
+          <textarea id="o-notes" class="form-control" rows="2" formControlName="notes"
+                    placeholder="Le client repasse à 16 h."></textarea>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">Annuler</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Ouverture…
+          } @else {
+            Ouvrir le dossier
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
