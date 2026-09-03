@@ -105,7 +105,7 @@ suivant.
 **Phase A — Fondations**
 - [x] **Lot 1** — Initialisation : Angular, API PHP, configuration, documentation
 - [x] **Lot 2** — Design system : jetons, Bootstrap personnalisé, layout, composants, page `/styleguide`
-- [ ] Lot 3 — Base de données du MVP
+- [x] **Lot 3** — Base de données : 12 tables, migrations, jeu de démonstration, 38 tests de schéma
 
 **Phase B — Cœur du MVP**
 - [ ] Lot 4 — Authentification, multi-tenant, permissions

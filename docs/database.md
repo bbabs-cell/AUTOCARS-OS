@@ -1,8 +1,34 @@
 # Base de données — AUTOCARE OS
 
-> **État : conception.** Les tables seront créées au **Lot 3**.
-> Ce document fixe dès maintenant les règles que toutes les tables
-> devront respecter.
+> **État : implémentée au Lot 3.** 12 tables métier, plus la table
+> technique `migrations`.
+
+---
+
+## Démarrage
+
+```bash
+cd backend
+
+php tools/migrate.php            # applique les migrations en attente
+php tools/migrate.php --status   # liste sans rien exécuter
+php tools/migrate.php --fresh    # efface tout et rejoue depuis zéro
+php tools/seed.php               # charge le jeu de démonstration
+php tests/schema_test.php        # vérifie que les garde-fous fonctionnent
+```
+
+`--fresh` **détruit toutes les données**. La commande refuse de
+s'exécuter si `APP_ENV=production`.
+
+### Pourquoi un outil de migration ?
+
+À plusieurs personnes et sur plusieurs mois, « est-ce que j'ai déjà
+passé le script qui ajoute la colonne devise ? » devient une question
+impossible à trancher.
+
+L'outil tient un registre : la table `migrations` mémorise chaque
+fichier appliqué. Relancer la commande ne rejoue donc rien. C'est ce
+qui permet de déployer sans se demander où on en était.
 
 ---
 
@@ -14,96 +40,271 @@ CREATE DATABASE autocare_os
   COLLATE utf8mb4_unicode_ci;
 ```
 
-`utf8mb4` est obligatoire : c'est ce qui permet de stocker les accents
-français et les emojis. L'ancien `utf8` de MySQL est incomplet.
+`utf8mb4` est obligatoire : il permet de stocker les accents français
+et les emojis. L'ancien `utf8` de MySQL est incomplet.
 
-Moteur : **InnoDB** (le défaut en MySQL 8), seul à gérer les clés
-étrangères et les transactions.
-
----
-
-## Règles communes à toutes les tables
-
-1. **Clé primaire** `id BIGINT UNSIGNED AUTO_INCREMENT`.
-2. **`organization_id`** sur toute table métier — voir isolation
-   ci-dessous.
-3. **Horodatage** : `created_at` et `updated_at` (`TIMESTAMP`, en UTC).
-4. **Clés étrangères** explicites, avec `ON DELETE` réfléchi
-   (généralement `RESTRICT` : on ne supprime pas un client qui a un
-   historique).
-5. **Index** sur toute colonne servant à filtrer ou à joindre.
-6. **Suppression logique** (`deleted_at`) sur les données à valeur de
-   preuve : un véhicule ou une inspection ne se supprime pas.
-7. **Montants en `BIGINT`**, jamais en `FLOAT` — le FCFA n'a pas de
-   décimales et les flottants produisent des erreurs d'arrondi.
+Moteur **InnoDB** partout : seul à gérer les clés étrangères et les
+transactions.
 
 ---
 
-## Isolation des données — la règle la plus importante
-
-AUTOCARE OS sert plusieurs entreprises depuis une seule base.
+## Les 12 tables
 
 ```
-organizations
-     └── stations
-            └── station_users  (qui travaille où, avec quel rôle)
-                   └── customers, vehicles, operations, payments…
+organizations                    l'entreprise cliente du SaaS
+   ├── users                     comptes de connexion
+   ├── stations                  points de service
+   │      └── station_users      qui travaille où, avec quel rôle
+   ├── customers                 clients de la station
+   │      └── vehicles           véhicules, rattachés à un client
+   ├── services                  catalogue des prestations
+   └── operations         ◄──────  LA TABLE CENTRALE
+          ├── inspections           état constaté du véhicule
+          │      └── inspection_photos   les preuves
+          └── payments              encaissements
+
+audit_logs                       qui a fait quoi, et quand
 ```
-
-**Toute requête métier doit filtrer sur `organization_id`.**
-
-Une seule requête qui l'oublie expose les données d'une entreprise à
-une autre. C'est pourquoi aucun contrôleur n'écrira de SQL librement :
-tout passera par une couche qui ajoute le filtre automatiquement.
-
----
-
-## Tables du MVP (Lot 3)
-
-| Table | Rôle |
-|---|---|
-| `organizations` | L'entreprise cliente du SaaS |
-| `users` | Comptes de connexion |
-| `stations` | Les points de service |
-| `station_users` | Affectation d'un utilisateur à une station + son rôle |
-| `customers` | Les clients de la station |
-| `vehicles` | Les véhicules, rattachés à un client |
-| `services` | Les prestations proposées (lavage, detailing…) |
-| `operations` | Un service réalisé sur un véhicule — **la table centrale** |
-| `inspections` | État constaté d'un véhicule à son arrivée |
-| `inspection_photos` | Photos associées à une inspection |
-| `payments` | Encaissements |
-| `audit_logs` | Journal des actions sensibles |
 
 ### Trois tables volontairement absentes
 
-| Table écartée | Pourquoi |
+| Écartée | Pourquoi |
 |---|---|
-| `queue` | La file d'attente n'est pas une entité mais une **vue** des opérations en cours. Une table séparée dupliquerait l'état et finirait par diverger. → un champ `priority` sur `operations` suffit. |
-| `employees` | Un employé **est** un `user` rattaché à une station via `station_users`. On créera cette table le jour où il y aura des données RH réelles (contrat, horaires, salaire). |
-| `roles` / `permissions` | Le rôle est un `ENUM('ADMIN','MANAGER','EMPLOYEE')` et la matrice de permissions vit dans un fichier PHP : lisible, testable, sans jointure. On passera en base le jour où un client voudra des rôles sur mesure. |
+| `queue` | La file d'attente n'est pas une entité mais une **vue** des opérations en cours, triées par priorité. Une table séparée dupliquerait l'état et finirait par diverger. → un champ `priority` sur `operations` suffit. |
+| `employees` | Un employé **est** un `user` rattaché à une station via `station_users`. On créera cette table le jour où il y aura de vraies données RH. |
+| `roles` / `permissions` | Le rôle est un `ENUM` de trois valeurs, la matrice des droits vit dans un fichier PHP : lisible, testable, sans jointure. On passera en base quand un client voudra des rôles sur mesure. |
+
+---
+
+## Règles appliquées partout
+
+1. **Clé primaire** `id BIGINT UNSIGNED AUTO_INCREMENT`.
+2. **`organization_id` sur toute table métier** — voir isolation.
+3. **Horodatage** `created_at` / `updated_at`, stockés en UTC.
+4. **Clés étrangères en `RESTRICT`** par défaut : on ne supprime pas
+   un client qui a un historique.
+5. **Index** sur toute colonne servant à filtrer ou à joindre.
+6. **Suppression logique** (`deleted_at`) sur `users`, `customers`,
+   `vehicles`.
+7. **Montants en entiers**, jamais en nombres à virgule.
+
+### Pourquoi les montants sont des entiers
+
+Le franc CFA n'a pas de décimales. Surtout, un `FLOAT` introduit des
+erreurs d'arrondi : `0.1 + 0.2` ne vaut pas exactement `0.3` en
+binaire. Sur une caisse qu'un gérant doit équilibrer au franc près,
+c'est inacceptable.
+
+Pour une devise à décimales, on stockera les centimes dans ce même
+entier.
+
+---
+
+## Isolation entre entreprises
+
+C'est **le** point de sécurité du produit.
+
+```
+organizations → stations → station_users → données métier
+```
+
+Toute table métier porte `organization_id`, y compris quand
+l'information serait déduisible par jointure (`station_users` en est
+un exemple). Cette duplication est **volontaire** : elle permet à la
+couche d'accès aux données d'appliquer le filtre d'isolation de façon
+uniforme, sans exception à retenir. Une exception est une occasion de
+l'oublier.
+
+**Le risque :** une seule requête sans `WHERE organization_id = ?`
+expose les données d'une entreprise à une autre.
+
+**La parade (Lot 4) :** aucun contrôleur n'écrira de SQL librement.
+Toutes les lectures passeront par une couche qui injecte le filtre
+automatiquement, plus des tests d'isolation automatisés.
 
 ---
 
 ## Machine à états des opérations
 
-`operations` est la table centrale du produit. Son statut suit un
-cycle **strict** — les transitions non listées seront refusées par
-l'API :
+> ⚠️ **En attente de validation.** Les transitions ci-dessous sont une
+> proposition ; elles seront verrouillées côté API au Lot 8. La base
+> garantit les *valeurs* possibles (via l'`ENUM`), pas l'*ordre* dans
+> lequel on y passe.
 
 ```
 WAITING ──► IN_PROGRESS ──► INSPECTION ──► WASHING
                                               │
                                               ▼
 COMPLETED ◄── READY ◄── QUALITY_CHECK ────────┘
+                             │
+                             └──► WASHING   (contrôle non conforme)
 
-(CANCELLED est accessible depuis tout état non terminal)
+CANCELLED : accessible depuis tout état non terminal
 ```
+
+| Depuis | Transitions autorisées |
+|---|---|
+| `WAITING` | `IN_PROGRESS`, `CANCELLED` |
+| `IN_PROGRESS` | `INSPECTION`, `CANCELLED` |
+| `INSPECTION` | `WASHING`, `CANCELLED` |
+| `WASHING` | `QUALITY_CHECK`, `CANCELLED` |
+| `QUALITY_CHECK` | `READY`, `WASHING`, `CANCELLED` |
+| `READY` | `COMPLETED`, `CANCELLED` |
+| `COMPLETED` | *(état final)* |
+| `CANCELLED` | *(état final)* |
 
 **Pourquoi cette rigueur ?** Parce que la traçabilité est le cœur du
 produit. Si on pouvait passer directement de `WAITING` à `COMPLETED`,
 un véhicule serait rendu sans inspection ni contrôle — exactement le
-litige que le produit doit empêcher. Chaque transition sera
-journalisée dans `audit_logs` avec son auteur et son horodatage.
+litige que le produit doit empêcher.
 
-> Cette machine à états sera validée explicitement avant d'être codée.
+Deux règles supplémentaires proposées :
+
+- **`QUALITY_CHECK` → `WASHING`** est autorisé : si le contrôle n'est
+  pas conforme, on relave. C'est le seul retour en arrière du parcours.
+- **`READY` → `COMPLETED`** (la restitution) exigera un paiement au
+  statut `PAID`, ou l'accord explicite d'un manager, tracé dans le
+  journal d'audit.
+
+Chaque transition sera journalisée dans `audit_logs` avec son auteur
+et son horodatage.
+
+---
+
+## Détails de conception à connaître
+
+### Le prix est recopié sur l'opération
+
+`operations.price` duplique `services.price` au moment de la
+création. C'est **volontaire** : si le gérant augmente le tarif du
+lavage premium le mois prochain, les opérations passées doivent
+continuer à montrer ce qui a réellement été facturé. Lire le prix par
+une jointure réécrirait le passé à chaque changement.
+
+### Le téléphone client n'est pas unique
+
+Il est obligatoire — c'est l'identifiant naturel d'une personne au
+Sénégal, bien avant l'e-mail — mais **pas unique** : un couple partage
+souvent un numéro. Une contrainte d'unicité bloquerait un
+enregistrement légitime en pleine affluence. Le doublon sera signalé
+par l'application (Lot 6), pas interdit par la base.
+
+### La plaque est unique par entreprise
+
+Une plaque désigne un seul véhicule dans une organisation, ce qui
+évite les fiches en double qui casseraient l'historique. Mais deux
+entreprises concurrentes peuvent servir le même véhicule : l'unicité
+est donc `(organization_id, plate_number)`, jamais la plaque seule.
+
+Les plaques sont stockées **normalisées** (majuscules, sans
+séparateur : `DK1234AA`) pour que « dk 1234 aa » et « DK-1234-AA »
+désignent bien le même véhicule. L'affichage remet les tirets.
+
+### L'e-mail est unique globalement
+
+C'est l'identifiant de connexion : il ne peut pas y en avoir deux.
+Conséquence assumée : une personne travaillant pour deux entreprises
+clientes aura besoin de deux adresses.
+
+### Les photos ne se suppriment pas
+
+`inspection_photos` a un statut `ARCHIVED` mais pas de `deleted_at` :
+une preuve effaçable ne vaut rien. On stocke aussi l'empreinte
+SHA-256 du fichier — si quelqu'un remplace l'image sur le disque,
+l'empreinte ne correspond plus et la substitution devient détectable.
+
+### `audit_logs` est en ajout seul
+
+Pas de `updated_at`, pas de `deleted_at` : leur présence suggérerait
+qu'une ligne peut changer. Pas de clé étrangère sur
+`entity_type` / `entity_id` non plus — elle empêcherait de conserver
+la trace d'un élément supprimé, exactement ce qu'un journal doit
+garder.
+
+---
+
+## Index et performance
+
+L'index le plus important du produit :
+
+```sql
+KEY idx_operations_queue (organization_id, station_id, status, priority)
+```
+
+C'est la requête de la file d'attente, rechargée en permanence sur
+tous les postes. L'ordre des colonnes suit celui du filtrage réel —
+MySQL ne peut utiliser un index composé que de la gauche vers la
+droite.
+
+**Mesuré sur 2 000 opérations** (`php tests/schema_test.php`) :
+l'index est retenu par l'optimiseur et n'examine que 60 à 180 lignes
+au lieu des 2 004.
+
+> Piège à connaître : sur une table de quatre lignes, l'optimiseur
+> **ignore volontairement** les index — lire quatre lignes coûte moins
+> cher que consulter un index puis la table. Vérifier l'usage d'un
+> index sur des données de démonstration ne prouve donc rien. C'est
+> pourquoi le test charge un volume réaliste, avec une répartition
+> réaliste des statuts (2 % d'opérations actives, le reste terminé).
+
+---
+
+## Jeu de démonstration
+
+`php tools/seed.php` crée une station sénégalaise plausible :
+
+- 1 entreprise (Groupe Diallo Auto), 2 stations (Dakar, Thiès)
+- 4 utilisateurs couvrant les 3 rôles
+- 5 prestations, 4 clients, 5 véhicules
+- 4 opérations à différents stades du parcours
+- 3 inspections, 5 photos (métadonnées seules), 2 paiements
+
+**Comptes** — mot de passe `Autocare2026!` :
+
+| Adresse | Rôle |
+|---|---|
+| `mamadou.diallo@dialloauto.sn` | Administrateur |
+| `awa.ndiaye@dialloauto.sn` | Manager |
+| `aliou.sow@dialloauto.sn` | Employé |
+
+Ces données sont volontairement réalistes. Une base remplie de
+« test1 » et « aaa » ne permet pas de juger si une interface tient
+debout avec de vrais noms.
+
+---
+
+## Tests
+
+`php tests/schema_test.php` — 38 vérifications.
+
+Un schéma qui « se crée sans erreur » ne prouve rien. Ce qui compte,
+c'est qu'il **refuse** ce qu'il doit refuser :
+
+- supprimer un client qui a un historique → refusé
+- enregistrer deux fois la même plaque → refusé
+- deux inspections d'entrée sur une opération → refusé
+- un statut d'opération inventé → refusé
+- la même plaque dans une **autre** entreprise → autorisé
+
+Le test est **rejouable** : il nettoie ses données avant et après, y
+compris après un plantage.
+
+---
+
+## Compatibilité MySQL / MariaDB
+
+Le SQL est volontairement conservateur pour fonctionner sur les deux.
+Il a été **exécuté et testé sur MariaDB 10.11**, tandis que
+l'environnement de référence du projet est **MySQL 8.4**.
+
+Points d'attention, tous évités ici :
+
+| Sujet | Traitement |
+|---|---|
+| Type `JSON` | Natif sur MySQL 8, alias de `LONGTEXT` sur MariaDB. On se contente de stocker et relire, ce qui marche sur les deux. |
+| Collation | `utf8mb4_unicode_ci`, présente sur les deux (MySQL 8 utilise `utf8mb4_0900_ai_ci` par défaut mais accepte l'autre). |
+| Longueur des index | Colonnes indexées limitées à 190 caractères, sûr sur toutes les versions. |
+| `DEFAULT (expression)` | Non utilisé. |
+
+Si une différence apparaît sur MySQL 8.4, le message d'erreur de
+`php tools/migrate.php` indique le fichier et l'instruction exacte.
