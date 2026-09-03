@@ -42,13 +42,56 @@ $connection = Database::connection();
 // Si des données existent déjà, on s'arrête plutôt que de créer des
 // doublons ou de faire échouer les insertions sur des identifiants
 // déjà pris.
-$organizationCount = (int) $connection->query('SELECT COUNT(*) FROM organizations')->fetchColumn();
+//
+// On MONTRE ce qui bloque, avec le nombre d'utilisateurs de chaque
+// organisation. Sans cette information, impossible de décider si l'on
+// peut effacer : une organisation sans utilisateur est un résidu de
+// test, une organisation avec des comptes est peut-être un vrai
+// début de travail. Un outil qui dit « c'est occupé » sans dire par
+// quoi oblige à aller fouiller soi-même.
+$existing = $connection->query(
+    'SELECT o.id, o.name, o.slug,
+            (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id) AS user_count
+       FROM organizations o
+   ORDER BY o.id'
+)->fetchAll();
 
-if ($organizationCount > 0) {
-    echo "[ARRÊT] La base contient déjà {$organizationCount} organisation(s).\n\n";
-    echo "        Pour repartir de zéro :\n";
+if ($existing !== []) {
+    echo '[ARRÊT] La base contient déjà ' . count($existing) . " organisation(s) :\n\n";
+
+    $hasRealData = false;
+
+    foreach ($existing as $organization) {
+        $userCount = (int) $organization['user_count'];
+        $note      = $userCount === 0
+            ? '  ← aucun utilisateur : probablement un résidu de test'
+            : '';
+
+        if ($userCount > 0) {
+            $hasRealData = true;
+        }
+
+        printf(
+            "        #%-4d %-30s %d utilisateur(s)%s\n",
+            (int) $organization['id'],
+            mb_substr((string) $organization['name'], 0, 30),
+            $userCount,
+            $note
+        );
+    }
+
+    echo "\n";
+
+    if ($hasRealData) {
+        echo "        ⚠️  Des comptes existent. Les effacer est irréversible.\n";
+    } else {
+        echo "        Aucun compte n'existe : rien d'utilisable ne sera perdu.\n";
+    }
+
+    echo "\n        Pour repartir de zéro :\n";
     echo "          php tools/migrate.php --fresh\n";
     echo "          php tools/seed.php\n";
+
     exit(1);
 }
 
