@@ -51,6 +51,10 @@ $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
 password_verify($plainPassword, $hash);
 ```
 
+Le rehachage automatique est en place : quand PHP recommande un
+algorithme plus solide, l'empreinte est mise à jour à la prochaine
+connexion — le seul moment où le mot de passe en clair est disponible.
+
 `password_hash()` produit un hachage lent et salé. Même avec la base
 volée, un attaquant ne peut pas retrouver les mots de passe.
 
@@ -73,7 +77,7 @@ JavaScript de la page. Une seule faille XSS et le compte est volé pour
 toute la durée du jeton. Un cookie `httpOnly` est invisible au
 JavaScript : même en cas de XSS, il ne peut pas être exfiltré.
 
-🔜 Lot 4.
+✅ Appliqué au Lot 4.
 
 ---
 
@@ -94,7 +98,7 @@ requête :
 
 Ce troisième point est le plus souvent oublié, et le plus grave.
 
-🔜 Lot 4.
+✅ Appliqué au Lot 4.
 
 ---
 
@@ -111,7 +115,7 @@ la possibilité de l'écrire.
 Des tests automatisés tenteront explicitement de lire les données
 d'une autre organisation et vérifieront que l'API refuse.
 
-🔜 Lot 4 — avant tout autre module.
+✅ Appliqué au Lot 4. `TenantRepository` injecte le filtre ; 43 tests dans `tests/security_test.php` tentent l'accès interdit et vérifient qu'il échoue.
 
 ---
 
@@ -175,7 +179,7 @@ Chaque entrée contient : `user_id`, `station_id`, `action`,
 C'est ce qui permet de répondre à « qui a fait quoi, et quand ? » —
 la question centrale en cas de litige sur un véhicule.
 
-🔜 Lot 4 (structure) · alimenté à chaque lot suivant.
+✅ Structure et événements d'authentification au Lot 4 · alimenté à chaque lot suivant.
 
 ---
 
@@ -188,9 +192,12 @@ la question centrale en cas de litige sur un véhicule.
 | Erreurs non divulguées | ✅ Lot 1 |
 | PDO sans émulation | ✅ Lot 1 |
 | CORS restreint à une origine | ✅ Lot 1 |
-| Hachage des mots de passe | 🔜 Lot 4 |
-| Autorisation côté API | 🔜 Lot 4 |
-| Isolation multi-tenant + tests | 🔜 Lot 4 |
-| Journal d'audit | 🔜 Lot 4 |
+| Hachage des mots de passe | ✅ Lot 4 |
+| Autorisation côté API | ✅ Lot 4 |
+| Isolation multi-tenant + tests | ✅ Lot 4 |
+| Journal d'audit | ✅ Lot 4 |
+| Jetons courts + rotation | ✅ Lot 4 |
+| Limitation des tentatives de connexion | ✅ Lot 4 |
+| Envoi d'e-mail (mot de passe oublié) | 🔜 Lot 15 |
 | Upload sécurisé | 🔜 Lot 7 |
 | Audit de sécurité complet | 🔜 Lot 21 |

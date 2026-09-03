@@ -1,0 +1,138 @@
+<h1 class="h3 mb-2">Créer votre station</h1>
+<p class="ac-text-secondary mb-5">
+  Quelques informations suffisent. Le reste se configure ensuite.
+</p>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+  <div class="mb-4">
+    <label for="organization_name" class="form-label">Nom de votre entreprise</label>
+    <input
+      id="organization_name"
+      type="text"
+      class="form-control"
+      formControlName="organization_name"
+      placeholder="Groupe Diallo Auto"
+      [class.is-invalid]="form.controls.organization_name.touched && form.controls.organization_name.invalid"
+    />
+    @if (form.controls.organization_name.touched && form.controls.organization_name.invalid) {
+      <div class="invalid-feedback d-block">Le nom de l'entreprise est obligatoire.</div>
+    }
+    @if (fieldErrors()['organization_name']; as error) {
+      <div class="invalid-feedback d-block">{{ error }}</div>
+    }
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6">
+      <label for="first_name" class="form-label">Prénom</label>
+      <input
+        id="first_name"
+        type="text"
+        class="form-control"
+        formControlName="first_name"
+        autocomplete="given-name"
+        [class.is-invalid]="form.controls.first_name.touched && form.controls.first_name.invalid"
+      />
+      @if (form.controls.first_name.touched && form.controls.first_name.invalid) {
+        <div class="invalid-feedback d-block">Le prénom est obligatoire.</div>
+      }
+    </div>
+
+    <div class="col-sm-6">
+      <label for="last_name" class="form-label">Nom</label>
+      <input
+        id="last_name"
+        type="text"
+        class="form-control"
+        formControlName="last_name"
+        autocomplete="family-name"
+        [class.is-invalid]="form.controls.last_name.touched && form.controls.last_name.invalid"
+      />
+      @if (form.controls.last_name.touched && form.controls.last_name.invalid) {
+        <div class="invalid-feedback d-block">Le nom est obligatoire.</div>
+      }
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <label for="email" class="form-label">Adresse e-mail</label>
+    <input
+      id="email"
+      type="email"
+      class="form-control"
+      formControlName="email"
+      autocomplete="email"
+      placeholder="vous@votre-station.sn"
+      [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+    />
+    <span class="ac-caption">Elle vous servira à vous connecter.</span>
+    @if (form.controls.email.touched && form.controls.email.invalid) {
+      <div class="invalid-feedback d-block">Cette adresse e-mail est invalide.</div>
+    }
+    @if (fieldErrors()['email']; as error) {
+      <div class="invalid-feedback d-block">{{ error }}</div>
+    }
+  </div>
+
+  <div class="mb-4">
+    <label for="phone" class="form-label">
+      Téléphone <span class="ac-text-muted fw-normal">(facultatif)</span>
+    </label>
+    <input
+      id="phone"
+      type="tel"
+      class="form-control"
+      formControlName="phone"
+      autocomplete="tel"
+      placeholder="+221 77 000 00 00"
+    />
+    @if (fieldErrors()['phone']; as error) {
+      <div class="invalid-feedback d-block">{{ error }}</div>
+    }
+  </div>
+
+  <div class="mb-4">
+    <label for="password" class="form-label">Mot de passe</label>
+    <input
+      id="password"
+      type="password"
+      class="form-control"
+      formControlName="password"
+      autocomplete="new-password"
+      [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+    />
+    <span class="ac-caption">
+      Au moins 10 caractères. Une phrase dont vous vous souvenez vaut mieux
+      qu'un mot compliqué noté sur un papier.
+    </span>
+    @if (form.controls.password.touched && form.controls.password.invalid) {
+      <div class="invalid-feedback d-block">
+        Le mot de passe doit contenir au moins 10 caractères.
+      </div>
+    }
+    @if (fieldErrors()['password']; as error) {
+      <div class="invalid-feedback d-block">{{ error }}</div>
+    }
+  </div>
+
+  <button type="submit" class="btn btn-primary ac-btn-field ac-btn-block" [disabled]="isSubmitting()">
+    @if (isSubmitting()) {
+      <span class="spinner-border spinner-border-sm"></span> Création…
+    } @else {
+      Créer ma station
+    }
+  </button>
+</form>
+
+<p class="text-center ac-text-secondary mt-5 mb-0">
+  Vous avez déjà un compte ?
+  <a routerLink="/login" class="fw-semibold">Se connecter</a>
+</p>

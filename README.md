@@ -108,7 +108,7 @@ suivant.
 - [x] **Lot 3** — Base de données : 12 tables, migrations, jeu de démonstration, 38 tests de schéma
 
 **Phase B — Cœur du MVP**
-- [ ] Lot 4 — Authentification, multi-tenant, permissions
+- [x] **Lot 4** — Authentification, multi-tenant, permissions : 43 tests de sécurité
 - [ ] Lot 5 — Onboarding station et prestations
 - [ ] Lot 6 — Clients et véhicules
 - [ ] Lot 7 — Inspection, photos, restitution

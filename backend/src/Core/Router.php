@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Autocare\Core;
 
+use Autocare\Http\Middleware\AuthMiddleware;
+
 /**
  * Routeur : associe une URL a un morceau de code
  * ------------------------------------------------------------------
@@ -28,7 +30,13 @@ final class Router
 {
     /**
      * Liste des routes enregistrees.
-     * @var array<int, array{method:string, pattern:string, handler:array{0:class-string,1:string}}>
+     * @var array<int, array{
+     *     method:string,
+     *     pattern:string,
+     *     handler:array{0:class-string,1:string},
+     *     auth:bool,
+     *     permission:string|null
+     * }>
      */
     private array $routes = [];
 
@@ -38,38 +46,58 @@ final class Router
      * @param string $method  GET, POST, PUT, DELETE
      * @param string $pattern Chemin, ex: "/api/vehicles/{id}"
      * @param array{0:class-string,1:string} $handler [Controleur::class, 'methode']
+     * @param array{auth?:bool, permission?:string} $options
+     *
+     * Les options declarent les exigences de securite DE LA ROUTE
+     * elle-meme. C'est volontaire : en lisant config/routes.php, on
+     * voit d'un coup d'oeil ce qui est public et ce qui ne l'est pas.
+     * Une protection oubliee devient visible a la relecture.
      */
-    public function add(string $method, string $pattern, array $handler): void
+    public function add(string $method, string $pattern, array $handler, array $options = []): void
     {
         $this->routes[] = [
-            'method'  => strtoupper($method),
-            'pattern' => rtrim($pattern, '/') ?: '/',
-            'handler' => $handler,
+            'method'     => strtoupper($method),
+            'pattern'    => rtrim($pattern, '/') ?: '/',
+            'handler'    => $handler,
+            'auth'       => (bool) ($options['auth'] ?? false),
+            'permission' => $options['permission'] ?? null,
         ];
     }
 
-    /** @param array{0:class-string,1:string} $handler */
-    public function get(string $pattern, array $handler): void
+    /**
+     * @param array{0:class-string,1:string} $handler
+     * @param array{auth?:bool, permission?:string} $options
+     */
+    public function get(string $pattern, array $handler, array $options = []): void
     {
-        $this->add('GET', $pattern, $handler);
+        $this->add('GET', $pattern, $handler, $options);
     }
 
-    /** @param array{0:class-string,1:string} $handler */
-    public function post(string $pattern, array $handler): void
+    /**
+     * @param array{0:class-string,1:string} $handler
+     * @param array{auth?:bool, permission?:string} $options
+     */
+    public function post(string $pattern, array $handler, array $options = []): void
     {
-        $this->add('POST', $pattern, $handler);
+        $this->add('POST', $pattern, $handler, $options);
     }
 
-    /** @param array{0:class-string,1:string} $handler */
-    public function put(string $pattern, array $handler): void
+    /**
+     * @param array{0:class-string,1:string} $handler
+     * @param array{auth?:bool, permission?:string} $options
+     */
+    public function put(string $pattern, array $handler, array $options = []): void
     {
-        $this->add('PUT', $pattern, $handler);
+        $this->add('PUT', $pattern, $handler, $options);
     }
 
-    /** @param array{0:class-string,1:string} $handler */
-    public function delete(string $pattern, array $handler): void
+    /**
+     * @param array{0:class-string,1:string} $handler
+     * @param array{auth?:bool, permission?:string} $options
+     */
+    public function delete(string $pattern, array $handler, array $options = []): void
     {
-        $this->add('DELETE', $pattern, $handler);
+        $this->add('DELETE', $pattern, $handler, $options);
     }
 
     /**
@@ -92,6 +120,15 @@ final class Router
             if ($route['method'] !== $request->method) {
                 $pathExistsWithOtherMethod = true;
                 continue;
+            }
+
+            // La securite est appliquee ICI, avant le controleur.
+            // Comme toutes les requetes passent par ce point unique,
+            // il est impossible d'oublier la verification sur une
+            // route : elle ne depend pas de ce que le controleur
+            // pense a faire.
+            if ($route['auth']) {
+                AuthMiddleware::handle($request, $route['permission']);
             }
 
             [$controllerClass, $methodName] = $route['handler'];

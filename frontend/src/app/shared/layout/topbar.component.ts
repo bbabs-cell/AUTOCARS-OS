@@ -1,5 +1,6 @@
-import { Component, output, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 
+import { AuthService } from '../../core/services/auth.service';
 import { AvatarComponent } from '../ui/avatar.component';
 
 /**
@@ -15,9 +16,8 @@ import { AvatarComponent } from '../ui/avatar.component';
  * quinzaine de lignes d'Angular évitent toute une catégorie de bugs,
  * et le comportement reste maîtrisé de bout en bout.
  *
- * Les données affichées (nom, rôle, nombre de notifications) sont
- * pour l'instant fictives. Elles viendront du service
- * d'authentification au Lot 4.
+ * Le nom et le rôle viennent du service d'authentification. Le nombre
+ * de notifications reste fictif jusqu'au lot 15.
  */
 @Component({
   selector: 'ac-topbar',
@@ -29,13 +29,34 @@ export class TopbarComponent {
   /** Demande à la coque d'ouvrir la barre latérale (mobile). */
   readonly toggleSidebar = output<void>();
 
+  private readonly auth = inject(AuthService);
+
   protected readonly isProfileMenuOpen = signal(false);
 
-  // --- Données provisoires, remplacées au Lot 4 ------------------
-  protected readonly userName = 'Mamadou Diallo';
-  protected readonly userRole = 'Administrateur';
-  protected readonly stationName = 'Station Dakar Plateau';
+  protected readonly userName = computed(() => this.auth.user()?.full_name ?? '');
+
+  /** Le rôle est stocké en anglais côté base ; on l'affiche en français. */
+  protected readonly userRole = computed(() => {
+    const labels = {
+      ADMIN: 'Administrateur',
+      MANAGER: 'Manager',
+      EMPLOYEE: 'Employé',
+    } as const;
+
+    const role = this.auth.user()?.role;
+
+    return role ? labels[role] : '';
+  });
+
+  // Provisoire : viendra du module stations (lot 17) et du centre de
+  // notifications (lot 15).
+  protected readonly stationName = 'Station principale';
   protected readonly unreadNotifications = 3;
+
+  protected logout(): void {
+    this.closeProfileMenu();
+    this.auth.logout();
+  }
 
   protected toggleProfileMenu(): void {
     this.isProfileMenuOpen.update((open) => !open);

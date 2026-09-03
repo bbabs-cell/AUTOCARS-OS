@@ -1,0 +1,44 @@
+<div class="ac-auth">
+
+  <!-- Panneau de présentation, masqué sous 992px -->
+  <aside class="ac-auth__promise d-none d-lg-flex">
+    <div class="ac-auth__promise-inner">
+      <div class="ac-auth__brand">
+        <span class="ac-auth__logo"><i class="bi bi-droplet-fill"></i></span>
+        <span><strong>AUTOCARE</strong> OS</span>
+      </div>
+
+      <h2 class="ac-auth__headline">
+        Votre station.<br />
+        Vos véhicules.<br />
+        Un seul logiciel.
+      </h2>
+
+      <p class="ac-auth__text">
+        Centralisez vos véhicules, vos clients, votre équipe et vos paiements.
+        Sachez à tout moment quel véhicule est présent, où il en est, et qui
+        s'en occupe.
+      </p>
+
+      <ul class="ac-auth__list">
+        <li><i class="bi bi-check-circle-fill"></i> Traçabilité complète, de l'arrivée à la restitution</li>
+        <li><i class="bi bi-check-circle-fill"></i> Inspection photo avant prise en charge</li>
+        <li><i class="bi bi-check-circle-fill"></i> File d'attente et suivi en temps réel</li>
+        <li><i class="bi bi-check-circle-fill"></i> Paiements et caisse au même endroit</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Formulaire -->
+  <main class="ac-auth__form">
+    <div class="ac-auth__form-inner">
+      <!-- Identité, visible seulement quand le panneau est masqué -->
+      <div class="ac-auth__brand d-lg-none mb-5">
+        <span class="ac-auth__logo"><i class="bi bi-droplet-fill"></i></span>
+        <span><strong>AUTOCARE</strong> OS</span>
+      </div>
+
+      <router-outlet />
+    </div>
+  </main>
+</div>

@@ -126,10 +126,9 @@ automatiquement, plus des tests d'isolation automatisés.
 
 ## Machine à états des opérations
 
-> ⚠️ **En attente de validation.** Les transitions ci-dessous sont une
-> proposition ; elles seront verrouillées côté API au Lot 8. La base
-> garantit les *valeurs* possibles (via l'`ENUM`), pas l'*ordre* dans
-> lequel on y passe.
+> ✅ **Validée.** Les transitions ci-dessous font foi ; elles seront
+> verrouillées côté API au Lot 8. La base garantit les *valeurs*
+> possibles (via l'`ENUM`), pas l'*ordre* dans lequel on y passe.
 
 ```
 WAITING ──► IN_PROGRESS ──► INSPECTION ──► WASHING
@@ -158,13 +157,20 @@ produit. Si on pouvait passer directement de `WAITING` à `COMPLETED`,
 un véhicule serait rendu sans inspection ni contrôle — exactement le
 litige que le produit doit empêcher.
 
-Deux règles supplémentaires proposées :
+Trois règles supplémentaires, validées :
 
 - **`QUALITY_CHECK` → `WASHING`** est autorisé : si le contrôle n'est
   pas conforme, on relave. C'est le seul retour en arrière du parcours.
 - **`READY` → `COMPLETED`** (la restitution) exigera un paiement au
   statut `PAID`, ou l'accord explicite d'un manager, tracé dans le
   journal d'audit.
+- **L'inspection d'entrée est obligatoire** : on ne peut pas passer de
+  `IN_PROGRESS` à `WASHING` sans passer par `INSPECTION`. C'est ce qui
+  protège la station des litiges, et c'est la raison d'être du produit.
+- **Le contrôle qualité est obligatoire** : `WASHING` mène toujours à
+  `QUALITY_CHECK` avant `READY`. Dans une petite station, la même
+  personne lave et contrôle — le statut reste une étape explicite,
+  tracée, même si elle ne dure que quelques secondes.
 
 Chaque transition sera journalisée dans `audit_logs` avec son auteur
 et son horodatage.

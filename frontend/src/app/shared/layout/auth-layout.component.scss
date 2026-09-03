@@ -1,0 +1,111 @@
+// Coque des pages publiques — voir auth-layout.component.ts
+
+.ac-auth {
+  display: grid;
+  min-height: 100vh;
+  background-color: var(--ac-surface);
+
+  @media (min-width: 992px) {
+    // Le formulaire garde plus de place que le discours : c'est lui
+    // que l'utilisateur est venu chercher.
+    grid-template-columns: 45% 55%;
+  }
+}
+
+// --- Panneau de présentation ---------------------------------------
+
+.ac-auth__promise {
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--ac-space-12);
+
+  // Bleu très clair plutôt qu'un aplat saturé : le cahier des charges
+  // demande une interface aérée, et une moitié d'écran en bleu vif
+  // fatiguerait dès la première seconde.
+  background-color: var(--ac-primary-50);
+  border-right: 1px solid var(--ac-primary-100);
+}
+
+.ac-auth__promise-inner {
+  max-width: 460px;
+  margin-inline: auto;
+}
+
+.ac-auth__headline {
+  font-size: var(--ac-text-3xl);
+  font-weight: var(--ac-weight-bold);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--ac-primary-700);
+  margin: var(--ac-space-10) 0 var(--ac-space-5);
+}
+
+.ac-auth__text {
+  color: var(--ac-text-secondary);
+  margin-bottom: var(--ac-space-8);
+}
+
+.ac-auth__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ac-space-3);
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ac-space-3);
+    font-size: var(--ac-text-base);
+    color: var(--ac-text-secondary);
+  }
+
+  i {
+    color: var(--ac-primary);
+    flex-shrink: 0;
+    line-height: 1.4;
+  }
+}
+
+// --- Identité --------------------------------------------------------
+
+.ac-auth__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  font-size: var(--ac-text-lg);
+
+  strong { font-weight: var(--ac-weight-bold); color: var(--ac-text); }
+  span   { color: var(--ac-primary); font-weight: var(--ac-weight-semibold); }
+}
+
+.ac-auth__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-primary);
+  color: var(--ac-text-inverse);
+  flex-shrink: 0;
+}
+
+// --- Zone de formulaire ----------------------------------------------
+
+.ac-auth__form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ac-space-6);
+
+  @media (min-width: 992px) {
+    padding: var(--ac-space-12);
+  }
+}
+
+.ac-auth__form-inner {
+  width: 100%;
+  max-width: 420px;
+}

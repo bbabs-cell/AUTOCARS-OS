@@ -128,11 +128,176 @@ Réponse `503` si la base ne répond pas :
 
 ---
 
+## Authentification
+
+### Comment ça marche
+
+```
+POST /api/auth/login
+   │
+   ├──► jeton d'accès (JWT, 30 min)   → renvoyé dans le corps JSON
+   │                                     Angular le garde EN MÉMOIRE
+   │
+   └──► jeton de rafraîchissement (7 j) → cookie httpOnly
+                                          invisible au JavaScript
+```
+
+Chaque requête protégée porte l'en-tête :
+
+```
+Authorization: Bearer <jeton d'accès>
+```
+
+Quand le jeton d'accès expire, l'API répond `401`. Le client appelle
+alors `POST /api/auth/refresh` (le cookie part tout seul), obtient un
+nouveau jeton et rejoue sa requête. L'utilisateur ne voit rien.
+
+**Pourquoi deux jetons ?** Un jeton unique de longue durée resterait
+exploitable une semaine s'il était volé. Un jeton unique de courte
+durée obligerait à se reconnecter toutes les demi-heures. Le couple
+donne la sécurité *et* le confort.
+
+**Pourquoi le rôle n'est-il pas dans le jeton ?** Parce qu'un JWT
+n'est pas modifiable une fois émis. Si le rôle y figurait, rétrograder
+un employé n'aurait aucun effet avant l'expiration du jeton. Il est
+donc relu en base à chaque requête : une requête de plus, une
+révocation immédiate.
+
+### Rotation
+
+À chaque `refresh`, l'ancien jeton de rafraîchissement est révoqué et
+un nouveau émis. Un jeton ne sert donc qu'une fois — s'il réapparaît,
+il est refusé.
+
+---
+
+### `POST /api/auth/register` — Créer une entreprise
+
+Crée en une transaction : l'organisation, sa première station, et
+l'utilisateur administrateur.
+
+```json
+{
+  "organization_name": "Groupe Diallo Auto",
+  "first_name": "Mamadou",
+  "last_name": "Diallo",
+  "email": "mamadou@dialloauto.sn",
+  "phone": "+221771234567",
+  "password": "un-mot-de-passe-assez-long"
+}
+```
+
+`201` → même charge utile que `login`.
+`422` → `{"errors": {"email": "Cette adresse e-mail est déjà utilisée."}}`
+
+---
+
+### `POST /api/auth/login`
+
+```json
+{ "email": "mamadou@dialloauto.sn", "password": "…" }
+```
+
+Réponse `200` :
+
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJ0eXAiOiJKV1Qi…",
+    "expires_in": 1800,
+    "user": {
+      "id": 1, "organization_id": 1,
+      "email": "mamadou@dialloauto.sn",
+      "full_name": "Mamadou Diallo",
+      "role": "ADMIN", "station_ids": [1]
+    }
+  },
+  "message": "Connexion réussie."
+}
+```
+
+| Code | Cas |
+|---|---|
+| `401` | Identifiants incorrects — **message identique** que le compte existe ou non |
+| `403` | Compte désactivé |
+| `429` | Plus de 5 échecs en 15 minutes |
+
+> Le message d'erreur ne dit jamais si l'adresse existe : ce serait un
+> moyen commode de découvrir quels comptes sont enregistrés.
+
+---
+
+### `POST /api/auth/refresh`
+
+Aucun corps. Le cookie `autocare_refresh` est envoyé automatiquement
+par le navigateur. Renvoie une nouvelle session.
+
+### `POST /api/auth/logout`
+
+Révoque le jeton de rafraîchissement et efface le cookie.
+
+### `GET /api/auth/me` 🔒
+
+Profil de l'utilisateur connecté.
+
+### `POST /api/auth/forgot-password`
+
+```json
+{ "email": "mamadou@dialloauto.sn" }
+```
+
+Répond **toujours** `200` avec le même message, que le compte existe
+ou non.
+
+> ⚠️ L'envoi d'e-mail n'est pas implémenté : aucun serveur SMTP n'est
+> configuré, et on ne simule pas une intégration inexistante. Le lien
+> est écrit dans le journal du serveur, et renvoyé dans la réponse
+> (`debug_reset_link`) uniquement si `APP_DEBUG=true`.
+> L'envoi réel arrive au **lot 15**.
+
+### `POST /api/auth/reset-password`
+
+```json
+{ "token": "…", "password": "nouveau-mot-de-passe" }
+```
+
+Change le mot de passe et **révoque toutes les sessions ouvertes**.
+
+---
+
+## Routes protégées
+
+Une route marquée 🔒 exige l'en-tête `Authorization`. Certaines
+exigent en plus une permission (voir
+`backend/config/permissions.php`).
+
+| Code | Signification |
+|---|---|
+| `401` | Pas de jeton, jeton expiré ou invalide |
+| `403` | Connecté, mais le rôle ne permet pas cette action |
+
+Les exigences de chaque route sont déclarées dans
+`backend/config/routes.php` :
+
+```php
+$router->post('/api/auth/login', [AuthController::class, 'login']);   // public
+$router->get('/api/auth/me', [AuthController::class, 'me'], ['auth' => true]);
+$router->get('/api/vehicles', [VehicleController::class, 'index'], [
+    'auth' => true,
+    'permission' => 'vehicles.view',
+]);
+```
+
+Les rendre visibles à cet endroit est délibéré : une protection
+oubliée saute aux yeux à la relecture.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 4 | `/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout` |
 | 5 | `/api/stations`, `/api/services` |
 | 6 | `/api/customers`, `/api/vehicles` |
 | 7 | `/api/inspections`, `/api/inspections/{id}/photos` |

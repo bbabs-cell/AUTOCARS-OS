@@ -1,0 +1,65 @@
+<h1 class="h3 mb-2">Connexion</h1>
+<p class="ac-text-secondary mb-5">Accédez à votre station.</p>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+  <div class="mb-4">
+    <label for="email" class="form-label">Adresse e-mail</label>
+    <input
+      id="email"
+      type="email"
+      class="form-control"
+      formControlName="email"
+      autocomplete="email"
+      placeholder="vous@votre-station.sn"
+      [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+    />
+    @if (form.controls.email.touched && form.controls.email.invalid) {
+      <div class="invalid-feedback d-block">
+        @if (form.controls.email.hasError('required')) {
+          L'adresse e-mail est obligatoire.
+        } @else {
+          Cette adresse e-mail est invalide.
+        }
+      </div>
+    }
+  </div>
+
+  <div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+      <label for="password" class="form-label">Mot de passe</label>
+      <a routerLink="/forgot-password" class="ac-caption">Mot de passe oublié ?</a>
+    </div>
+    <input
+      id="password"
+      type="password"
+      class="form-control"
+      formControlName="password"
+      autocomplete="current-password"
+      [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+    />
+    @if (form.controls.password.touched && form.controls.password.invalid) {
+      <div class="invalid-feedback d-block">Le mot de passe est obligatoire.</div>
+    }
+  </div>
+
+  <button type="submit" class="btn btn-primary ac-btn-field ac-btn-block" [disabled]="isSubmitting()">
+    @if (isSubmitting()) {
+      <span class="spinner-border spinner-border-sm"></span> Connexion…
+    } @else {
+      Se connecter
+    }
+  </button>
+</form>
+
+<p class="text-center ac-text-secondary mt-5 mb-0">
+  Pas encore de compte ?
+  <a routerLink="/register" class="fw-semibold">Créer une station</a>
+</p>

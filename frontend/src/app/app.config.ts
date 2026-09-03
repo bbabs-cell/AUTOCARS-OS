@@ -1,31 +1,38 @@
 import {
   ApplicationConfig,
+  inject,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 import { routes } from './app.routes';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { AuthService } from './core/services/auth.service';
 
 /**
- * Configuration globale de l'application Angular
+ * Configuration globale de l'application
  * ------------------------------------------------------------------
- * C'est ici qu'on declare les services disponibles partout.
+ * provideAppInitializer bloque l'affichage tant que la promesse n'est
+ * pas résolue. On l'utilise pour tenter de restaurer la session AVANT
+ * que le routeur ne décide quoi afficher.
  *
- * provideHttpClient(withFetch())
- *   Active HttpClient, indispensable pour appeler l'API PHP.
- *   `withFetch()` utilise l'API fetch du navigateur plutot que le
- *   vieux XMLHttpRequest : plus moderne et mieux supporte.
+ * Sans cela, recharger une page interne renverrait systématiquement
+ * vers l'écran de connexion : au moment où le garde de route
+ * s'exécute, la session n'aurait pas encore été restaurée.
  *
- *   Au Lot 4 nous ajouterons ici un "interceptor" qui joindra
- *   automatiquement le jeton d'authentification a chaque requete.
+ * Le coût est un appel réseau de quelques dizaines de millisecondes
+ * au démarrage. Le bénéfice : rester connecté après un F5.
  */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withFetch()),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideAppInitializer(() => firstValueFrom(inject(AuthService).restoreSession())),
   ],
 };

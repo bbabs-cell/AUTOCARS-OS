@@ -67,7 +67,7 @@ final class Response
     /** @param array<string,string> $errors */
     public static function validationFailed(array $errors): never
     {
-        self::error('Les donnees envoyees sont invalides.', $errors, 422);
+        self::error('Les données envoyées sont invalides.', $errors, 422);
     }
 
     public static function unauthorized(string $message = 'Authentification requise.'): never
@@ -75,7 +75,7 @@ final class Response
         self::error($message, [], 401);
     }
 
-    public static function forbidden(string $message = 'Action non autorisee.'): never
+    public static function forbidden(string $message = 'Action non autorisée.'): never
     {
         self::error($message, [], 403);
     }
