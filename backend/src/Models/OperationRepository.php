@@ -102,7 +102,14 @@ final class OperationRepository extends TenantRepository
             $reference = $this->nextReference($stationCode);
 
             try {
-                $id = $this->create($data + ['reference' => $reference]);
+                // status_changed_at dès l'ouverture : un dossier créé
+                // est déjà « en attente depuis maintenant ». Le laisser
+                // à NULL obligerait chaque lecture à retomber sur
+                // created_at, donc à écrire la règle deux fois.
+                $id = $this->create($data + [
+                    'reference'         => $reference,
+                    'status_changed_at' => date('Y-m-d H:i:s'),
+                ]);
 
                 return ['id' => $id, 'reference' => $reference];
             } catch (PDOException $exception) {
@@ -124,10 +131,17 @@ final class OperationRepository extends TenantRepository
      *
      * @param array{status?:string, station_id?:int, vehicle_id?:int,
      *              customer_id?:int, active?:bool, search?:string} $filters
+     * @param string $orderBy Clause de tri. Elle vient TOUJOURS du code,
+     *        jamais de la requête HTTP : c'est du SQL inséré tel quel.
+     *        Le jour où un écran voudra laisser l'utilisateur choisir
+     *        son tri, il faudra passer par une liste blanche.
      * @return list<array<string,mixed>>
      */
-    public function listDetailed(array $filters = [], int $limit = 100): array
-    {
+    public function listDetailed(
+        array $filters = [],
+        int $limit = 100,
+        string $orderBy = 'o.priority DESC, o.created_at ASC',
+    ): array {
         $conditions = [];
         $parameters = [];
 
@@ -201,7 +215,7 @@ final class OperationRepository extends TenantRepository
           LEFT JOIN users     u  ON u.id  = o.assigned_user_id
               WHERE o.organization_id = :organization_id
                     {$extra}
-           ORDER BY o.priority DESC, o.created_at ASC
+           ORDER BY {$orderBy}
               LIMIT {$limit}"
         );
 
@@ -315,6 +329,12 @@ final class OperationRepository extends TenantRepository
     {
         $data = ['status' => $status] + $extra;
 
+        // Depuis quand le dossier est-il à cette étape ? C'est ce qui
+        // permet à la file d'attente de dire « en lavage depuis 1 h 40 »
+        // plutôt que « en lavage ». Sans cette date, le tableau
+        // affiche un état sans jamais signaler un oubli.
+        $data['status_changed_at'] = date('Y-m-d H:i:s');
+
         $column = OperationStatus::timestampColumn($status);
 
         if ($column !== null) {
@@ -353,6 +373,29 @@ final class OperationRepository extends TenantRepository
         ]);
 
         return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * La file d'attente : tout ce qui occupe réellement la station.
+     *
+     * L'ORDRE EST LA MOITIÉ DU TRAVAIL. Priorité décroissante d'abord
+     * — un client pressé passe devant — puis ancienneté dans l'étape
+     * courante. Trier par date d'arrivée serait plus intuitif mais
+     * faux : un véhicule renvoyé au lavage après un contrôle raté
+     * remonterait tout en haut de la colonne alors qu'il vient d'y
+     * entrer, et masquerait celui qui attend vraiment.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function queue(?int $stationId = null): array
+    {
+        $filters = ['active' => true];
+
+        if ($stationId !== null) {
+            $filters['station_id'] = $stationId;
+        }
+
+        return $this->listDetailed($filters, 500, 'o.priority DESC, o.status_changed_at ASC');
     }
 
     /**

@@ -1,0 +1,284 @@
+<ac-page-header
+  title="File d'attente"
+  [subtitle]="refreshedLabel() ? 'Actualisé à ' + refreshedLabel() : 'Chargement…'"
+>
+  <button type="button" class="btn btn-outline-secondary" (click)="load()">
+    <i class="bi bi-arrow-clockwise"></i> Actualiser
+  </button>
+  <a routerLink="/operations" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> Accueillir un véhicule
+  </a>
+</ac-page-header>
+
+<!--
+  QUATRE CHIFFRES, PAS HUIT.
+  Le dernier est le seul qui appelle une action : c'est pourquoi il
+  change de couleur quand il n'est pas à zéro, et lui seul.
+-->
+@if (metrics(); as m) {
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="ac-card h-100">
+        <div class="ac-card__body">
+          <div class="ac-caption">En attente</div>
+          <div class="ac-numeric fw-bold" style="font-size: var(--ac-text-2xl)">{{ m.waiting }}</div>
+          @if (m.longest_wait_minutes !== null && m.waiting > 0) {
+            <div class="ac-caption">plus longue attente : {{ m.longest_wait_minutes | acDuration }}</div>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="ac-card h-100">
+        <div class="ac-card__body">
+          <div class="ac-caption">En cours</div>
+          <div class="ac-numeric fw-bold" style="font-size: var(--ac-text-2xl)">{{ m.in_progress }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="ac-card h-100">
+        <div class="ac-card__body">
+          <div class="ac-caption">Prêts à restituer</div>
+          <div class="ac-numeric fw-bold" style="font-size: var(--ac-text-2xl)">{{ m.ready }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="ac-card h-100" [class.ac-card--alert]="m.overdue > 0">
+        <div class="ac-card__body">
+          <div class="ac-caption">À regarder</div>
+          <div
+            class="ac-numeric fw-bold"
+            style="font-size: var(--ac-text-2xl)"
+            [style.color]="m.overdue > 0 ? 'var(--ac-warning-700)' : null"
+          >{{ m.overdue }}</div>
+          @if (m.overdue > 0) {
+            <div class="ac-caption">dossiers qui dépassent leur durée</div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (actionError(); as message) {
+  <div class="ac-alert ac-alert--warning mb-4">
+    <i class="bi bi-exclamation-circle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 70%"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 50%"></div>
+    </div>
+  </div>
+}
+
+<!--
+  LE TABLEAU.
+  Défilement horizontal avec accrochage : sur téléphone, on passe
+  d'une colonne à l'autre d'un geste, exactement comme dans les
+  applications de tableau que les gens connaissent déjà.
+-->
+@if (!isLoading()) {
+  <div class="ac-board" (click)="closeMenus()">
+    @for (column of columns(); track column.label) {
+      <section
+        class="ac-board__column"
+        [class.ac-board__column--target]="hoveredColumn() === column.drop_status"
+        [class.ac-board__column--forbidden]="
+          dragging() !== null
+          && hoveredColumn() !== column.drop_status
+          && !canMoveTo(dragging()!, column.drop_status)
+        "
+        (dragover)="onDragOver(column.drop_status, $event)"
+        (dragleave)="onDragLeave(column.drop_status)"
+        (drop)="onDrop(column.drop_status, $event)"
+      >
+        <header class="ac-board__header">
+          <span class="ac-board__title">{{ column.label }}</span>
+          <span class="ac-board__count" [class.ac-board__count--alert]="column.overdue > 0">
+            {{ column.count }}
+          </span>
+        </header>
+
+        @if (column.operations.length === 0) {
+          <p class="ac-board__empty">Rien ici</p>
+        }
+
+        @for (operation of column.operations; track operation.id) {
+          <article
+            class="ac-op-card"
+            [class.ac-op-card--overdue]="operation.is_overdue"
+            [class.ac-op-card--moving]="movingId() === operation.id"
+            draggable="true"
+            (dragstart)="onDragStart(operation)"
+            (dragend)="onDragEnd()"
+          >
+            <div class="ac-op-card__top">
+              <a [routerLink]="['/operations', operation.id]" class="ac-plate" (click)="$event.stopPropagation()">
+                {{ operation.plate_display }}
+              </a>
+
+              @if (operation.priority > 0) {
+                <span class="ac-badge ac-badge--warning">Prioritaire</span>
+              }
+            </div>
+
+            <div class="ac-op-card__vehicle">{{ operation.brand }} {{ operation.model }}</div>
+            <div class="ac-caption">{{ operation.customer_name }}</div>
+            <div class="ac-op-card__service">{{ operation.service_name }}</div>
+
+            <!--
+              LE TEMPS, PAS L'ÉTAT.
+              « En lavage » ne dit rien. « En lavage depuis 53 min pour
+              une prestation de 45 » déclenche une action.
+            -->
+            <div class="ac-op-card__timing">
+              <span class="ac-nowrap" [class.ac-op-card__late]="operation.is_overdue">
+                @if (operation.is_overdue) {
+                  <i class="bi bi-clock-fill"></i>
+                } @else {
+                  <i class="bi bi-clock"></i>
+                }
+                {{ operation.minutes_in_status | acDuration }}
+              </span>
+
+              <!--
+                « 59 min / 45 min » plutôt que « au-delà de 45 min » :
+                deux nombres côte à côte se comparent d'un coup d'œil,
+                et la phrase complète passerait à la ligne dans une
+                colonne étroite — ce qui rendrait la carte plus haute
+                que ses voisines et casserait l'alignement du tableau.
+                La phrase reste disponible au survol.
+              -->
+              @if (operation.is_overdue && operation.alert_after_minutes !== null) {
+                <span
+                  class="ac-caption ac-nowrap"
+                  [title]="'Cette étape dépasse ' + duration(operation.alert_after_minutes)"
+                >/ {{ operation.alert_after_minutes | acDuration }}</span>
+              }
+            </div>
+
+            <div class="ac-op-card__bottom">
+              <span class="ac-caption">
+                @if (operation.assigned_name) {
+                  {{ operation.assigned_name }}
+                } @else {
+                  Non assigné
+                }
+              </span>
+              <span class="ac-numeric ac-nowrap">{{ operation.price | acAmount }}</span>
+            </div>
+
+            <!--
+              LE CHEMIN PRINCIPAL POUR DÉPLACER UNE CARTE.
+              Le glisser-déposer ne fonctionne ni au doigt ni au
+              clavier : ce bouton n'est pas une solution de repli,
+              c'est la voie normale.
+            -->
+            <div class="ac-op-card__actions">
+              @if (nextSteps(operation).length > 0) {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  [disabled]="movingId() === operation.id"
+                  [attr.aria-expanded]="openMenuId() === operation.id"
+                  (click)="toggleMenu(operation, $event)"
+                >
+                  @if (movingId() === operation.id) {
+                    <span class="spinner-border spinner-border-sm"></span>
+                  } @else {
+                    Déplacer <i class="bi bi-chevron-down"></i>
+                  }
+                </button>
+              }
+
+              @if (canManage()) {
+                <button
+                  type="button"
+                  class="ac-btn-icon"
+                  aria-label="Confier ce dossier à quelqu'un"
+                  (click)="openAssign(operation, $event)"
+                >
+                  <i class="bi bi-person-plus"></i>
+                </button>
+              }
+
+              <a
+                [routerLink]="['/operations', operation.id]"
+                class="ac-btn-icon ms-auto"
+                aria-label="Ouvrir le dossier"
+              >
+                <i class="bi bi-arrow-right"></i>
+              </a>
+            </div>
+
+            @if (openMenuId() === operation.id) {
+              <div class="ac-op-card__menu" (click)="$event.stopPropagation()">
+                @for (step of nextSteps(operation); track step) {
+                  <button type="button" class="ac-op-card__menu-item" (click)="move(operation, step)">
+                    {{ stepLabel(step) }}
+                  </button>
+                }
+
+                @if (canManage()) {
+                  <div class="ac-op-card__menu-divider"></div>
+                  @if (operation.priority === 0) {
+                    <button type="button" class="ac-op-card__menu-item" (click)="setPriority(operation, 2, $event)">
+                      Faire passer devant
+                    </button>
+                  } @else {
+                    <button type="button" class="ac-op-card__menu-item" (click)="setPriority(operation, 0, $event)">
+                      Remettre en priorité normale
+                    </button>
+                  }
+                }
+              </div>
+            }
+
+            @if (assigningId() === operation.id) {
+              <div class="ac-op-card__menu" (click)="$event.stopPropagation()">
+                @for (member of team(); track member.id) {
+                  <button
+                    type="button"
+                    class="ac-op-card__menu-item"
+                    (click)="assign(operation, member.id, $event)"
+                  >
+                    {{ member.full_name }}
+                  </button>
+                }
+
+                @if (operation.assigned_user_id !== null) {
+                  <div class="ac-op-card__menu-divider"></div>
+                  <button type="button" class="ac-op-card__menu-item" (click)="assign(operation, null, $event)">
+                    Remettre dans la file commune
+                  </button>
+                }
+              </div>
+            }
+          </article>
+        }
+      </section>
+    }
+  </div>
+
+  <p class="ac-caption mt-3">
+    Faites glisser une carte à la souris, ou utilisez « Déplacer » —
+    le glisser-déposer ne fonctionne pas au doigt.
+    Le serveur revérifie chaque étape : l'inspection d'entrée reste
+    obligatoire avant le lavage, et la restitution passe par le dossier.
+  </p>
+}

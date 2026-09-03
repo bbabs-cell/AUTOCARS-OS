@@ -112,7 +112,7 @@ suivant.
 - [x] **Lot 5** — Onboarding station et prestations : 30 tests d'API par HTTP réel
 - [x] **Lot 6** — Clients et véhicules : recherche au comptoir, plaques normalisées
 - [x] **Lot 7** — Opérations, inspection, photos, restitution : machine à états vérifiée côté serveur, upload sécurisé, 93 tests
-- [ ] Lot 8 — File d'attente et Kanban
+- [x] **Lot 8** — File d'attente : tableau à colonnes, alertes de dépassement, priorité et affectation, 59 tests de plus
 - [ ] Lot 9 — Paiements et caisse
 - [ ] Lot 10 — Tableau de bord → **MVP utilisable**
 

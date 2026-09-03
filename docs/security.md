@@ -235,4 +235,5 @@ la question centrale en cas de litige sur un véhicule.
 | Upload sécurisé | ✅ Lot 7 |
 | Machine à états vérifiée côté serveur | ✅ Lot 7 |
 | Procédure de restitution contrôlée | ✅ Lot 7 |
+| Réorganisation de la file réservée et tracée | ✅ Lot 8 |
 | Audit de sécurité complet | 🔜 Lot 21 |

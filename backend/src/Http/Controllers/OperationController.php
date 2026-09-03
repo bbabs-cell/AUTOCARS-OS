@@ -11,6 +11,7 @@ use Autocare\Core\Request;
 use Autocare\Core\Response;
 use Autocare\Core\Security\AuthContext;
 use Autocare\Core\Validator;
+use Autocare\Http\Presenters\OperationPresenter;
 use Autocare\Models\InspectionRepository;
 use Autocare\Models\OperationRepository;
 use Autocare\Models\ServiceRepository;
@@ -89,7 +90,7 @@ final class OperationController
         $repository = new OperationRepository();
 
         Response::success([
-            'operations' => array_map($this->present(...), $repository->listDetailed($filters)),
+            'operations' => array_map(OperationPresenter::present(...), $repository->listDetailed($filters)),
             'counts'     => $repository->countByStatus(
                 isset($filters['station_id']) ? (int) $filters['station_id'] : null
             ),
@@ -106,7 +107,7 @@ final class OperationController
         }
 
         Response::success([
-            'operation'   => $this->present($operation),
+            'operation'   => OperationPresenter::present($operation),
             'inspections' => array_map(
                 $this->presentInspection(...),
                 (new InspectionRepository())->forOperation((int) $id),
@@ -220,7 +221,7 @@ final class OperationController
         );
 
         Response::success(
-            ['operation' => $this->present($repository->findDetailed($created['id']) ?? [])],
+            ['operation' => OperationPresenter::present($repository->findDetailed($created['id']) ?? [])],
             'Dossier ' . $created['reference'] . ' ouvert.',
             201
         );
@@ -307,7 +308,7 @@ final class OperationController
         );
 
         Response::success(
-            ['operation' => $this->present($repository->findDetailed($operationId) ?? [])],
+            ['operation' => OperationPresenter::present($repository->findDetailed($operationId) ?? [])],
             OperationStatus::label($to) . '.'
         );
     }
@@ -329,7 +330,7 @@ final class OperationController
         }
 
         Response::success([
-            'operation' => $this->present($operation),
+            'operation' => OperationPresenter::present($operation),
             'checklist' => $this->buildChecklist($operation),
         ]);
     }
@@ -460,7 +461,7 @@ final class OperationController
         );
 
         Response::success(
-            ['operation' => $this->present($repository->findDetailed($operationId) ?? [])],
+            ['operation' => OperationPresenter::present($repository->findDetailed($operationId) ?? [])],
             'Véhicule restitué.'
         );
     }
@@ -532,69 +533,6 @@ final class OperationController
                 'blocking' => false,
                 'detail'   => $exitInspection === null ? 'Recommandée en cas de doute' : 'Enregistrée',
             ],
-        ];
-    }
-
-    /**
-     * @param array<string,mixed> $operation
-     * @return array<string,mixed>
-     */
-    private function present(array $operation): array
-    {
-        $status = (string) ($operation['status'] ?? 'WAITING');
-        $plate  = (string) ($operation['plate_number'] ?? '');
-
-        $due  = (int) ($operation['price'] ?? 0);
-        $paid = (int) ($operation['paid_amount'] ?? 0);
-
-        return [
-            'id'        => (int) ($operation['id'] ?? 0),
-            'reference' => $operation['reference'] ?? '',
-            'status'    => $status,
-            'status_label' => OperationStatus::label($status),
-            'allowed_transitions' => OperationStatus::allowedFrom($status),
-            'priority'  => (int) ($operation['priority'] ?? 0),
-
-            'vehicle_id'    => (int) ($operation['vehicle_id'] ?? 0),
-            'plate_number'  => $plate,
-            'plate_display' => PlateNumber::format($plate),
-            'brand'         => $operation['brand'] ?? '',
-            'model'         => $operation['model'] ?? '',
-            'color'         => $operation['color'] ?? null,
-            'vehicle_type'  => $operation['vehicle_type'] ?? 'CAR',
-
-            'customer_id'   => (int) ($operation['customer_id'] ?? 0),
-            'customer_name' => trim(
-                ($operation['customer_first_name'] ?? '') . ' ' . ($operation['customer_last_name'] ?? '')
-            ),
-            'customer_phone' => $operation['customer_phone'] ?? null,
-
-            'service_id'       => (int) ($operation['service_id'] ?? 0),
-            'service_name'     => $operation['service_name'] ?? '',
-            'duration_minutes' => (int) ($operation['duration_minutes'] ?? 0),
-
-            'station_id'   => (int) ($operation['station_id'] ?? 0),
-            'station_name' => $operation['station_name'] ?? '',
-
-            'assigned_user_id' => $operation['assigned_user_id'] === null
-                ? null
-                : (int) $operation['assigned_user_id'],
-            'assigned_name'    => $operation['assigned_name'] ?? null,
-
-            'price'         => $due,
-            'currency_code' => $operation['currency_code'] ?? 'XOF',
-            'paid_amount'   => $paid,
-            'is_settled'    => $paid >= $due,
-
-            // Le frontend n'a pas à redemander la liste des inspections
-            // pour savoir s'il peut proposer « Commencer le lavage ».
-            'has_entry_inspection' => (int) ($operation['has_entry_inspection'] ?? 0) > 0,
-
-            'notes'        => $operation['notes'] ?? null,
-            'created_at'   => $operation['created_at'] ?? null,
-            'started_at'   => $operation['started_at'] ?? null,
-            'completed_at' => $operation['completed_at'] ?? null,
-            'released_at'  => $operation['released_at'] ?? null,
         ];
     }
 

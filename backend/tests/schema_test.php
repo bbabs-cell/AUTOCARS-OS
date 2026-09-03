@@ -230,6 +230,39 @@ checkRejected(
 );
 
 // ------------------------------------------------------------------
+// La colonne qui rend la file d'attente utile (migration 016).
+//
+// Elle doit accepter NULL : un dossier importé ou créé avant sa mise
+// en place n'a pas cette date, et l'API retombe alors sur created_at.
+// La rendre obligatoire ferait échouer ces cas au lieu de les gérer.
+// ------------------------------------------------------------------
+$statusColumn = $connection
+    ->query("SHOW COLUMNS FROM operations LIKE 'status_changed_at'")
+    ->fetch();
+
+check(
+    "operations.status_changed_at existe",
+    $statusColumn !== false
+);
+check(
+    "elle accepte NULL, pour les dossiers antérieurs à sa création",
+    ($statusColumn['Null'] ?? '') === 'YES'
+);
+
+// Chaque dossier de démonstration doit la porter : sans elle, toutes
+// les cartes de la file afficheraient « depuis 0 minute », et une
+// donnée fausse est pire qu'une donnée absente parce qu'on la croit.
+$withoutDate = (int) $connection
+    ->query('SELECT COUNT(*) FROM operations WHERE status_changed_at IS NULL')
+    ->fetchColumn();
+
+check(
+    "aucune opération du jeu de démonstration n'est sans cette date",
+    $withoutDate === 0,
+    "{$withoutDate} sans date"
+);
+
+// ------------------------------------------------------------------
 echo "\n7. Performance des requêtes clés\n";
 // ------------------------------------------------------------------
 

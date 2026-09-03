@@ -14,7 +14,7 @@ declare(strict_types=1);
  * que de faire échouer l'ensemble.
  *
  * POURQUOI UN LANCEUR ?
- * Parce qu'à six fichiers, on finit par n'en lancer que deux — et
+ * Parce qu'à sept fichiers, on finit par n'en lancer que deux — et
  * ce sont toujours les deux mêmes. Une seule commande, et on sait où
  * on en est.
  */
@@ -28,6 +28,7 @@ $tests = [
     'api_test.php'            => 'API — installation et prestations',
     'api_crm_test.php'        => 'API — clients et véhicules',
     'api_operations_test.php' => 'API — opérations et inspections',
+    'api_queue_test.php'      => "API — file d'attente",
 ];
 
 $directory = __DIR__;

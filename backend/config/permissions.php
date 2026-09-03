@@ -87,6 +87,16 @@ return [
         'operations.create',
         'operations.view',
         'operations.update_status',
+        // Il ne réorganise PAS la file (operations.prioritize) et ne
+        // confie PAS un dossier à un collègue (operations.assign) :
+        // faire reculer un client qui attendait déjà, ou répartir le
+        // travail de l'équipe, engage la station — c'est au
+        // responsable de le décider.
+        //
+        // Choisir « client pressé » À L'ACCUEIL reste possible : là,
+        // l'employé enregistre ce que le client lui dit, il ne
+        // réorganise pas une file existante.
+        //
         // Il rend les clés — c'est lui qui est au comptoir. La
         // procédure de vérification l'encadre, et la dérogation de
         // paiement (operations.override_payment) reste hors de portée :

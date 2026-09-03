@@ -53,12 +53,17 @@ export const routes: Routes = [
     children: [
       {
         // L'enfant vide indispensable, voir l'explication ci-dessus.
-        // Deviendra le tableau de bord au lot 10. En attendant, on
-        // arrive sur l'écran d'accueil des véhicules : c'est celui
-        // qu'un employé ouvre en premier le matin.
+        // Deviendra le tableau de bord au lot 10. En attendant, la
+        // file d'attente : c'est l'écran qu'on laisse ouvert toute la
+        // journée, donc celui qu'on veut trouver en arrivant.
         path: '',
         pathMatch: 'full',
-        redirectTo: 'operations',
+        redirectTo: 'queue',
+      },
+      {
+        path: 'queue',
+        title: "File d'attente — AUTOCARE OS",
+        loadComponent: () => import('./features/queue/queue.page').then((m) => m.QueuePage),
       },
       {
         path: 'operations',

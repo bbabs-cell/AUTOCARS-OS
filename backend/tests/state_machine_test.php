@@ -152,7 +152,63 @@ check("tous les statuts sont atteignables depuis WAITING",
 check("la file d'attente compte 6 statuts actifs (ni restitué ni annulé)",
     count(OperationStatus::active()) === 6);
 
-echo "\n6. Les messages de refus\n";
+echo "\n6. Les colonnes du tableau\n";
+
+$board = OperationStatus::board();
+
+check("le tableau déclare 5 colonnes", count($board) === 5, (string) count($board));
+
+// Chaque statut actif doit apparaître dans EXACTEMENT une colonne.
+// Zéro fois, il devient invisible : un véhicule disparaîtrait du
+// tableau sans que personne ne s'en aperçoive. Deux fois, il
+// s'afficherait en double.
+$placed = [];
+
+foreach ($board as $column) {
+    foreach ($column['statuses'] as $status) {
+        $placed[] = $status;
+    }
+}
+
+$missing   = array_values(array_diff(OperationStatus::active(), $placed));
+$duplicate = array_values(array_diff_assoc($placed, array_unique($placed)));
+
+check("aucun statut actif n'est absent du tableau", $missing === [], implode(', ', $missing));
+check("aucun statut n'apparaît dans deux colonnes", $duplicate === [], implode(', ', $duplicate));
+
+check("aucune colonne ne montre un statut final",
+    array_intersect($placed, ['COMPLETED', 'CANCELLED']) === []);
+
+// Le statut appliqué au dépôt doit faire partie de la colonne, sinon
+// déposer une carte dans « Lavage » la mettrait ailleurs.
+$inconsistent = [];
+
+foreach ($board as $column) {
+    if (!in_array($column['drop'], $column['statuses'], true)) {
+        $inconsistent[] = $column['label'];
+    }
+
+    if (!OperationStatus::exists($column['drop'])) {
+        $inconsistent[] = $column['label'] . ' (statut inconnu)';
+    }
+}
+
+check("le statut de dépôt appartient bien à sa colonne",
+    $inconsistent === [], implode(', ', $inconsistent));
+
+echo "\n7. Les seuils d'alerte\n";
+
+check("un lavage hérite de la durée de la prestation",
+    OperationStatus::alertThreshold('WASHING', 45) === 45);
+check("sans durée connue, le lavage ne déclenche AUCUNE alerte",
+    OperationStatus::alertThreshold('WASHING', null) === null);
+check("une durée de zéro ne produit pas un seuil de zéro",
+    OperationStatus::alertThreshold('WASHING', 0) === null);
+check("l'attente a un seuil fixe", OperationStatus::alertThreshold('WAITING') === 20);
+check("un dossier restitué n'a pas de seuil",
+    OperationStatus::alertThreshold('COMPLETED', 45) === null);
+
+echo "\n8. Les messages de refus\n";
 
 $message = OperationStatus::refusalMessage('WAITING', 'WASHING');
 

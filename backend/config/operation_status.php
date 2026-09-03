@@ -117,4 +117,71 @@ return [
      * Sert au comptage du tableau de bord et au Kanban (lot 8).
      */
     'active' => ['WAITING', 'IN_PROGRESS', 'INSPECTION', 'WASHING', 'QUALITY_CHECK', 'READY'],
+
+    /**
+     * Les colonnes du tableau de la file d'attente.
+     * ------------------------------------------------------------------
+     * POURQUOI CINQ COLONNES ALORS QU'IL Y A SIX STATUTS ACTIFS ?
+     *
+     * Parce que IN_PROGRESS ne dure que quelques secondes dans la
+     * réalité : l'employé prend le véhicule en charge et enchaîne
+     * aussitôt sur l'inspection. Lui donner sa propre colonne, c'est
+     * réserver un sixième de l'écran à une case vide en permanence —
+     * et voler cette place aux colonnes qu'on regarde vraiment.
+     *
+     * Sur le tableau, « pris en charge » et « inspection en cours »
+     * veulent dire la même chose pour celui qui regarde : quelqu'un
+     * s'en occupe, le lavage n'a pas commencé.
+     *
+     * ATTENTION : ce regroupement est un choix d'AFFICHAGE. Les deux
+     * statuts restent distincts en base et dans la machine à états —
+     * c'est ce qui permet d'exiger l'inspection avant le lavage.
+     * On regroupe ce qu'on montre, jamais ce qu'on enregistre.
+     *
+     * `drop` est le statut appliqué quand on dépose une carte dans la
+     * colonne. Pour un regroupement, c'est l'entrée du groupe.
+     */
+    'board' => [
+        ['label' => 'En attente',    'drop' => 'WAITING',       'statuses' => ['WAITING']],
+        ['label' => 'Inspection',    'drop' => 'INSPECTION',    'statuses' => ['IN_PROGRESS', 'INSPECTION']],
+        ['label' => 'Lavage',        'drop' => 'WASHING',       'statuses' => ['WASHING']],
+        ['label' => 'Contrôle',      'drop' => 'QUALITY_CHECK', 'statuses' => ['QUALITY_CHECK']],
+        ['label' => 'Prêts',         'drop' => 'READY',         'statuses' => ['READY']],
+    ],
+
+    /**
+     * Au bout de combien de minutes une étape mérite-t-elle un
+     * coup d'œil ?
+     * ------------------------------------------------------------------
+     * CE QUI REND LA FILE D'ATTENTE UTILE.
+     *
+     * « 6 véhicules en lavage » ne dit rien d'actionnable. « Cette
+     * voiture est en lavage depuis 1 h 40 » déclenche une action.
+     * Ces seuils sont ce qui transforme un état en alerte.
+     *
+     * `null` signifie « s'appuyer sur la durée annoncée de la
+     * prestation ». C'est le cas du lavage : dépasser de moitié une
+     * prestation vendue 30 minutes n'a pas le même sens que dépasser
+     * de moitié un detailing vendu 3 heures. Un seuil fixe serait
+     * absurde pour l'un ou pour l'autre.
+     *
+     * CES VALEURS SONT DES POINTS DE DÉPART, PAS DES VÉRITÉS.
+     * Elles viennent du bon sens, pas de mesures : aucune station ne
+     * tourne encore avec le produit. Elles seront réglées sur des
+     * durées réelles au test terrain — et elles vivent ici, dans un
+     * seul fichier, précisément pour que ce réglage prenne une minute.
+     */
+    'alerts' => [
+        // Un client qui attend plus de 20 minutes sans que personne
+        // ne prenne sa voiture commence à se demander s'il a été vu.
+        'WAITING'       => 20,
+        'IN_PROGRESS'   => 15,
+        'INSPECTION'    => 15,
+        // Durée de la prestation : c'est ce qui a été annoncé au client.
+        'WASHING'       => null,
+        'QUALITY_CHECK' => 10,
+        // Le véhicule est prêt et personne ne vient : c'est au comptoir
+        // de rappeler, pas au client de deviner.
+        'READY'         => 45,
+    ],
 ];

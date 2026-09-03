@@ -98,6 +98,50 @@ final class OperationStatus
     }
 
     /**
+     * Les colonnes du tableau de la file d'attente.
+     *
+     * Une colonne peut regrouper plusieurs statuts : voir la note
+     * dans config/operation_status.php. Le regroupement est un choix
+     * d'affichage, jamais une simplification du parcours.
+     *
+     * @return list<array{label:string, drop:string, statuses:list<string>}>
+     */
+    public static function board(): array
+    {
+        return self::config()['board'] ?? [];
+    }
+
+    /**
+     * Au bout de combien de minutes cette étape mérite-t-elle un
+     * coup d'œil ?
+     *
+     * @param int|null $serviceDuration Durée annoncée de la prestation,
+     *        utilisée pour les étapes dont le seuil dépend d'elle.
+     *
+     * @return int|null null = aucune alerte prévue pour ce statut
+     */
+    public static function alertThreshold(string $status, ?int $serviceDuration = null): ?int
+    {
+        $alerts = self::config()['alerts'] ?? [];
+
+        if (!array_key_exists($status, $alerts)) {
+            return null;
+        }
+
+        $threshold = $alerts[$status];
+
+        // null dans la configuration = « la durée de la prestation ».
+        // Si on ne la connaît pas, on préfère ne rien signaler plutôt
+        // que d'inventer un seuil : une alerte fausse fait perdre plus
+        // de temps qu'une alerte absente, parce qu'on la vérifie.
+        if ($threshold === null) {
+            return $serviceDuration !== null && $serviceDuration > 0 ? $serviceDuration : null;
+        }
+
+        return (int) $threshold;
+    }
+
+    /**
      * Message expliquant pourquoi un passage est refusé.
      *
      * Rédigé pour l'employé au comptoir, pas pour le développeur :

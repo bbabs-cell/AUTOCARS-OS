@@ -56,6 +56,18 @@ export interface Operation {
   /** Évite d'aller chercher les inspections pour savoir si on peut laver. */
   has_entry_inspection: boolean;
 
+  // --- La file d'attente ---------------------------------------------
+  // Ces trois champs sont calculés PAR LE SERVEUR, dont l'horloge fait
+  // foi. Le poste d'une station peut être déréglé de vingt minutes, et
+  // une alerte fausse coûte plus cher qu'une alerte absente : on la
+  // vérifie, on perd du temps, et on finit par ne plus les regarder.
+  status_changed_at: string | null;
+  /** Minutes passées à l'étape actuelle. */
+  minutes_in_status: number | null;
+  /** Seuil au-delà duquel l'étape mérite un coup d'œil. */
+  alert_after_minutes: number | null;
+  is_overdue: boolean;
+
   notes: string | null;
   created_at: string | null;
   started_at: string | null;
@@ -197,4 +209,51 @@ export interface ReleasePayload {
   reference: string;
   plate_number: string;
   override_reason?: string | null;
+}
+
+
+// ====================================================================
+// LA FILE D'ATTENTE
+// ====================================================================
+
+/**
+ * Une colonne du tableau, telle que la construit le serveur.
+ *
+ * Une colonne peut regrouper plusieurs statuts — « Inspection »
+ * réunit `IN_PROGRESS` et `INSPECTION`, qui veulent dire la même
+ * chose pour celui qui regarde le tableau. Ce regroupement est
+ * déclaré côté serveur : le frontend ne connaît pas le parcours, il
+ * affiche ce qu'on lui donne.
+ */
+export interface QueueColumn {
+  label: string;
+  /** Le statut appliqué quand on dépose une carte dans la colonne. */
+  drop_status: OperationStatus;
+  /** Les statuts regroupés sous cette colonne. */
+  statuses: OperationStatus[];
+  count: number;
+  /** Combien de dossiers de cette colonne traînent. */
+  overdue: number;
+  operations: Operation[];
+}
+
+/**
+ * Les quatre chiffres du bandeau.
+ * Quatre, pas huit : un bandeau qui affiche les huit statuts oblige à
+ * les lire tous pour repérer celui qui pose problème.
+ */
+export interface QueueMetrics {
+  waiting: number;
+  in_progress: number;
+  ready: number;
+  overdue: number;
+  /** La plus longue attente de la file, en minutes. */
+  longest_wait_minutes: number | null;
+}
+
+export interface QueueBoard {
+  columns: QueueColumn[];
+  metrics: QueueMetrics;
+  /** Heure du serveur : le frontend n'affiche pas celle du poste. */
+  generated_at: string;
 }

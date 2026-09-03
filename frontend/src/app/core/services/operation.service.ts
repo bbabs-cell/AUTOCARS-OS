@@ -13,6 +13,7 @@ import {
   InspectionSummary,
   Operation,
   OperationPayload,
+  QueueBoard,
   PhotoPosition,
   ReleaseCheckItem,
   ReleasePayload,
@@ -109,6 +110,46 @@ export class OperationService {
       this.http.put<ApiResponse<{ operation: Operation }>>(`${this.api}/operations/${id}/status`, {
         status,
       }),
+    );
+  }
+
+  // --- File d'attente --------------------------------------------------
+
+  /**
+   * Le tableau complet, colonnes déjà constituées.
+   *
+   * POURQUOI NE PAS REGROUPER ICI, EN TYPESCRIPT ?
+   * Parce que la liste des statuts actifs et leur ordre sont une règle
+   * métier, déclarée une seule fois côté serveur. La recopier ici en
+   * ferait une seconde source de vérité, qui divergerait au premier
+   * changement du parcours.
+   */
+  queue(stationId?: number): Observable<QueueBoard> {
+    const query = stationId ? `?station_id=${stationId}` : '';
+
+    return this.unwrap(this.http.get<ApiResponse<QueueBoard>>(`${this.api}/queue${query}`));
+  }
+
+  /** Faire passer un véhicule devant — réservé aux responsables. */
+  setPriority(id: number, priority: number): Observable<{ operation: Operation }> {
+    return this.unwrap(
+      this.http.put<ApiResponse<{ operation: Operation }>>(
+        `${this.api}/operations/${id}/priority`,
+        { priority },
+      ),
+    );
+  }
+
+  /**
+   * Confier un dossier à quelqu'un.
+   * `null` le remet dans la file commune.
+   */
+  assign(id: number, userId: number | null): Observable<{ operation: Operation }> {
+    return this.unwrap(
+      this.http.put<ApiResponse<{ operation: Operation }>>(
+        `${this.api}/operations/${id}/assign`,
+        { assigned_user_id: userId },
+      ),
     );
   }
 

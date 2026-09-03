@@ -70,7 +70,7 @@ audit_logs                       qui a fait quoi, et quand
 
 | Écartée | Pourquoi |
 |---|---|
-| `queue` | La file d'attente n'est pas une entité mais une **vue** des opérations en cours, triées par priorité. Une table séparée dupliquerait l'état et finirait par diverger. → un champ `priority` sur `operations` suffit. |
+| `queue` | La file d'attente n'est pas une entité mais une **vue** des opérations en cours, triées par priorité. Une table séparée dupliquerait l'état et finirait par diverger : on aurait un véhicule « en lavage » dans la file et « restitué » dans son dossier, sans savoir lequel a raison. → `priority` et `status_changed_at` sur `operations` suffisent. *(Confirmé au lot 8 : `GET /api/queue` est bien une lecture.)* |
 | `employees` | Un employé **est** un `user` rattaché à une station via `station_users`. On créera cette table le jour où il y aura de vraies données RH. |
 | `roles` / `permissions` | Le rôle est un `ENUM` de trois valeurs, la matrice des droits vit dans un fichier PHP : lisible, testable, sans jointure. On passera en base quand un client voudra des rôles sur mesure. |
 
@@ -179,6 +179,27 @@ et son horodatage.
 
 ## Détails de conception à connaître
 
+### `status_changed_at` : depuis quand ce véhicule est-il à cette étape ?
+
+Ajoutée au lot 8 (migration 016), c'est la colonne qui rend la file
+d'attente utile. « 6 véhicules en lavage » n'appelle aucune décision ;
+« cette voiture est en lavage depuis 1 h 06 pour une prestation vendue
+45 minutes » en appelle une immédiatement.
+
+L'information existe déjà dans `audit_logs` : chaque changement de
+statut y est tracé. On pourrait donc la recalculer par une
+sous-requête. Mais la file est rechargée en permanence, sur tous les
+postes — c'est **la requête la plus fréquente du produit**. Une
+dénormalisation assumée, au service d'une lecture qu'on fait mille
+fois plus souvent qu'on ne l'écrit. Même logique que `started_at` et
+`completed_at`.
+
+**Pourquoi pas `updated_at`, qui existe déjà ?** Parce qu'il change à
+chaque modification : assigner un employé ou monter la priorité
+remettrait le compteur à zéro. Un véhicule oublié depuis deux heures
+paraîtrait arrivé à l'instant — exactement le contraire de ce qu'on
+cherche à voir.
+
 ### Le prix est recopié sur l'opération
 
 `operations.price` duplique `services.price` au moment de la
@@ -263,7 +284,15 @@ au lieu des 2 004.
 - 4 utilisateurs couvrant les 3 rôles
 - 5 prestations, 4 clients, 5 véhicules
 - 4 opérations à différents stades du parcours
-- 3 inspections, 5 photos (métadonnées seules), 2 paiements
+- 3 inspections, 5 photos (fichiers réels, empreintes recalculées), 2 paiements
+
+**Les dates sont relatives à maintenant** (`NOW() - INTERVAL n MINUTE`),
+jamais écrites en dur. La file d'attente ne montre pas un état mais une
+durée : avec des dates figées, la démonstration afficherait au bout
+d'une semaine « en attente depuis 7 jours » sur chaque carte, et
+l'écran paraîtrait cassé alors qu'il fonctionne. Un dossier est
+volontairement en retard — l'écran doit montrer à quoi ressemble un
+oubli.
 
 **Comptes** — mot de passe `Autocare2026!` :
 

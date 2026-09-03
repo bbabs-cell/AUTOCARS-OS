@@ -557,12 +557,107 @@ soient pas accessibles à quiconque devine une adresse.
 
 ---
 
+## File d'attente
+
+| Route | Permission |
+|---|---|
+| `GET /api/queue?station_id=` | `operations.view` |
+| `PUT /api/operations/{id}/priority` | `operations.prioritize` |
+| `PUT /api/operations/{id}/assign` | `operations.assign` |
+
+**Il n'y a pas de table `queue`, et ce n'est pas un oubli.** La file
+est une *lecture* des opérations actives, groupées et triées. Une
+table séparée dupliquerait l'état, et deux copies d'un même état
+finissent toujours par diverger — on aurait alors un véhicule « en
+lavage » dans la file et « restitué » dans son dossier, sans moyen de
+savoir lequel a raison.
+
+### Les colonnes
+
+Elles sont déclarées dans `backend/config/operation_status.php`, à
+côté du parcours qu'elles montrent, et arrivent constituées :
+
+```json
+{ "label": "Inspection", "drop_status": "INSPECTION",
+  "statuses": ["IN_PROGRESS", "INSPECTION"],
+  "count": 2, "overdue": 0, "operations": [ … ] }
+```
+
+**Cinq colonnes pour six statuts actifs** : `IN_PROGRESS` ne dure que
+quelques secondes en pratique — l'employé prend le véhicule en charge
+et enchaîne sur l'inspection. Lui donner sa propre colonne
+reviendrait à réserver un sixième de l'écran à une case vide.
+
+⚠️ Ce regroupement est un choix d'**affichage**. Les deux statuts
+restent distincts en base et dans la machine à états : c'est ce qui
+permet d'exiger l'inspection avant le lavage. *On regroupe ce qu'on
+montre, jamais ce qu'on enregistre.*
+
+`drop_status` est le statut appliqué quand une carte est déposée dans
+la colonne — le frontend n'a donc jamais besoin de connaître le
+parcours.
+
+### Le temps, pas l'état
+
+Chaque opération porte trois champs qui font tout l'intérêt de
+l'écran :
+
+| Champ | Sens |
+|---|---|
+| `minutes_in_status` | Temps passé à l'étape actuelle |
+| `alert_after_minutes` | Seuil au-delà duquel l'étape mérite un coup d'œil |
+| `is_overdue` | Le seuil est dépassé |
+
+« 6 véhicules en lavage » n'appelle aucune décision. « Cette voiture
+est en lavage depuis 1 h 06 pour une prestation vendue 45 minutes » en
+appelle une immédiatement.
+
+Les seuils sont dans `config/operation_status.php`, section `alerts`.
+Celui du lavage vaut `null` : il reprend alors **la durée annoncée de
+la prestation**. Dépasser de moitié un lavage vendu 30 minutes n'a pas
+le même sens que dépasser de moitié un detailing vendu 3 heures, et un
+seuil fixe serait absurde pour l'un ou pour l'autre. Sans durée
+connue, aucune alerte n'est levée : une alerte fausse coûte plus cher
+qu'une alerte absente, parce qu'on la vérifie.
+
+Ces trois champs sont calculés **par le serveur**, dont l'horloge fait
+foi. Le poste d'une station peut être déréglé de vingt minutes.
+
+### L'ordre
+
+Priorité décroissante d'abord, puis ancienneté **dans l'étape
+courante** — et non date d'arrivée. Un véhicule renvoyé au lavage
+après un contrôle raté remonterait sinon en tête de colonne alors
+qu'il vient d'y entrer, et masquerait celui qui attend vraiment.
+
+### Deux actions réservées aux responsables
+
+`priority` (0 à 3, borné) et `assign` exigent des permissions que
+l'employé n'a pas. **Ce n'est pas une méfiance, c'est une distinction
+de geste** : à l'accueil, l'employé *enregistre* ce que le client lui
+dit — « je suis pressé » fait partie de la prise de commande, et le
+champ `priority` reste donc accessible sur `POST /api/operations`.
+Ici, on *réorganise* une file où des gens attendent déjà, et l'on fait
+reculer quelqu'un qui était devant.
+
+Un employé n'a pas besoin de `assign` pour prendre un véhicule en
+charge : passer le dossier à `IN_PROGRESS` l'inscrit dessus
+automatiquement. Cette route sert à désigner **quelqu'un d'autre**,
+c'est-à-dire à répartir le travail de l'équipe.
+
+Les deux actions sont tracées dans le journal d'audit — « pourquoi ma
+voiture est passée après celle-là ? » se discute après coup.
+
+`assigned_user_id: null` remet le dossier dans la file commune.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 8 | `/api/queue` (file d'attente et Kanban) |
 | 9 | `/api/payments`, `/api/cash-registers` |
+| 10 | `/api/dashboard` |
 
 ---
 

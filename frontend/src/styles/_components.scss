@@ -873,3 +873,266 @@
   background-color: transparent;
   color: var(--ac-text-secondary);
 }
+
+
+// ==================================================================
+// TABLEAU DE LA FILE D'ATTENTE
+// ==================================================================
+// Une colonne par étape du parcours, en défilement horizontal.
+//
+// POURQUOI DÉFILER PLUTÔT QUE COMPRIMER ?
+// Six colonnes réparties sur 390 px donneraient 60 px chacune : une
+// plaque n'y tient pas. En défilement, chaque colonne garde sa
+// largeur utile et l'on passe de l'une à l'autre d'un geste — c'est
+// le fonctionnement des applications de tableau que les gens
+// connaissent déjà, et qu'ils n'ont donc pas à apprendre.
+
+.ac-board {
+  display: flex;
+  gap: var(--ac-space-3);
+  overflow-x: auto;
+  padding-bottom: var(--ac-space-3);
+
+  // L'accrochage arrête le défilement sur une colonne entière plutôt
+  // qu'au milieu de deux. Sans lui, on termine chaque geste sur une
+  // demi-colonne et on doit corriger.
+  scroll-snap-type: x proximity;
+}
+
+.ac-board__column {
+  flex: 0 0 280px;
+  scroll-snap-align: start;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--ac-space-2);
+
+  padding: var(--ac-space-3);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-lg);
+  background-color: var(--ac-gray-50);
+
+  transition: border-color var(--ac-transition), background-color var(--ac-transition);
+}
+
+// Colonne survolée pendant un glisser : la cible est ÉCLAIRÉE, pas
+// seulement soulignée. Pendant le déplacement, le curseur est ailleurs
+// et l'œil a besoin d'une zone, pas d'un trait.
+.ac-board__column--target {
+  border-color: var(--ac-primary);
+  background-color: var(--ac-primary-50);
+}
+
+// Colonne interdite pendant un glisser : on l'estompe au lieu de
+// laisser croire au dépôt puis de le refuser.
+.ac-board__column--forbidden {
+  opacity: 0.45;
+}
+
+// Sur un grand écran, les colonnes se partagent la largeur disponible
+// plutôt que de déborder.
+//
+// POURQUOI CE SEUIL PRÉCIS ?
+// Parce qu'en dessous, cinq colonnes réparties donneraient moins de
+// 230 px chacune — et « Personne d'assigné · 35 000 FCFA » passerait à
+// la ligne. Mieux vaut alors garder des colonnes lisibles et faire
+// défiler que tout comprimer jusqu'à l'illisible.
+//
+// C'est le seul endroit du produit où la mise en page dépend d'un
+// nombre de colonnes. Si une sixième colonne était ajoutée dans
+// config/operation_status.php, ce seuil serait à revoir : la note est
+// là pour qu'on s'en souvienne.
+@media (min-width: 1400px) {
+  .ac-board__column {
+    flex: 1 1 230px;
+  }
+}
+
+.ac-board__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ac-space-2);
+  padding-bottom: var(--ac-space-2);
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-board__title {
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-semibold);
+  color: var(--ac-text-secondary);
+  // Un intitulé sur deux lignes décalerait toutes les colonnes.
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ac-board__count {
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  padding: 0 0.375rem;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-gray-200);
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-xs);
+  font-weight: var(--ac-weight-semibold);
+  text-align: center;
+}
+
+// Le compteur ne change de couleur QUE si la colonne contient un
+// dossier en retard. Colorer les six colonnes ne signalerait plus rien.
+.ac-board__count--alert {
+  background-color: var(--ac-warning-50);
+  color: var(--ac-warning-700);
+}
+
+.ac-board__empty {
+  margin: 0;
+  padding: var(--ac-space-4) 0;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-text-sm);
+  text-align: center;
+}
+
+
+// ==================================================================
+// CARTE D'OPÉRATION
+// ==================================================================
+
+.ac-op-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+
+  padding: var(--ac-space-3);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-md);
+  background-color: var(--ac-surface);
+  box-shadow: var(--ac-shadow-sm);
+
+  // Indique que la carte se saisit, sans promettre que c'est le seul
+  // moyen : le bouton « Déplacer » reste la voie principale.
+  cursor: grab;
+}
+
+.ac-op-card:active {
+  cursor: grabbing;
+}
+
+// Un dossier qui dépasse sa durée : bordure gauche épaisse plutôt que
+// fond coloré. Le fond rendrait le texte moins lisible, et quand la
+// moitié des cartes sont en retard, un aplat de couleur devient du
+// bruit dont l'œil ne tire plus rien.
+.ac-op-card--overdue {
+  border-left: 3px solid var(--ac-warning-700);
+}
+
+// Pendant l'appel au serveur : la carte s'estompe mais reste en place.
+// On ne la déplace pas avant la réponse — si le serveur refuse, il
+// faudrait la remettre sous les yeux de l'utilisateur.
+.ac-op-card--moving {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ac-op-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ac-space-2);
+  margin-bottom: var(--ac-space-1);
+}
+
+.ac-op-card__vehicle {
+  font-weight: var(--ac-weight-semibold);
+  font-size: var(--ac-text-sm);
+}
+
+.ac-op-card__service {
+  margin-top: var(--ac-space-1);
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-sm);
+}
+
+.ac-op-card__timing {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ac-space-2);
+  margin-top: var(--ac-space-2);
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-sm);
+}
+
+.ac-op-card__late {
+  color: var(--ac-warning-700);
+  font-weight: var(--ac-weight-semibold);
+}
+
+.ac-op-card__bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ac-space-2);
+  margin-top: var(--ac-space-2);
+  padding-top: var(--ac-space-2);
+  border-top: 1px solid var(--ac-border);
+}
+
+.ac-op-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-1);
+  margin-top: var(--ac-space-2);
+}
+
+// Le menu des étapes, DANS le flux de la carte.
+//
+// POURQUOI PAS UN MENU FLOTTANT, COMME PARTOUT AILLEURS ?
+// Parce que le tableau défile horizontalement, et qu'un conteneur en
+// `overflow-x: auto` rogne aussi ce qui dépasse verticalement : un
+// menu en position absolue serait coupé net sous la carte. C'est une
+// règle CSS qu'on ne peut pas contourner sans calculer des
+// coordonnées à la main et les recalculer à chaque défilement.
+//
+// Dans le flux, la carte s'agrandit et pousse celles du dessous. On y
+// perd un peu de stabilité visuelle ; on y gagne un menu qui
+// fonctionne à toutes les largeurs, au doigt comme au clavier, sans
+// une ligne de JavaScript de positionnement. Le bon échange.
+.ac-op-card__menu {
+  display: flex;
+  flex-direction: column;
+
+  margin-top: var(--ac-space-2);
+  padding: var(--ac-space-1);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-md);
+  background-color: var(--ac-gray-50);
+}
+
+.ac-op-card__menu-item {
+  padding: var(--ac-space-2);
+  border: 0;
+  border-radius: var(--ac-radius-sm);
+  background: none;
+  color: var(--ac-text);
+  font-size: var(--ac-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ac-op-card__menu-item:hover {
+  background-color: var(--ac-primary-50);
+  color: var(--ac-primary-700);
+}
+
+.ac-op-card__menu-divider {
+  margin: var(--ac-space-1) 0;
+  border-top: 1px solid var(--ac-border);
+}
+
+// Bandeau de comptage dont le chiffre appelle une action.
+.ac-card--alert {
+  border-color: #fde68a;
+}

@@ -60,6 +60,37 @@ final class TeamRepository
         return $statement->fetchAll();
     }
 
+    /**
+     * Un membre précis, dans l'organisation courante.
+     *
+     * Retourne null pour quelqu'un d'une autre entreprise — comme
+     * s'il n'existait pas. Sert à vérifier qu'un dossier n'est pas
+     * confié à l'employé d'un concurrent.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function findMember(int $userId): ?array
+    {
+        $statement = $this->db->prepare(
+            "SELECT u.id, u.first_name, u.last_name, u.email, u.status, su.role, su.station_id
+               FROM users u
+               JOIN station_users su ON su.user_id = u.id
+              WHERE u.id = :id
+                AND u.organization_id = :organization_id
+                AND u.deleted_at IS NULL
+              LIMIT 1"
+        );
+
+        $statement->execute([
+            'id'              => $userId,
+            'organization_id' => AuthContext::current()->organizationId,
+        ]);
+
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
+
     public function count(): int
     {
         $statement = $this->db->prepare(

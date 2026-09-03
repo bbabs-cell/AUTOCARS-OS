@@ -83,33 +83,53 @@ INSERT INTO vehicles (id, organization_id, customer_id, plate_number, brand, mod
 -- Quatre véhicules à différents stades du parcours, pour que la file
 -- d'attente du lot 8 ait immédiatement quelque chose à afficher.
 -- Le prix est recopié depuis services.price : il est figé.
+-- ------------------------------------------------------------------
+-- LES DATES SONT RELATIVES À MAINTENANT, PAS ÉCRITES EN DUR.
+--
+-- La file d'attente ne montre pas un état, elle montre une DURÉE :
+-- « en lavage depuis 1 h 40 alors que la prestation en prend 30 ».
+-- Avec des dates figées au 31 août, le jeu de démonstration afficherait
+-- au bout d'une semaine « en attente depuis 7 jours » sur chaque carte,
+-- et l'écran paraîtrait cassé alors qu'il fonctionne.
+--
+-- NOW() - INTERVAL n MINUTE garde la démonstration vivante quel que
+-- soit le jour où on la charge. C'est le genre de détail qui décide si
+-- une démonstration convainc un gérant ou l'inquiète.
+--
+-- Les durées choisies racontent une matinée crédible : une voiture
+-- restituée, une prête depuis un moment, un lavage qui traîne un peu,
+-- et un client pressé qui vient d'arriver.
+-- ------------------------------------------------------------------
 INSERT INTO operations
     (id, organization_id, station_id, vehicle_id, customer_id, service_id, assigned_user_id,
-     reference, status, priority, price, started_at, completed_at, released_at,
+     reference, status, status_changed_at, priority, price, started_at, completed_at, released_at,
      released_by_user_id, created_by_user_id, created_at) VALUES
 -- Terminée et restituée : le parcours complet, celui du §41.
-(1, 1, 1, 1, 1, 2, 3, 'DKP-2608-0001', 'COMPLETED', 0, 10000,
- '2026-08-30 08:15:00', '2026-08-30 09:20:00', '2026-08-30 09:45:00', 2, 2, '2026-08-30 08:10:00'),
--- Prête, en attente que le client vienne la chercher.
-(2, 1, 1, 4, 4, 1, 3, 'DKP-2608-0002', 'READY', 0, 5000,
- '2026-08-31 08:05:00', '2026-08-31 08:40:00', NULL, NULL, 2, '2026-08-31 08:00:00'),
--- En cours de lavage.
-(3, 1, 1, 2, 2, 3, 4, 'DKP-2608-0003', 'WASHING', 0, 7500,
- '2026-08-31 09:10:00', NULL, NULL, NULL, 2, '2026-08-31 09:05:00'),
--- Dans la file, personne d'assigné, priorité élevée (client pressé).
-(4, 1, 1, 3, 3, 5, NULL, 'DKP-2608-0004', 'WAITING', 10, 35000,
- NULL, NULL, NULL, NULL, 2, '2026-08-31 09:40:00');
+(1, 1, 1, 1, 1, 2, 3, 'DKP-2608-0001', 'COMPLETED', NOW() - INTERVAL 95 MINUTE, 0, 10000,
+ NOW() - INTERVAL 185 MINUTE, NOW() - INTERVAL 120 MINUTE, NOW() - INTERVAL 95 MINUTE,
+ 2, 2, NOW() - INTERVAL 190 MINUTE),
+-- Prête depuis 40 minutes : le client tarde à venir la chercher.
+(2, 1, 1, 4, 4, 1, 3, 'DKP-2608-0002', 'READY', NOW() - INTERVAL 40 MINUTE, 0, 5000,
+ NOW() - INTERVAL 115 MINUTE, NOW() - INTERVAL 40 MINUTE, NULL, NULL, 2,
+ NOW() - INTERVAL 120 MINUTE),
+-- En lavage depuis 50 minutes pour une prestation de 45 : en retard.
+-- C'est volontaire — l'écran doit montrer à quoi ressemble un oubli.
+(3, 1, 1, 2, 2, 3, 4, 'DKP-2608-0003', 'WASHING', NOW() - INTERVAL 50 MINUTE, 0, 7500,
+ NOW() - INTERVAL 55 MINUTE, NULL, NULL, NULL, 2, NOW() - INTERVAL 60 MINUTE),
+-- Dans la file depuis 12 minutes, personne d'assigné, client pressé.
+(4, 1, 1, 3, 3, 5, NULL, 'DKP-2608-0004', 'WAITING', NOW() - INTERVAL 12 MINUTE, 2, 35000,
+ NULL, NULL, NULL, NULL, 2, NOW() - INTERVAL 12 MINUTE);
 
 -- --- Les inspections d'entrée -------------------------------------
 INSERT INTO inspections
     (id, organization_id, operation_id, vehicle_id, type, performed_by_user_id,
      fuel_level, mileage, has_damage, damage_notes, items_left, customer_present,
      signature_name, performed_at) VALUES
-(1, 1, 1, 1, 'ENTRY', 3, 'HALF', 84520, 0, NULL, NULL, 1, 'Cheikh Fall', '2026-08-30 08:12:00'),
+(1, 1, 1, 1, 'ENTRY', 3, 'HALF', 84520, 0, NULL, NULL, 1, 'Cheikh Fall', NOW() - INTERVAL 188 MINUTE),
 (2, 1, 2, 4, 'ENTRY', 3, 'QUARTER', 132890, 1,
  'Rayure de 10 cm sur la portière avant droite, présente à l''arrivée.',
- 'Siège enfant à l''arrière.', 1, 'Ibrahima Gueye', '2026-08-31 08:02:00'),
-(3, 1, 3, 2, 'ENTRY', 4, 'FULL', 45120, 0, NULL, 'Chargeur de téléphone.', 0, NULL, '2026-08-31 09:07:00');
+ 'Siège enfant à l''arrière.', 1, 'Ibrahima Gueye', NOW() - INTERVAL 118 MINUTE),
+(3, 1, 3, 2, 'ENTRY', 4, 'FULL', 45120, 0, NULL, 'Chargeur de téléphone.', 0, NULL, NOW() - INTERVAL 58 MINUTE);
 
 -- --- Les photos d'inspection --------------------------------------
 -- Ce sont des MÉTADONNÉES seulement : aucun fichier n'existe encore
@@ -129,8 +149,8 @@ INSERT INTO inspection_photos
 INSERT INTO payments
     (organization_id, station_id, operation_id, customer_id, amount, method,
      provider, external_reference, status, paid_at, recorded_by_user_id) VALUES
-(1, 1, 1, 1, 10000, 'MOBILE_MONEY', 'Wave', 'TX-8842019', 'PAID', '2026-08-30 09:40:00', 2),
-(1, 1, 2, 4,  5000, 'CASH',          NULL,   NULL,         'PAID', '2026-08-31 08:45:00', 2);
+(1, 1, 1, 1, 10000, 'MOBILE_MONEY', 'Wave', 'TX-8842019', 'PAID', NOW() - INTERVAL 100 MINUTE, 2),
+(1, 1, 2, 4,  5000, 'CASH',          NULL,   NULL,         'PAID', NOW() - INTERVAL 38 MINUTE, 2);
 
 -- --- Le journal d'audit -------------------------------------------
 -- Quelques lignes montrant le format attendu. Ce journal sera

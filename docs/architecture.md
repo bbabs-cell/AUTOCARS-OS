@@ -195,6 +195,7 @@ Trois consommateurs lisent cette même table :
 | Qui | Pour quoi |
 |---|---|
 | `OperationController` | Appliquer la règle, et refuser sinon |
+| `QueueController` | Composer les colonnes et lever les alertes |
 | Le frontend, via `GET /api/operations/statuses` | N'afficher que les boutons utilisables |
 | `tests/state_machine_test.php` | Vérifier la cohérence, sans base ni serveur |
 
@@ -212,6 +213,32 @@ La classe `OperationStatus` sépare deux questions qui se ressemblent :
 
 Cette séparation permet de tester toute la mécanique du parcours en
 quelques millisecondes — et un test rapide est un test qu'on lance.
+
+### Les colonnes du tableau
+
+La même configuration déclare les colonnes de la file d'attente. Une
+colonne peut regrouper plusieurs statuts — « Inspection » réunit
+`IN_PROGRESS` et `INSPECTION`, qui veulent dire la même chose pour
+celui qui regarde le tableau.
+
+**On regroupe ce qu'on montre, jamais ce qu'on enregistre.** Les deux
+statuts restent distincts en base et dans la machine à états : c'est
+ce qui permet d'exiger l'inspection avant le lavage. Le regroupement
+ne vit que dans la colonne `board` de la configuration, et le frontend
+reçoit les colonnes déjà constituées — il n'a jamais besoin de
+connaître le parcours.
+
+### La file d'attente n'est pas une table
+
+Il n'existe pas de table `queue`. La file est une lecture des
+opérations actives, groupées et triées.
+
+Une table séparée dupliquerait l'état, et deux copies d'un même état
+divergent tôt ou tard : on aurait un véhicule « en lavage » dans la
+file et « restitué » dans son dossier, sans moyen de savoir lequel a
+raison. La seule dénormalisation assumée est `operations.status_changed_at`,
+qui évite de recalculer « depuis quand ? » à partir du journal d'audit
+sur la requête la plus fréquente du produit.
 
 ---
 

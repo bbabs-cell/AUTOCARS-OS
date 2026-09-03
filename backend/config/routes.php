@@ -34,6 +34,7 @@ use Autocare\Http\Controllers\HealthController;
 use Autocare\Http\Controllers\InspectionController;
 use Autocare\Http\Controllers\OnboardingController;
 use Autocare\Http\Controllers\OperationController;
+use Autocare\Http\Controllers\QueueController;
 use Autocare\Http\Controllers\ServiceController;
 use Autocare\Http\Controllers\StationController;
 use Autocare\Http\Controllers\TeamController;
@@ -163,7 +164,21 @@ return static function (Router $router): void {
     $router->get('/api/photos/{id}', [InspectionController::class, 'servePhoto'],
         ['auth' => true, 'permission' => 'inspections.view']);
 
+    // --- File d'attente -------------------------------------------------
+    // Il n'y a PAS de table `queue` : cette route est une lecture des
+    // opérations actives, groupées et triées. Une table séparée
+    // dupliquerait l'état et finirait par diverger.
+    $router->get('/api/queue', [QueueController::class, 'index'],
+        ['auth' => true, 'permission' => 'operations.view']);
+
+    // Réorganiser une file où des gens attendent déjà fait reculer
+    // quelqu'un : c'est une décision de responsable, pas un geste de
+    // comptoir. D'où deux permissions que l'employé n'a pas.
+    $router->put('/api/operations/{id}/priority', [QueueController::class, 'prioritize'],
+        ['auth' => true, 'permission' => 'operations.prioritize']);
+    $router->put('/api/operations/{id}/assign',   [QueueController::class, 'assign'],
+        ['auth' => true, 'permission' => 'operations.assign']);
+
     // --- Les routes suivantes arriveront aux prochains lots --------
-    // Lot 8 : /api/queue (file d'attente et Kanban)
     // Lot 9 : /api/payments
 };
