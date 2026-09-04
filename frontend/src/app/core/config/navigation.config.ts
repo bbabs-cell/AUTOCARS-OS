@@ -65,12 +65,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
     ],
   },
   {
-    label: 'Gestion',
-    items: [
-      { label: 'Employés',    icon: 'person-badge',  route: null, lot: 12 },
-    ],
-  },
-  {
     label: 'Finances',
     items: [
       { label: 'Fidélité',    icon: 'award',       route: null, lot: 14 },
@@ -108,6 +102,10 @@ export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   { label: 'Caisse',        icon: 'cash-stack',  route: '/cash',       lot: 9,
     permission: 'cash.view' },
   { label: 'Accueil',       icon: 'shield-check', route: '/operations', lot: 7 },
+  { label: 'Équipe',        icon: 'person-badge', route: '/team',       lot: 12,
+    permission: 'employees.view' },
+  { label: 'Pointage',      icon: 'clock',        route: '/attendance', lot: 12,
+    permission: 'attendance.view' },
   { label: 'Véhicules',     icon: 'car-front', route: '/vehicles',  lot: 6 },
   { label: 'Clients',       icon: 'people',    route: '/customers', lot: 6 },
   { label: 'Prestations',   icon: 'droplet',  route: '/services',   lot: 5 },

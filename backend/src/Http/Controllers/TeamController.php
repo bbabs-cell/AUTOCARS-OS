@@ -17,12 +17,21 @@ use Throwable;
 /**
  * L'équipe de la station
  * ------------------------------------------------------------------
- * Version minimale, celle dont l'installation guidée a besoin :
- * lister l'équipe et ajouter un membre.
+ * QUI TRAVAILLE ICI, AVEC QUEL RÔLE, ET CE QU'IL A FAIT.
  *
- * La gestion complète — modification, désactivation, performance,
- * historique d'activité — arrive au lot 12. On ne développe pas
- * d'avance ce dont personne n'a encore l'usage.
+ * ------------------------------------------------------------------
+ * DEUX RÈGLES QUI STRUCTURENT TOUT LE MODULE
+ *
+ * 1. ON NE SUPPRIME PAS UN EMPLOYÉ QUI PART.
+ *    Son nom figure sur des inspections, des encaissements et des
+ *    restitutions : effacer la ligne casserait cet historique, qui
+ *    est précisément ce qui sert en cas de litige. On DÉSACTIVE le
+ *    compte — l'accès est coupé immédiatement, la trace reste.
+ *
+ * 2. ON NE PEUT PAS DÉSACTIVER LE DERNIER ADMINISTRATEUR.
+ *    Une entreprise dont plus personne ne peut gérer les comptes est
+ *    enfermée dehors, et il faudrait intervenir en base pour l'en
+ *    sortir. Le refus est explicite plutôt que subi.
  */
 final class TeamController
 {
@@ -43,10 +52,141 @@ final class TeamController
                 'status'        => $member['status'],
                 'station_id'    => (int) $member['station_id'],
                 'station_name'  => $member['station_name'],
+                // La liste complète quand la personne est rattachée à
+                // plusieurs stations : « Dakar Plateau, Thiès ».
+                'station_names' => $member['station_names'],
+                'station_count' => (int) $member['station_count'],
                 'last_login_at' => $member['last_login_at'],
             ],
             $members,
         ));
+    }
+
+    /**
+     * GET /api/team/activity?from=
+     *
+     * Ce que chacun a produit sur la période : dossiers pris en
+     * charge, et ce qu'ils ont rapporté.
+     *
+     * Le chiffre d'affaires n'est envoyé qu'à qui a le droit de voir
+     * des montants. Comme au tableau de bord, il n'est pas masqué par
+     * l'interface : il n'est pas envoyé.
+     */
+    public function activity(Request $request): void
+    {
+        // Par défaut le mois en cours : c'est la période de la paie.
+        $from = $request->query('from') ?? date('Y-m-01');
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) !== 1) {
+            Response::validationFailed(['from' => 'Date attendue au format AAAA-MM-JJ.']);
+        }
+
+        $team       = new TeamRepository();
+        $activity   = $team->activitySince($from);
+        $canSeeMoney = AuthContext::current()->can('reports.view');
+
+        Response::success([
+            'from' => $from,
+            'members' => array_map(
+                static function (array $member) use ($activity, $canSeeMoney): array {
+                    $userId = (int) $member['id'];
+                    $row    = $activity[$userId] ?? ['operations' => 0, 'revenue' => 0];
+
+                    $result = [
+                        'id'         => $userId,
+                        'full_name'  => trim($member['first_name'] . ' ' . $member['last_name']),
+                        'role'       => $member['role'],
+                        'status'     => $member['status'],
+                        'operations' => $row['operations'],
+                    ];
+
+                    if ($canSeeMoney) {
+                        $result['revenue'] = $row['revenue'];
+                    }
+
+                    return $result;
+                },
+                $team->members(),
+            ),
+            'can_see_money' => $canSeeMoney,
+        ]);
+    }
+
+    /**
+     * PUT /api/team/{id}
+     * Modifier le rôle ou l'état d'un membre.
+     */
+    public function update(Request $request, string $id): void
+    {
+        $userId = (int) $id;
+        $team   = new TeamRepository();
+        $member = $team->findMember($userId);
+
+        if ($member === null) {
+            Response::notFound("Cette personne ne fait pas partie de votre équipe.");
+        }
+
+        $validator = Validator::make($request->body())
+            ->required('role', 'Le rôle')->in('role', ['ADMIN', 'MANAGER', 'EMPLOYEE'])
+            ->required('status', "L'état")->in('status', ['ACTIVE', 'DISABLED']);
+
+        if ($validator->fails()) {
+            Response::validationFailed($validator->errors());
+        }
+
+        $role   = $validator->string('role');
+        $status = $validator->string('status');
+
+        $current = AuthContext::current();
+
+        // On ne se retire pas soi-même ses propres droits : le seul
+        // effet garanti serait de ne plus pouvoir revenir en arrière.
+        if ($userId === $current->userId && ($role !== 'ADMIN' || $status !== 'ACTIVE')) {
+            Response::error(
+                'Vous ne pouvez pas modifier votre propre rôle ni désactiver votre compte. '
+                . 'Demandez-le à un autre administrateur.',
+                [],
+                409
+            );
+        }
+
+        // Le dernier administrateur actif est intouchable — sinon
+        // plus personne ne peut gérer les comptes, et il faut
+        // intervenir directement en base pour rouvrir l'entreprise.
+        $wasActiveAdmin = $member['role'] === 'ADMIN' && $member['status'] === 'ACTIVE';
+        $staysActiveAdmin = $role === 'ADMIN' && $status === 'ACTIVE';
+
+        if ($wasActiveAdmin && !$staysActiveAdmin && $team->activeAdminCount() <= 1) {
+            Response::error(
+                "C'est le dernier administrateur actif. Nommez-en un autre avant de "
+                . 'modifier celui-ci.',
+                [],
+                409
+            );
+        }
+
+        $team->updateRole($userId, $role);
+        $team->setStatus($userId, $status);
+
+        AuditLogger::record(
+            action: $status === 'DISABLED' ? 'team.member_disabled' : 'team.member_updated',
+            organizationId: $current->organizationId,
+            userId: $current->userId,
+            stationId: (int) $member['station_id'],
+            entityType: 'user',
+            entityId: $userId,
+            metadata: [
+                'from' => ['role' => $member['role'], 'status' => $member['status']],
+                'to'   => ['role' => $role, 'status' => $status],
+            ],
+        );
+
+        Response::success(
+            ['id' => $userId, 'role' => $role, 'status' => $status],
+            $status === 'DISABLED'
+                ? "Compte désactivé. L'historique de cette personne est conservé."
+                : 'Membre mis à jour.'
+        );
     }
 
     /** POST /api/team */

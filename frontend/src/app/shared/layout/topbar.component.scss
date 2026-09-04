@@ -153,3 +153,23 @@
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+// Le bouton de pointage quand la personne EST pointée.
+//
+// Fond vert clair plutôt que bouton plein : il doit se remarquer sans
+// devenir l'élément le plus voyant de l'en-tête — l'action principale
+// d'un écran reste ce qu'on y fait, pas le pointage.
+.ac-topbar__clocked {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  border: 1px solid var(--ac-success-700);
+  background-color: var(--ac-success-50);
+  color: var(--ac-success-700);
+}
+
+.ac-topbar__clocked:hover {
+  background-color: var(--ac-success-50);
+  border-color: var(--ac-success-600);
+  color: var(--ac-success-700);
+}

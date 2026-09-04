@@ -36,6 +36,29 @@ final class TeamRepository
      */
     public function members(): array
     {
+        // UNE LIGNE PAR PERSONNE, PAS PAR RATTACHEMENT.
+        //
+        // `station_users` porte une ligne par station : un
+        // administrateur rattaché à deux stations apparaissait deux
+        // fois dans la liste de l'équipe. Le défaut est resté invisible
+        // tant que personne n'avait plus d'une station.
+        //
+        // On regroupe donc par utilisateur et on agrège ses stations.
+        //
+        // ------------------------------------------------------------
+        // LE PIÈGE DE MIN() SUR UN ENUM
+        //
+        // On voudrait « le rôle le plus élevé ». Écrire MIN(su.role)
+        // serait tentant, mais MySQL et MariaDB ne comparent pas les
+        // ENUM de la même façon selon les versions — tantôt par
+        // l'ordre de déclaration, tantôt alphabétiquement. Or
+        // alphabétiquement, ADMIN < EMPLOYEE < MANAGER : on obtiendrait
+        // un résultat juste par accident, et faux le jour d'un
+        // changement de moteur.
+        //
+        // FIELD() rend l'ordre EXPLICITE : 1 pour ADMIN, 2 pour
+        // MANAGER, 3 pour EMPLOYEE. Le minimum est donc le rôle le
+        // plus élevé, sur les deux moteurs, sans ambiguïté.
         $statement = $this->db->prepare(
             "SELECT u.id,
                     u.first_name,
@@ -44,20 +67,36 @@ final class TeamRepository
                     u.phone,
                     u.status,
                     u.last_login_at,
-                    su.role,
-                    su.station_id,
-                    s.name AS station_name
+                    MIN(FIELD(su.role, 'ADMIN', 'MANAGER', 'EMPLOYEE')) AS role_rank,
+                    MIN(su.station_id) AS station_id,
+                    GROUP_CONCAT(DISTINCT s.name ORDER BY s.name SEPARATOR ', ') AS station_names,
+                    COUNT(DISTINCT su.station_id) AS station_count
                FROM users u
                JOIN station_users su ON su.user_id = u.id
                JOIN stations s       ON s.id = su.station_id
               WHERE u.organization_id = :organization_id
                 AND u.deleted_at IS NULL
-              ORDER BY FIELD(su.role, 'ADMIN', 'MANAGER', 'EMPLOYEE'), u.last_name"
+           GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone,
+                    u.status, u.last_login_at
+              ORDER BY role_rank, u.last_name"
         );
 
         $statement->execute(['organization_id' => AuthContext::current()->organizationId]);
 
-        return $statement->fetchAll();
+        $roles = [1 => 'ADMIN', 2 => 'MANAGER', 3 => 'EMPLOYEE'];
+
+        return array_map(
+            static function (array $row) use ($roles): array {
+                $row['role'] = $roles[(int) $row['role_rank']] ?? 'EMPLOYEE';
+                // Le nom de la première station, pour les écrans qui
+                // n'en attendent qu'une ; `station_names` porte la
+                // liste complète.
+                $row['station_name'] = explode(', ', (string) $row['station_names'])[0] ?? '';
+
+                return $row;
+            },
+            $statement->fetchAll(),
+        );
     }
 
     /**
@@ -89,6 +128,136 @@ final class TeamRepository
         $row = $statement->fetch();
 
         return $row === false ? null : $row;
+    }
+
+    /**
+     * L'activité d'un membre : ce qu'il a réellement fait.
+     *
+     * POURQUOI COMPTER LES OPÉRATIONS PLUTÔT QUE LES HEURES ?
+     * Parce que les deux répondent à des questions différentes. Le
+     * pointage dit combien de temps quelqu'un était là ; ceci dit ce
+     * qui est sorti de ses mains. Un employé présent douze jours qui
+     * a lavé quatre voitures, ce n'est pas la même conversation qu'un
+     * employé présent douze jours qui en a lavé soixante.
+     *
+     * On ne compte QUE les dossiers non annulés : un dossier annulé
+     * n'a pas produit de travail.
+     *
+     * @return array<int, array{operations:int, revenue:int}> Indexé par user_id
+     */
+    public function activitySince(string $from): array
+    {
+        $statement = $this->db->prepare(
+            "SELECT o.assigned_user_id AS user_id,
+                    COUNT(*) AS operations,
+                    COALESCE(SUM(o.price), 0) AS revenue
+               FROM operations o
+              WHERE o.organization_id = :organization_id
+                AND o.assigned_user_id IS NOT NULL
+                AND o.status != 'CANCELLED'
+                AND o.created_at >= :from
+           GROUP BY o.assigned_user_id"
+        );
+
+        $statement->execute([
+            'organization_id' => AuthContext::current()->organizationId,
+            'from' => $from . ' 00:00:00',
+        ]);
+
+        $activity = [];
+
+        foreach ($statement->fetchAll() as $row) {
+            $activity[(int) $row['user_id']] = [
+                'operations' => (int) $row['operations'],
+                'revenue'    => (int) $row['revenue'],
+            ];
+        }
+
+        return $activity;
+    }
+
+    /**
+     * Change le rôle d'un membre.
+     *
+     * LE RÔLE VAUT POUR TOUTE L'ENTREPRISE, pas station par station.
+     * Techniquement il est stocké dans `station_users`, donc une même
+     * personne pourrait être responsable ici et employée ailleurs —
+     * mais rien dans le produit ne permet de le faire, et la mise à
+     * jour porte volontairement sur TOUTES ses lignes.
+     *
+     * C'est une simplification assumée : personne n'a demandé des
+     * rôles par station, et une permission qui change selon l'endroit
+     * où l'on se trouve est très difficile à expliquer à un
+     * utilisateur. La question se reposera au lot 17, avec le
+     * multi-stations.
+     */
+    public function updateRole(int $userId, string $role): bool
+    {
+        $statement = $this->db->prepare(
+            'UPDATE station_users
+                SET role = :role
+              WHERE user_id = :user_id
+                AND organization_id = :organization_id'
+        );
+
+        $statement->execute([
+            'role'    => $role,
+            'user_id' => $userId,
+            'organization_id' => AuthContext::current()->organizationId,
+        ]);
+
+        return $statement->rowCount() > 0;
+    }
+
+    /**
+     * Active ou désactive un compte.
+     *
+     * ON NE SUPPRIME PAS UN EMPLOYÉ QUI PART. Son nom figure sur des
+     * inspections, des encaissements et des restitutions : effacer la
+     * ligne casserait cet historique, qui est précisément ce qui sert
+     * en cas de litige. On coupe l'accès, on garde la trace.
+     */
+    public function setStatus(int $userId, string $status): bool
+    {
+        $statement = $this->db->prepare(
+            'UPDATE users
+                SET status = :status
+              WHERE id = :user_id
+                AND organization_id = :organization_id
+                AND deleted_at IS NULL'
+        );
+
+        $statement->execute([
+            'status'  => $status,
+            'user_id' => $userId,
+            'organization_id' => AuthContext::current()->organizationId,
+        ]);
+
+        return $statement->rowCount() > 0;
+    }
+
+    /**
+     * Combien de comptes ADMIN actifs reste-t-il ?
+     *
+     * Sert à empêcher de désactiver le dernier administrateur — une
+     * entreprise sans personne pouvant gérer les comptes est une
+     * entreprise enfermée dehors.
+     */
+    public function activeAdminCount(): int
+    {
+        $statement = $this->db->prepare(
+            "SELECT COUNT(DISTINCT u.id)
+               FROM users u
+               JOIN station_users su ON su.user_id = u.id
+              WHERE u.organization_id = :organization_id
+                AND u.deleted_at IS NULL
+                AND u.status = 'ACTIVE'
+                AND su.role = 'ADMIN'"
+        );
+
+        $statement->execute(['organization_id' => AuthContext::current()->organizationId]);
+
+        return (int) $statement->fetchColumn();
     }
 
     public function count(): int

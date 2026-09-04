@@ -28,6 +28,7 @@ declare(strict_types=1);
  */
 
 use Autocare\Core\Router;
+use Autocare\Http\Controllers\AttendanceController;
 use Autocare\Http\Controllers\AuthController;
 use Autocare\Http\Controllers\CustomerController;
 use Autocare\Http\Controllers\HealthController;
@@ -90,10 +91,41 @@ return static function (Router $router): void {
         ['auth' => true, 'permission' => 'services.update']);
 
     // --- Équipe -------------------------------------------------------
+    // « activity » est déclaré AVANT « {id} » : les deux motifs ont le
+    // même nombre de segments, et le routeur retient le premier qui
+    // correspond.
+    $router->get('/api/team/activity', [TeamController::class, 'activity'],
+        ['auth' => true, 'permission' => 'employees.view']);
     $router->get('/api/team',  [TeamController::class, 'index'],
         ['auth' => true, 'permission' => 'employees.view']);
     $router->post('/api/team', [TeamController::class, 'store'],
         ['auth' => true, 'permission' => 'employees.create']);
+
+    // Changer un rôle ou désactiver un compte donne — ou retire —
+    // l'accès aux données de l'entreprise. C'est une décision de
+    // propriétaire, pas de responsable de station.
+    $router->put('/api/team/{id}', [TeamController::class, 'update'],
+        ['auth' => true, 'permission' => 'employees.update']);
+
+    // --- Pointage -------------------------------------------------------
+    // Un registre, pas une caméra : ni géolocalisation, ni photo, ni
+    // pointage automatique.
+    //
+    // Les trois routes « me » sont ouvertes à tout employé
+    // (attendance.clock) et n'agissent QUE sur son propre pointage.
+    $router->get('/api/attendance/me',        [AttendanceController::class, 'me'],
+        ['auth' => true, 'permission' => 'attendance.clock']);
+    $router->post('/api/attendance/clock-in', [AttendanceController::class, 'clockIn'],
+        ['auth' => true, 'permission' => 'attendance.clock']);
+    $router->post('/api/attendance/clock-out', [AttendanceController::class, 'clockOut'],
+        ['auth' => true, 'permission' => 'attendance.clock']);
+
+    // Le registre de l'équipe et la correction d'une heure restent au
+    // responsable : une heure corrigée sert à payer quelqu'un.
+    $router->get('/api/attendance',      [AttendanceController::class, 'index'],
+        ['auth' => true, 'permission' => 'attendance.view']);
+    $router->put('/api/attendance/{id}', [AttendanceController::class, 'correct'],
+        ['auth' => true, 'permission' => 'attendance.correct']);
 
     // --- Clients ------------------------------------------------------
     // La vérification de doublon est déclarée AVANT /api/customers/{id} :

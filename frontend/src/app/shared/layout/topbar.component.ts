@@ -1,6 +1,7 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 
 import { AuthService } from '../../core/services/auth.service';
+import { AttendanceService } from '../../core/services/attendance.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { AvatarComponent } from '../ui/avatar.component';
 
@@ -32,8 +33,46 @@ export class TopbarComponent {
 
   private readonly auth = inject(AuthService);
   private readonly catalog = inject(CatalogService);
+  private readonly attendance = inject(AttendanceService);
 
   protected readonly isProfileMenuOpen = signal(false);
+  protected readonly isClocking = signal(false);
+
+  /**
+   * LE POINTAGE EST DANS L'EN-TÊTE, PAS DANS UNE PAGE.
+   *
+   * Un employé ouvre l'application pour pointer, et rien d'autre.
+   * L'obliger à trouver un écran dédié ajoute deux gestes à quelque
+   * chose qui doit en demander un seul — et un pointage qui demande
+   * un effort finit par être fait « plus tard », c'est-à-dire jamais.
+   *
+   * Le bouton n'apparaît que si l'utilisateur a le droit de pointer.
+   */
+  protected readonly canClock = computed(() => this.auth.can('attendance.clock'));
+  protected readonly attendanceState = computed(() => this.attendance.mine());
+  protected readonly isClockedIn = computed(
+    () => this.attendance.mine()?.is_clocked_in === true,
+  );
+
+  /** « depuis 3 h 20 » — l'heure du serveur, pas celle du téléphone. */
+  protected readonly presenceLabel = computed(() => {
+    const minutes = this.attendance.mine()?.current?.minutes_present;
+
+    if (minutes === null || minutes === undefined) {
+      return '';
+    }
+
+    if (minutes < 60) {
+      return `depuis ${minutes} min`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+
+    return rest === 0
+      ? `depuis ${hours} h`
+      : `depuis ${hours} h ${String(rest).padStart(2, '0')}`;
+  });
 
   /**
    * Nom de la station affiché en haut à droite.
@@ -74,6 +113,10 @@ export class TopbarComponent {
       next: (stations) => this.stationName.set(stations[0]?.name ?? ''),
       error: () => this.stationName.set(''),
     });
+
+    // L'état du pointage est chargé une fois, à l'ouverture de
+    // l'application : le bouton doit être juste dès le premier écran.
+    this.attendance.refreshMine();
   }
 
   protected logout(): void {
@@ -87,5 +130,34 @@ export class TopbarComponent {
 
   protected closeProfileMenu(): void {
     this.isProfileMenuOpen.set(false);
+  }
+
+  /**
+   * Pointer son arrivée ou son départ, d'un seul geste.
+   *
+   * Le serveur refuse un double pointage (409) : on ne réplique pas
+   * cette règle ici, on se contente de désactiver le bouton pendant
+   * l'appel pour éviter le double appui sur un téléphone lent.
+   */
+  protected toggleClock(): void {
+    if (this.isClocking()) {
+      return;
+    }
+
+    this.isClocking.set(true);
+
+    const request = this.isClockedIn()
+      ? this.attendance.clockOut()
+      : this.attendance.clockIn();
+
+    request.subscribe({
+      next: () => this.isClocking.set(false),
+      error: () => {
+        this.isClocking.set(false);
+        // L'état réel vient du serveur : on le recharge plutôt que de
+        // deviner ce qui s'est passé.
+        this.attendance.refreshMine();
+      },
+    });
   }
 }

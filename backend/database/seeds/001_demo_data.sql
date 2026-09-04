@@ -227,6 +227,41 @@ INSERT INTO payments
 (1, 1, 22, 2,  5000, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 5 DAY, 2),
 (1, 1, 23, 4, 10000, 'MOBILE_MONEY',  'Orange Money',  'OM-4411907', 'PAID', NOW() - INTERVAL 6 DAY, 2);
 
+-- ------------------------------------------------------------------
+-- LE POINTAGE
+-- ------------------------------------------------------------------
+-- Six journées passées pour deux employés, plus deux situations que
+-- l'écran doit savoir montrer :
+--
+--   - un pointage EN COURS (Aliou est là depuis ce matin) ;
+--   - un pointage JAMAIS FERMÉ, il y a trois jours. C'est l'anomalie
+--     la plus fréquente du module : quelqu'un part sans pointer, et
+--     le compteur tourne toute la nuit. Le logiciel ne le ferme pas
+--     tout seul — il ne sait pas à quelle heure la personne est
+--     partie, et inventer cette heure fabriquerait une donnée de
+--     paie. Il le signale, un responsable tranche.
+--
+-- Les journées font 8 à 9 heures, ce qui correspond à une station
+-- ouverte de 8 h à 18 h avec une pause.
+-- ------------------------------------------------------------------
+INSERT INTO time_entries
+    (organization_id, station_id, user_id, clock_in_at, clock_out_at, duration_minutes) VALUES
+-- Aliou Sow (3)
+(1, 1, 3, NOW() - INTERVAL 6 DAY - INTERVAL 9 HOUR, NOW() - INTERVAL 6 DAY, 540),
+(1, 1, 3, NOW() - INTERVAL 5 DAY - INTERVAL 8 HOUR, NOW() - INTERVAL 5 DAY, 480),
+(1, 1, 3, NOW() - INTERVAL 4 DAY - INTERVAL 9 HOUR, NOW() - INTERVAL 4 DAY, 540),
+(1, 1, 3, NOW() - INTERVAL 2 DAY - INTERVAL 8 HOUR, NOW() - INTERVAL 2 DAY, 480),
+(1, 1, 3, NOW() - INTERVAL 1 DAY - INTERVAL 9 HOUR, NOW() - INTERVAL 1 DAY, 540),
+-- Ousmane Ba (4)
+(1, 1, 4, NOW() - INTERVAL 6 DAY - INTERVAL 8 HOUR, NOW() - INTERVAL 6 DAY, 480),
+(1, 1, 4, NOW() - INTERVAL 4 DAY - INTERVAL 9 HOUR, NOW() - INTERVAL 4 DAY, 540),
+(1, 1, 4, NOW() - INTERVAL 2 DAY - INTERVAL 8 HOUR, NOW() - INTERVAL 2 DAY, 480),
+(1, 1, 4, NOW() - INTERVAL 1 DAY - INTERVAL 8 HOUR, NOW() - INTERVAL 1 DAY, 480),
+-- L'OUBLI : parti il y a trois jours sans pointer son départ.
+(1, 1, 4, NOW() - INTERVAL 3 DAY - INTERVAL 9 HOUR, NULL, NULL),
+-- EN COURS : Aliou est arrivé ce matin.
+(1, 1, 3, NOW() - INTERVAL 190 MINUTE, NULL, NULL);
+
 -- --- Le journal d'audit -------------------------------------------
 -- Quelques lignes montrant le format attendu. Ce journal sera
 -- alimenté automatiquement par l'API à partir du lot 4.

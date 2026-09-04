@@ -392,6 +392,76 @@ styles sont légitimement uniques.
 
 ---
 
+## Le pointage est dans l'en-tête (lot 12)
+
+Le bouton « Pointer mon arrivée » est dans la barre du haut, présent
+sur tous les écrans — pas dans la page `/attendance`.
+
+Un employé ouvre l'application pour pointer, et rien d'autre.
+L'obliger à trouver un écran dédié ajoute deux gestes à quelque chose
+qui doit en demander un seul ; et un pointage qui demande un effort
+finit par être fait « plus tard », c'est-à-dire jamais. Le registre,
+lui, est une page : on l'ouvre une fois par mois, le jour de la paie.
+
+Le bouton affiche l'état plutôt qu'une action abstraite :
+
+| État | Libellé |
+|---|---|
+| Pas encore arrivé | « Pointer mon arrivée » |
+| Présent | « Pointer mon départ · depuis 3 h 17 » |
+
+La durée vient du **serveur**, jamais du calcul `maintenant −
+heure d'arrivée` fait dans le navigateur : l'horloge d'un téléphone se
+règle à la main, celle du serveur non.
+
+Sur mobile, le libellé disparaît et l'icône reste : la barre du haut
+n'a la place que d'un geste, et c'est celui-là.
+
+Il n'apparaît que si l'utilisateur a le droit `attendance.clock`. Ce
+masquage est un **confort**, pas une protection : le serveur refuse de
+toute façon.
+
+---
+
+## L'ordre d'un écran suit le travail à faire
+
+Le registre de pointage est l'exemple le plus net du principe déjà
+appliqué au tableau de bord (lot 10) : **ce qui demande une action
+passe devant ce qui informe.**
+
+1. **Les pointages jamais fermés** — tant qu'ils traînent, les totaux
+   du mois sont faux. Bloc d'alerte, en tête.
+2. **Qui est présent maintenant.**
+3. **Les totaux** — le chiffre qui sert à payer.
+4. **Le détail**, ligne par ligne.
+
+Un écran qui commence par un tableau de trente lignes oblige à
+chercher ce qui ne va pas. Un écran qui commence par « deux pointages
+à corriger » dit quoi faire en une seconde.
+
+**Les jours avant les heures.** La paie d'une station de lavage se
+fait le plus souvent à la journée travaillée : « 14 jours » est le
+chiffre qu'on cherche, « 112 h 30 » celui qu'un logiciel européen
+mettrait en avant.
+
+---
+
+## Les dates : ISO dans les échanges, français à l'écran
+
+Les dates circulent en `2026-09-04` — le seul format qu'une base de
+données et une API lisent sans ambiguïté.
+
+Elles ne s'**affichent** jamais ainsi dans une phrase. « Du 2026-09-01
+au 2026-09-04 » est du format technique laissé à la vue de
+l'utilisateur ; on écrit « Du 1 septembre au 4 septembre 2026 »,
+via `toLocaleDateString('fr-FR', …)`.
+
+L'exception est le tableau : dans une colonne « Jour » qu'on parcourt
+du regard, l'ISO s'aligne et se compare mieux qu'un mois écrit en
+toutes lettres.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

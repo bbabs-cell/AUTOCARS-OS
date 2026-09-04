@@ -50,6 +50,16 @@ export interface TeamMember {
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
   status: string;
   station_id: number;
+  /**
+   * Toutes les stations de la personne : « Dakar Plateau, Thiès ».
+   *
+   * Jusqu'au lot 12, la liste de l'équipe renvoyait une ligne PAR
+   * RATTACHEMENT : un administrateur présent sur deux stations
+   * apparaissait deux fois. Le serveur regroupe désormais par
+   * personne et agrège ses stations ici.
+   */
+  station_names?: string;
+  station_count?: number;
   station_name: string;
   last_login_at: string | null;
 }

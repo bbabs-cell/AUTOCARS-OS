@@ -215,6 +215,53 @@ colonne qui se met à jour en cascade. Le message d'erreur —
 ALWAYS AS clause »* — ne le dit pas du tout. La perte est nulle :
 l'identifiant d'une station est auto-incrémenté, il ne change jamais.
 
+### `time_entries` : un seul pointage ouvert par personne
+
+`time_entries` (lot 12, migration 018) reprend **exactement** le
+mécanisme de la caisse, pour la même raison :
+
+```sql
+open_user_id BIGINT UNSIGNED
+    AS (IF(clock_out_at IS NULL, user_id, NULL)) STORED,
+UNIQUE KEY uq_time_entries_one_open (open_user_id)
+```
+
+Deux pointages ouverts pour la même personne, et la question « depuis
+quand est-elle là ? » n'a plus de réponse. Le cas n'a rien de
+théorique : sur un téléphone lent, un employé appuie deux fois sur
+« Pointer mon arrivée ». Le contrôleur vérifie avant d'écrire, mais
+deux requêtes parties à la même seconde passent toutes les deux la
+vérification. La base, elle, ne peut pas se tromper.
+
+Même piège que pour la caisse : la clé étrangère sur `user_id` est en
+`ON UPDATE RESTRICT`.
+
+**`duration_minutes` est figée à la fermeture**, et n'est pas
+recalculée à l'affichage. Une durée qui sert à payer ne doit pas
+changer parce qu'on a rouvert l'écran six mois plus tard. Elle est
+recalculée à un seul moment : quand un responsable corrige la ligne —
+et cette correction laisse une trace.
+
+**Aucun `DELETE` sur cette table.** Un pointage effacé, c'est une
+journée de travail qui disparaît de la paie sans que personne ne
+puisse le démontrer. Une erreur se corrige, et la correction se voit :
+`corrected_by_user_id`, `corrected_at` et `correction_reason` sont
+**sur la ligne**, pas seulement dans un journal qu'il faudrait penser
+à ouvrir.
+
+### Ce que `time_entries` ne contient PAS
+
+Ni latitude, ni longitude, ni photo, ni adresse IP, ni identifiant
+d'appareil.
+
+Le module est un **registre, pas une caméra**. Géolocaliser un
+pointage réglerait le problème de la personne qui pointe pour un
+collègue — et créerait celui d'un logiciel qui suit ses employés à la
+trace. Sur une station où tout le monde se connaît et se voit, la
+seconde nuisance est bien plus grande que la première. Le jour où le
+besoin sera réel, il faudra le décider explicitement, pas le découvrir
+dans un schéma.
+
 ### `payments.cash_session_id` : quelle vacation ?
 
 On aurait pu rattacher les encaissements à leur session **par la

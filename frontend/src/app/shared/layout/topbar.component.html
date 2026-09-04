@@ -37,6 +37,34 @@
       </span>
     }
 
+    <!--
+      POINTAGE — le geste le plus fréquent d'un employé.
+      Il est ici, à portée depuis n'importe quel écran, plutôt que
+      dans une page à trouver. Un pointage qui demande un effort finit
+      par être fait « plus tard », c'est-à-dire jamais.
+    -->
+    @if (canClock()) {
+      <button
+        type="button"
+        class="btn btn-sm"
+        [class.btn-outline-secondary]="!isClockedIn()"
+        [class.ac-topbar__clocked]="isClockedIn()"
+        [disabled]="isClocking()"
+        (click)="toggleClock()"
+      >
+        @if (isClocking()) {
+          <span class="spinner-border spinner-border-sm"></span>
+        } @else if (isClockedIn()) {
+          <i class="bi bi-record-circle"></i>
+          <span class="d-none d-md-inline">Pointer mon départ</span>
+          <span class="ac-caption d-none d-lg-inline">{{ presenceLabel() }}</span>
+        } @else {
+          <i class="bi bi-play-circle"></i>
+          <span class="d-none d-md-inline">Pointer mon arrivée</span>
+        }
+      </button>
+    }
+
     <!-- Notifications -->
     <button type="button" class="ac-btn-icon position-relative" aria-label="Notifications">
       <i class="bi bi-bell fs-5" aria-hidden="true"></i>

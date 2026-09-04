@@ -873,11 +873,229 @@ qu'un jour les deux divergent.
 
 ---
 
+## Équipe et pointage
+
+### `GET /api/team` — la liste de l'équipe
+
+Droit requis : `employees.view` (MANAGER et ADMIN).
+
+```json
+{
+  "success": true,
+  "data": {
+    "members": [
+      {
+        "id": 3,
+        "full_name": "Mamadou Diallo",
+        "email": "mamadou.diallo@dialloauto.sn",
+        "role": "ADMIN",
+        "status": "ACTIVE",
+        "station_id": 1,
+        "station_name": "Station Dakar Plateau",
+        "station_names": "Station Dakar Plateau, Station Thiès",
+        "station_count": 2,
+        "last_login_at": "2026-09-04T11:02:44+00:00"
+      }
+    ]
+  }
+}
+```
+
+> **UNE LIGNE PAR PERSONNE, PAS PAR RATTACHEMENT.**
+> Jusqu'au lot 12, la requête joignait `station_users` sans regrouper :
+> un administrateur présent sur deux stations apparaissait **deux
+> fois** dans la liste. Le serveur regroupe désormais par personne,
+> agrège les stations dans `station_names`, et retient le rôle le plus
+> élevé (`MIN(FIELD(role,'ADMIN','MANAGER','EMPLOYEE'))`).
+>
+> `FIELD()` plutôt que `MIN(role)` : l'ordre d'un `ENUM` dépend de
+> l'ordre de déclaration, et une base migrée pourrait le changer sans
+> prévenir. `FIELD()` écrit la hiérarchie noir sur blanc.
+
+---
+
+### `PUT /api/team/{id}` — changer un rôle, désactiver un compte
+
+Droit requis : `employees.update` (**ADMIN seulement**).
+
+```json
+{ "role": "MANAGER", "status": "INACTIVE" }
+```
+
+Deux refus qui n'ont rien d'un détail :
+
+| Cas | Code | Pourquoi |
+|---|---|---|
+| Se retirer soi-même ses propres droits | `422` | On se retrouverait enfermé dehors, sans personne pour rouvrir. |
+| Retirer ou désactiver **le dernier administrateur actif** | `409` | Plus personne ne pourrait créer de compte, changer un rôle ni corriger une heure. L'entreprise serait bloquée sans recours. |
+
+> **DÉSACTIVER, JAMAIS SUPPRIMER.**
+> Un employé qui part garde son nom sur les dossiers qu'il a traités
+> et les encaissements qu'il a saisis. Supprimer la ligne, ce serait
+> effacer la trace de qui a fait quoi — et rendre le journal
+> inexploitable le jour d'un litige. `status = 'INACTIVE'` coupe
+> l'accès **immédiatement** : la connexion est refusée (`403`) et un
+> jeton déjà émis cesse d'être accepté (`401`) au premier appel.
+
+---
+
+### `GET /api/team/activity?from=&to=` — l'activité de chacun
+
+Droit requis : `employees.view`.
+
+```json
+{
+  "members": [
+    { "id": 6, "full_name": "Aliou Sow", "operations": 6, "revenue": 72500 }
+  ]
+}
+```
+
+> Le champ `revenue` **n'est pas envoyé** aux comptes sans
+> `reports.view`. Il n'est pas masqué à l'affichage : il ne quitte
+> jamais le serveur. Un employé qui ouvre les outils de développement
+> ne trouvera pas le chiffre d'affaires de ses collègues dans la
+> réponse, parce qu'il n'y est pas.
+
+---
+
+### `GET /api/attendance/me` — mon pointage
+
+Droit requis : `attendance.clock` — **tous les rôles**, y compris
+EMPLOYEE. Chacun ne voit que son propre pointage.
+
+```json
+{
+  "is_clocked_in": true,
+  "current": {
+    "id": 12,
+    "clock_in_at": "2026-09-04T11:04:00+00:00",
+    "minutes_present": 197
+  }
+}
+```
+
+`minutes_present` est calculé **par le serveur**. L'horloge d'un
+téléphone se règle à la main ; celle du serveur, non. C'est la seule
+raison pour laquelle le frontend ne fait pas cette soustraction
+lui-même.
+
+---
+
+### `POST /api/attendance/clock-in` — pointer son arrivée
+### `POST /api/attendance/clock-out` — pointer son départ
+
+Droit requis : `attendance.clock`. Sans corps de requête : le serveur
+sait qui appelle et quelle heure il est.
+
+| Situation | Code |
+|---|---|
+| Arrivée alors qu'un pointage est déjà ouvert | `409` |
+| Départ sans pointage ouvert | `409` |
+
+La règle « un seul pointage ouvert par personne » n'est pas seulement
+vérifiée en PHP : elle est **inscrite dans le schéma** par une colonne
+générée sous contrainte d'unicité (voir `docs/database.md`). Deux
+appels partis en même temps depuis deux téléphones ne peuvent pas
+créer deux lignes.
+
+---
+
+### `GET /api/attendance?from=&to=&user_id=&station_id=` — le registre
+
+Droit requis : `attendance.view` (MANAGER et ADMIN). Un employé reçoit
+`403` : les heures de ses collègues ne le regardent pas.
+
+```json
+{
+  "stale":   [ { "id": 9, "user_name": "Ousmane Ba", "hours_open": 81 } ],
+  "present": [ { "id": 12, "user_name": "Aliou Sow", "minutes_present": 197 } ],
+  "totals":  [ { "user_id": 6, "user_name": "Aliou Sow", "days": 2, "minutes": 1020 } ],
+  "entries": [ … ],
+  "period":  { "from": "2026-09-01", "to": "2026-09-04" }
+}
+```
+
+Quatre blocs, dans l'ordre du travail à faire :
+
+1. **`stale`** — les pointages jamais fermés. Tant qu'ils traînent,
+   les totaux du mois sont faux.
+2. **`present`** — qui est là maintenant.
+3. **`totals`** — le chiffre qui sert à payer.
+4. **`entries`** — le détail, ligne par ligne.
+
+> **LE LOGICIEL NE FERME RIEN TOUT SEUL.**
+> Quelqu'un pointe le matin, part le soir sans pointer, et le compteur
+> tourne toute la nuit. La tentation est de fermer automatiquement à
+> 18 h, ou après huit heures. Ce serait **fabriquer une donnée de
+> paie** : le logiciel ne sait pas à quelle heure la personne est
+> partie. Il signale, un responsable tranche avec ce qu'il sait, et la
+> correction porte son nom.
+>
+> Un pointage signalé (`stale`) n'apparaît **ni** dans `present` — un
+> « présent depuis 81 h » ferait douter de tout le panneau — **ni**
+> dans `totals` : une durée inconnue ne s'estime pas quand elle sert à
+> payer. Une ligne est soit une présence, soit une anomalie, jamais
+> les deux.
+
+`days` avant `minutes` : la paie d'une station de lavage se fait le
+plus souvent à la journée travaillée. « 14 jours » est le chiffre
+qu'on cherche ; « 112 h 30 » est celui qu'un logiciel européen
+mettrait en avant.
+
+---
+
+### `PUT /api/attendance/{id}` — corriger un pointage
+
+Droit requis : `attendance.correct` (MANAGER et ADMIN).
+
+```json
+{
+  "clock_in_at":  "2026-09-01 08:00",
+  "clock_out_at": "2026-09-01 17:30",
+  "reason": "Départ non pointé — confirmé par le chef d'équipe"
+}
+```
+
+Le motif est **obligatoire**. Une heure de paie modifiée sans
+explication, c'est exactement ce qu'un employé conteste — et ce qu'un
+gérant ne peut plus justifier six mois plus tard.
+
+Quatre refus, tous en `422` :
+
+| Cas | Pourquoi |
+|---|---|
+| Motif absent | Voir ci-dessus. |
+| Départ antérieur à l'arrivée | Une journée ne se termine pas avant de commencer. |
+| Journée de plus de 16 heures | Au-delà, c'est une faute de frappe, pas une journée de travail. |
+| Pointage dans le futur | On ne pointe pas demain. |
+
+La réponse renvoie la ligne corrigée **avec les noms**, pas seulement
+les identifiants : `corrected_by_name`, `user_name`, `station_name`.
+
+> `find()` fait un `SELECT *` sur la seule table `time_entries` : il en
+> revient des identifiants. La ligne renvoyée après une correction
+> affichait donc « corrigé par — », alors que le registre affichait
+> bien le nom : deux écrans, deux vérités pour la même donnée. D'où
+> `findDetailed()`, qui reprend **exactement** les jointures de
+> `listDetailed()`.
+
+La correction laisse trois traces, et elles sont indépendantes :
+
+1. `corrected_by_user_id`, `corrected_at`, `correction_reason` **sur
+   la ligne elle-même** — visibles dans le registre, sans avoir à
+   ouvrir un journal.
+2. Une entrée dans `activity_logs` qui conserve **l'avant et
+   l'après** (`from` / `to`).
+3. La ligne d'origine n'est jamais supprimée : elle est modifiée, et
+   la modification se voit.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 12 | `/api/employees` |
 | 13 | `/api/bookings` |
 | 16 | `/api/analytics` |
 

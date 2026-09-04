@@ -56,6 +56,10 @@ return [
         // décision d'exploitation quotidienne, pas de structure.
         'services.update',
         'employees.view',
+        // Le pointage est de la gestion quotidienne : c'est le
+        // responsable de station qui constate les présences et
+        // rattrape les oublis, pas le propriétaire depuis Dakar.
+        'attendance.*',
         'reports.view',
         'stations.view',
         'onboarding.view',
@@ -104,6 +108,15 @@ return [
         // retirer ces deux lignes.
         'payments.create',
         'payments.view',
+
+        // CHACUN POINTE POUR SOI.
+        // Pointer à la place d'un collègue est le premier
+        // détournement d'un registre de présence : l'employé n'a donc
+        // que `attendance.clock`, qui n'agit que sur son propre
+        // pointage. Consulter le registre de l'équipe
+        // (attendance.view) et corriger une heure (attendance.correct)
+        // restent au responsable.
+        'attendance.clock',
 
         // L'accueil d'un véhicule au comptoir est le travail de
         // l'employé : lui refuser la création de dossier obligerait à

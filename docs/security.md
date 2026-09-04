@@ -231,6 +231,89 @@ personne ne recompte contre un nombre déjà donné.
 
 ---
 
+## 7 ter. Comptes, rôles et heures de travail
+
+Trois règles ajoutées au lot 12, chacune parce que son absence casse
+quelque chose qu'on ne peut pas réparer après coup.
+
+### On ne se retire pas ses propres droits
+
+Un administrateur qui se rétrograde en employé se retrouve enfermé
+dehors : plus personne pour lui rendre ses droits. Refusé en `422`.
+
+### Le dernier administrateur actif ne peut pas être retiré
+
+Rétrograder ou désactiver le dernier compte ADMIN encore actif rend
+l'entreprise **définitivement** ingérable : plus de création de
+compte, plus de changement de rôle, plus de correction d'heure. Le
+serveur compte les administrateurs actifs avant d'écrire et refuse en
+`409`.
+
+Ce n'est pas une vérification d'interface : elle est faite là où
+l'écriture se produit, dans le même flux que la mise à jour.
+
+### On désactive un compte, on ne le supprime pas
+
+Un employé qui part garde son nom sur les dossiers qu'il a traités et
+les encaissements qu'il a saisis. Supprimer son compte effacerait la
+trace de qui a fait quoi — exactement ce qu'on cherche le jour d'un
+litige.
+
+`status = 'INACTIVE'` coupe l'accès **immédiatement**, à deux
+endroits :
+
+- la **connexion** est refusée (`403`) ;
+- un **jeton déjà émis** cesse d'être accepté (`401`) dès l'appel
+  suivant, parce que le middleware relit le statut du compte en base
+  à chaque requête plutôt que de faire confiance au contenu du jeton.
+
+Sans ce second point, un employé licencié le matin garderait l'accès
+jusqu'à l'expiration de son jeton. Les deux cas sont couverts par un
+test.
+
+### Les heures de travail sont des données de paie
+
+**Le logiciel ne ferme jamais un pointage tout seul.** Il ne sait pas
+à quelle heure la personne est partie ; inventer une heure de sortie,
+c'est fabriquer une donnée qui servira à payer quelqu'un. Les
+pointages oubliés sont **signalés**, et un responsable tranche.
+
+**Toute correction est nominative et motivée.** Le motif est
+obligatoire (`422` sans lui), et la trace est écrite à deux endroits
+indépendants : sur la ligne elle-même (`corrected_by_user_id`,
+`corrected_at`, `correction_reason`) et dans `activity_logs`, qui
+conserve l'avant **et** l'après. Une heure de paie modifiée sans
+explication est exactement ce qu'un employé conteste — et ce qu'un
+gérant ne peut plus justifier six mois plus tard.
+
+**Aucune suppression** n'est possible sur `time_entries` : aucune
+route, aucune méthode de dépôt.
+
+### Ce que les employés ne reçoivent pas
+
+| Donnée | Qui la reçoit | Comment c'est appliqué |
+|---|---|---|
+| Le registre de toute l'équipe | `attendance.view` — MANAGER, ADMIN | Le serveur **refuse** (`403`) |
+| La correction d'une heure | `attendance.correct` — MANAGER, ADMIN | Le serveur **refuse** (`403`) |
+| Le chiffre d'affaires par personne | `reports.view` | Le serveur **n'envoie pas** le champ |
+| Son propre pointage | `attendance.clock` — tous | Le serveur ne renvoie **que** sa ligne |
+
+Le troisième cas est le plus important à comprendre : `revenue` n'est
+pas masqué à l'affichage, il est **retiré de la réponse**. Un employé
+qui ouvre les outils de développement de son navigateur ne trouvera
+pas le chiffre d'affaires de ses collègues, parce qu'il n'y est pas.
+
+### Un registre, pas une caméra
+
+Ni géolocalisation, ni photo, ni identifiant d'appareil, ni pointage
+automatique. Géolocaliser réglerait le cas de celui qui pointe pour un
+collègue, et créerait celui d'un logiciel qui suit ses employés à la
+trace. Sur une station où tout le monde se voit, la seconde nuisance
+est la plus grande. Ce choix se décide, il ne se découvre pas dans un
+schéma.
+
+---
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -299,4 +382,8 @@ la question centrale en cas de litige sur un véhicule.
 | Aucune intégration de paiement (vérifié par un test) | ✅ Lot 9 |
 | Écritures comptables non modifiables | ✅ Lot 9 |
 | Écart de caisse enregistré, jamais corrigé | ✅ Lot 9 |
+| Compte désactivé = accès coupé immédiatement | ✅ Lot 12 |
+| Dernier administrateur protégé | ✅ Lot 12 |
+| Heures de travail : ni suppression, ni fermeture automatique | ✅ Lot 12 |
+| Corrections nominatives et motivées | ✅ Lot 12 |
 | Audit de sécurité complet | 🔜 Lot 21 |

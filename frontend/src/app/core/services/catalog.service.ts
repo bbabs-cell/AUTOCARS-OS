@@ -90,4 +90,37 @@ export class CatalogService {
   addTeamMember(payload: TeamMemberPayload): Observable<{ id: number }> {
     return this.unwrap(this.http.post<ApiResponse<{ id: number }>>(`${this.api}/team`, payload));
   }
+
+  /**
+   * L'activité de chacun sur la période : dossiers pris en charge, et
+   * ce qu'ils ont rapporté.
+   *
+   * `revenue` est ABSENT pour qui n'a pas le droit de voir des
+   * montants — le serveur ne l'envoie pas, il ne se contente pas de
+   * le masquer.
+   */
+  teamActivity(from?: string): Observable<{
+    from: string;
+    members: {
+      id: number;
+      full_name: string;
+      role: string;
+      status: string;
+      operations: number;
+      revenue?: number;
+    }[];
+    can_see_money: boolean;
+  }> {
+    const query = from ? `?from=${from}` : '';
+
+    return this.unwrap(this.http.get<ApiResponse<never>>(`${this.api}/team/activity${query}`));
+  }
+
+  /** Change le rôle ou l'état d'un membre. */
+  updateMember(
+    id: number,
+    payload: { role: string; status: string },
+  ): Observable<{ id: number; role: string; status: string }> {
+    return this.unwrap(this.http.put<ApiResponse<never>>(`${this.api}/team/${id}`, payload));
+  }
 }

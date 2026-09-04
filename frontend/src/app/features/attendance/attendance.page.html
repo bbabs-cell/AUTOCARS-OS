@@ -1,0 +1,333 @@
+<ac-page-header
+  title="Pointage"
+  [subtitle]="periodLabel()"
+/>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--success mb-4">
+    <i class="bi bi-check-circle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<!--
+  ============================================================
+  1. LES POINTAGES OUBLIÉS — AVANT TOUT LE RESTE
+  ============================================================
+  Tant qu'une de ces lignes n'est pas corrigée, les totaux du mois
+  sont faux. Le logiciel ne les ferme PAS tout seul : il ne sait pas
+  à quelle heure la personne est partie, et inventer cette heure
+  reviendrait à fabriquer une donnée de paie.
+-->
+@if (stale().length > 0) {
+  <div class="ac-card ac-card--alert mb-4">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Pointages jamais fermés</h2>
+    </div>
+    <div class="ac-card__body">
+      <p class="ac-text-secondary">
+        Ces personnes ont pointé leur arrivée sans jamais pointer leur départ.
+        Tant que ce n'est pas corrigé, leurs heures ne sont comptées nulle part.
+      </p>
+
+      @for (entry of stale(); track entry.id) {
+        <div class="ac-alert-row">
+          <i class="bi bi-exclamation-circle-fill" style="color: var(--ac-warning-700)"></i>
+          <div>
+            <div class="fw-semibold">{{ entry.user_name }}</div>
+            <div class="ac-caption">
+              Arrivée le {{ longDateOf(entry.clock_in_at) }} à {{ timeOf(entry.clock_in_at) }} —
+              ouvert depuis {{ entry.hours_open }} h
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary ms-auto"
+                  (click)="openCorrection(entry)">
+            Corriger
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <form [formGroup]="filterForm" (ngSubmit)="load()" class="row g-3 align-items-end">
+      <div class="col-6 col-md-3">
+        <label for="a-from" class="form-label">Du</label>
+        <input id="a-from" type="date" class="form-control" formControlName="from" />
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="a-to" class="form-label">Au</label>
+        <input id="a-to" type="date" class="form-control" formControlName="to" />
+      </div>
+      <div class="col-12 col-md-3">
+        <button type="submit" class="btn btn-primary w-100">Afficher</button>
+      </div>
+    </form>
+
+    <div class="d-flex gap-2 mt-3">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setThisMonth()">
+        Ce mois-ci
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setLastMonth()">
+        Mois dernier
+      </button>
+    </div>
+  </div>
+</div>
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 60%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading()) {
+  <div class="row g-4 mb-4">
+    <!-- ============================================================
+         2. QUI EST LÀ MAINTENANT
+         ============================================================ -->
+    <div class="col-lg-5">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Présents en ce moment</h2>
+          <span class="ac-caption">{{ present().length }}</span>
+        </div>
+
+        @if (present().length === 0) {
+          <div class="ac-card__body ac-text-secondary">
+            Personne n'est pointé actuellement.
+          </div>
+        } @else {
+          <div class="ac-card__body">
+            @for (entry of present(); track entry.id) {
+              <div class="d-flex justify-content-between align-items-baseline gap-3 mb-3">
+                <div>
+                  <div class="fw-semibold">{{ entry.user_name }}</div>
+                  <div class="ac-caption">arrivé à {{ timeOf(entry.clock_in_at) }}</div>
+                </div>
+                <span class="ac-numeric ac-nowrap">
+                  {{ entry.minutes_present | acDuration }}
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ============================================================
+         3. LES TOTAUX — LE CHIFFRE QUI SERT À PAYER
+         ============================================================
+         Les jours d'abord : la paie d'une station se fait le plus
+         souvent à la journée travaillée.
+    -->
+    <div class="col-lg-7">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Totaux de la période</h2>
+        </div>
+
+        @if (totals().length === 0) {
+          <div class="ac-card__body ac-text-secondary">
+            Aucun pointage fermé sur cette période.
+          </div>
+        } @else {
+          <div class="ac-table-wrapper">
+            <table class="ac-table">
+              <thead>
+                <tr>
+                  <th>Personne</th>
+                  <th>Jours travaillés</th>
+                  <th>Temps de présence</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (total of totals(); track total.user_id) {
+                  <tr>
+                    <td class="fw-semibold">{{ total.user_name }}</td>
+                    <td class="ac-numeric">{{ total.days }}</td>
+                    <td class="ac-numeric ac-text-secondary">
+                      {{ total.minutes | acDuration }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="ac-card__footer">
+            <span class="ac-caption">
+              Les pointages encore ouverts ne sont pas comptés : leur durée
+              n'est pas connue, et l'estimer fausserait un total qui sert à payer.
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       4. LE DÉTAIL
+       ============================================================ -->
+  <div class="ac-card">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Détail des pointages</h2>
+      <span class="ac-caption">{{ entries().length }} ligne(s)</span>
+    </div>
+
+    @if (entries().length === 0) {
+      <ac-empty-state
+        icon="bi-clock"
+        title="Aucun pointage sur cette période"
+        text="Chaque arrivée et chaque départ apparaîtront ici, avec leur durée."
+      />
+    } @else {
+      <div class="ac-table-wrapper">
+        <table class="ac-table">
+          <thead>
+            <tr>
+              <th>Jour</th>
+              <th>Personne</th>
+              <th>Arrivée</th>
+              <th>Départ</th>
+              <th>Durée</th>
+              <th class="ac-table__actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of entries(); track entry.id) {
+              <tr [class.ac-row--muted]="entry.is_open">
+                <td class="ac-numeric ac-nowrap">{{ dateOf(entry.clock_in_at) }}</td>
+                <td>
+                  {{ entry.user_name }}
+                  <!--
+                    UNE CORRECTION NE SE CACHE PAS.
+                    Sans cette mention, un employé payé sur des heures
+                    qu'il n'a pas reconnues n'aurait aucun moyen de
+                    s'en apercevoir.
+                  -->
+                  @if (entry.is_corrected) {
+                    <div class="ac-caption">
+                      corrigé par {{ entry.corrected_by_name }} —
+                      {{ entry.correction_reason }}
+                    </div>
+                  }
+                </td>
+                <td class="ac-numeric">{{ timeOf(entry.clock_in_at) }}</td>
+                <td class="ac-numeric">
+                  @if (entry.is_open) {
+                    <span class="ac-badge ac-badge--warning">en cours</span>
+                  } @else {
+                    {{ timeOf(entry.clock_out_at) }}
+                  }
+                </td>
+                <td class="ac-numeric">
+                  {{ entry.is_open ? '—' : (entry.duration_minutes | acDuration) }}
+                </td>
+                <td class="ac-table__actions">
+                  <button
+                    type="button"
+                    class="ac-btn-icon"
+                    [attr.aria-label]="'Corriger le pointage de ' + entry.user_name"
+                    (click)="openCorrection(entry)"
+                  >
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}
+
+<!-- La correction -->
+@if (correcting(); as entry) {
+  <div class="ac-modal-backdrop" (click)="closeCorrection()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="correction-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="correction-title">Corriger un pointage</h2>
+      <button type="button" class="ac-btn-icon" (click)="closeCorrection()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="correctionForm" (ngSubmit)="submitCorrection()" novalidate>
+      <div class="ac-modal__body">
+        <div class="ac-alert ac-alert--info mb-4">
+          <i class="bi bi-person"></i>
+          <div>
+            <strong>{{ entry.user_name }}</strong>
+            <div class="ac-caption">
+              Pointage du {{ longDateOf(entry.clock_in_at) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="c-in" class="form-label">Arrivée</label>
+          <input id="c-in" type="datetime-local" class="form-control"
+                 formControlName="clock_in_at"
+                 [class.is-invalid]="fieldErrors()['clock_in_at']" />
+          @if (fieldErrors()['clock_in_at']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="c-out" class="form-label">
+            Départ <span class="ac-text-muted fw-normal">(vide = toujours présent)</span>
+          </label>
+          <input id="c-out" type="datetime-local" class="form-control"
+                 formControlName="clock_out_at"
+                 [class.is-invalid]="fieldErrors()['clock_out_at']" />
+          @if (fieldErrors()['clock_out_at']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div>
+          <label for="c-reason" class="form-label">Motif de la correction</label>
+          <input id="c-reason" type="text" class="form-control" formControlName="reason"
+                 placeholder="Parti à 18 h sans pointer, confirmé par le chef d'équipe."
+                 [class.is-invalid]="fieldErrors()['reason']" />
+          <span class="ac-caption">
+            Votre nom et ce motif resteront visibles à côté de la ligne. Une heure
+            modifiée sert à payer quelqu'un : il doit pouvoir voir qu'elle l'a été.
+          </span>
+          @if (fieldErrors()['reason']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeCorrection()">
+          Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            Enregistrer la correction
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

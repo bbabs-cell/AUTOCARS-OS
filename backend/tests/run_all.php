@@ -31,6 +31,7 @@ $tests = [
     'api_queue_test.php'      => "API — file d'attente",
     'api_payment_test.php'    => 'API — encaissements et caisse',
     'api_dashboard_test.php'  => 'API — tableau de bord',
+    'api_team_test.php'       => 'API — équipe et pointage',
 ];
 
 $directory = __DIR__;

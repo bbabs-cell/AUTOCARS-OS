@@ -1,0 +1,285 @@
+<ac-page-header
+  title="Équipe"
+  [subtitle]="members().length + ' personne(s)'"
+>
+  @if (canManage()) {
+    <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <i class="bi bi-plus-lg"></i> Ajouter un membre
+    </button>
+  }
+</ac-page-header>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--success mb-4">
+    <i class="bi bi-check-circle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 70%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && members().length === 0) {
+  <div class="ac-card">
+    <ac-empty-state
+      icon="bi-people"
+      title="Personne dans l'équipe"
+      text="Ajoutez vos employés pour qu'ils puissent prendre les véhicules en charge et pointer leurs journées."
+      actionLabel="Ajouter un membre"
+      (action)="openCreate()"
+    />
+  </div>
+}
+
+@if (!isLoading() && members().length > 0) {
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Rôle</th>
+            <th>Station</th>
+            <th>Dossiers ce mois-ci</th>
+            @if (canSeeMoney()) {
+              <th class="ac-table__amount">Chiffre d'affaires</th>
+            }
+            <th>Dernière connexion</th>
+            @if (canManage()) {
+              <th class="ac-table__actions">Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (member of members(); track member.id) {
+            <tr [class.ac-row--muted]="member.status === 'DISABLED'">
+              <td>
+                <div class="fw-semibold">
+                  {{ member.full_name }}
+                  @if (member.id === currentUserId()) {
+                    <span class="ac-caption">(vous)</span>
+                  }
+                </div>
+                <div class="ac-caption">{{ member.email }}</div>
+              </td>
+              <td>
+                {{ roleLabel(member.role) }}
+                @if (member.status === 'DISABLED') {
+                  <div>
+                    <span class="ac-badge ac-badge--neutral">Désactivé</span>
+                  </div>
+                }
+              </td>
+              <td class="ac-text-secondary">
+                {{ member.station_names ?? member.station_name }}
+              </td>
+              <td class="ac-numeric">
+                {{ activityFor(member.id)?.operations ?? 0 }}
+              </td>
+              @if (canSeeMoney()) {
+                <td class="ac-table__amount ac-numeric">
+                  {{ activityFor(member.id)?.revenue ?? 0 | acAmount }}
+                </td>
+              }
+              <td class="ac-text-secondary ac-nowrap">
+                {{ member.last_login_at ? (member.last_login_at | acRelativeDate) : 'jamais' }}
+              </td>
+              @if (canManage()) {
+                <td class="ac-table__actions">
+                  <button
+                    type="button"
+                    class="ac-btn-icon"
+                    [attr.aria-label]="'Modifier ' + member.full_name"
+                    (click)="openEdit(member)"
+                  >
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!--
+    Il n'y a pas de bouton « Supprimer », et ce n'est pas un oubli :
+    le nom d'un employé figure sur des inspections et des
+    encaissements. Effacer sa ligne casserait l'historique qui sert
+    justement en cas de litige.
+  -->
+  <p class="ac-caption mt-3">
+    Un employé qui part se <strong>désactive</strong>, il ne se supprime pas :
+    son accès est coupé immédiatement, et son nom reste sur les dossiers qu'il
+    a traités.
+  </p>
+}
+
+<!-- Ajouter / modifier -->
+@if (isFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="team-form-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="team-form-title">
+        {{ editing() ? 'Modifier ' + editing()!.full_name : 'Ajouter un membre' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closeForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    @if (editing(); as member) {
+      <!--
+        LA MODIFICATION NE TOUCHE QUE LE RÔLE ET L'ÉTAT.
+        Changer le nom ou l'adresse de quelqu'un d'autre est un autre
+        sujet — et une adresse modifiée par un tiers, c'est un compte
+        détourné. La personne le fera depuis son profil (lot 17).
+      -->
+      <form [formGroup]="editForm" (ngSubmit)="submitEdit()" novalidate>
+        <div class="ac-modal__body">
+          <div class="mb-4">
+            <label for="t-role" class="form-label">Rôle</label>
+            <select id="t-role" class="form-select" formControlName="role">
+              @for (role of roles; track role.value) {
+                <option [value]="role.value">{{ role.label }} — {{ role.hint }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="t-status" class="form-label">État du compte</label>
+            <select id="t-status" class="form-select" formControlName="status">
+              <option value="ACTIVE">Actif</option>
+              <option value="DISABLED">Désactivé</option>
+            </select>
+            <span class="ac-caption">
+              Un compte désactivé ne peut plus se connecter, dès la prochaine
+              seconde. Son historique reste intact.
+            </span>
+          </div>
+
+          @if (member.id === currentUserId()) {
+            <div class="ac-alert ac-alert--info">
+              <i class="bi bi-info-circle-fill"></i>
+              <div>
+                C'est votre compte. Vous ne pouvez ni changer votre rôle ni vous
+                désactiver — le seul effet garanti serait de ne plus pouvoir
+                revenir en arrière.
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="ac-modal__footer">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="isSaving() || member.id === currentUserId()"
+          >
+            @if (isSaving()) {
+              <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+            } @else {
+              Enregistrer
+            }
+          </button>
+        </div>
+      </form>
+    } @else {
+      <form [formGroup]="createForm" (ngSubmit)="submitCreate()" novalidate>
+        <div class="ac-modal__body">
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label for="t-first" class="form-label">Prénom</label>
+              <input id="t-first" type="text" class="form-control" formControlName="first_name" />
+            </div>
+            <div class="col-sm-6">
+              <label for="t-last" class="form-label">Nom</label>
+              <input id="t-last" type="text" class="form-control" formControlName="last_name" />
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="t-email" class="form-label">Adresse e-mail</label>
+            <input id="t-email" type="email" class="form-control" formControlName="email"
+                   autocomplete="off" [class.is-invalid]="fieldErrors()['email']" />
+            <span class="ac-caption">Elle lui servira d'identifiant.</span>
+            @if (fieldErrors()['email']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+
+          <div class="mb-4">
+            <label for="t-phone" class="form-label">
+              Téléphone <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <input id="t-phone" type="tel" class="form-control ac-numeric"
+                   formControlName="phone" placeholder="+221 77 000 00 00" />
+          </div>
+
+          <div class="mb-4">
+            <label for="t-password" class="form-label">Mot de passe provisoire</label>
+            <input id="t-password" type="text" class="form-control" formControlName="password"
+                   autocomplete="off" [class.is-invalid]="fieldErrors()['password']" />
+            <span class="ac-caption">
+              Dix caractères minimum. <strong>Communiquez-le de vive voix</strong> :
+              aucun e-mail n'est envoyé.
+            </span>
+            @if (fieldErrors()['password']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-7">
+              <label for="t-new-role" class="form-label">Rôle</label>
+              <select id="t-new-role" class="form-select" formControlName="role">
+                @for (role of roles; track role.value) {
+                  <option [value]="role.value">{{ role.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-sm-5">
+              <label for="t-station" class="form-label">Station</label>
+              <select id="t-station" class="form-select" formControlName="station_id">
+                @for (station of stations(); track station.id) {
+                  <option [value]="station.id">{{ station.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="ac-modal__footer">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">
+            Annuler
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+            @if (isSaving()) {
+              <span class="spinner-border spinner-border-sm"></span> Création…
+            } @else {
+              Ajouter le membre
+            }
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+}

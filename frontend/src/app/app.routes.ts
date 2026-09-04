@@ -109,6 +109,17 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'team',
+        title: 'Équipe — AUTOCARE OS',
+        loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),
+      },
+      {
+        path: 'attendance',
+        title: 'Pointage — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/attendance/attendance.page').then((m) => m.AttendancePage),
+      },
+      {
         path: 'payments',
         title: 'Encaissements — AUTOCARE OS',
         loadComponent: () =>

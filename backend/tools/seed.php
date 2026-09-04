@@ -206,6 +206,7 @@ $tables = [
     'inspections'       => 'inspections',
     'inspection_photos' => 'photos',
     'payments'          => 'paiements',
+    'time_entries'      => 'pointages',
     'audit_logs'        => 'entrées de journal',
 ];
 

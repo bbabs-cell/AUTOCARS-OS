@@ -118,7 +118,7 @@ suivant.
 
 **Phase C — Extension**
 - [x] **Lot 11** — Page d'accueil publique : l'argumentaire, aucun chiffre ni tarif inventé, 7 tests de routage
-- [ ] Lot 12 — Employés et pointage
+- [x] **Lot 12** — Équipe et pointage : un registre et non une caméra, aucune fermeture automatique, corrections nominatives, 53 tests de plus
 - [ ] Lot 13 — Réservations
 - [ ] Lot 14 — Fidélité
 - [ ] Lot 15 — Abonnements
@@ -140,7 +140,7 @@ restitution :
 **restitution vérifiée** → **clôture de caisse** — et le tableau de
 bord qui dit, le lendemain matin, ce qui demande une action.
 
-**432 tests** (398 backend, 34 frontend) tiennent l'ensemble.
+**485 tests** (451 backend, 34 frontend) tiennent l'ensemble.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie
 station : les modules restants gagneront à être conçus sur ce qu'un
