@@ -115,6 +115,12 @@ export const routes: Routes = [
           import('./features/bookings/bookings.page').then((m) => m.BookingsPage),
       },
       {
+        path: 'loyalty',
+        title: 'Fidélité — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/loyalty/loyalty.page').then((m) => m.LoyaltyPage),
+      },
+      {
         path: 'team',
         title: 'Équipe — AUTOCARE OS',
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),

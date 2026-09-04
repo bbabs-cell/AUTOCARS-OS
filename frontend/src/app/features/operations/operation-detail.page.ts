@@ -7,6 +7,8 @@ import { AmountPipe } from '../../shared/pipes/amount.pipe';
 import { RelativeDatePipe } from '../../shared/pipes/relative-date.pipe';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge.component';
 import { AuthService } from '../../core/services/auth.service';
+import { LoyaltyService } from '../../core/services/loyalty.service';
+import { LoyaltyCard } from '../../core/models/loyalty.model';
 import { OperationService } from '../../core/services/operation.service';
 import { PaymentService } from '../../core/services/payment.service';
 import { compressPhoto, formatBytes } from '../../core/services/image-compressor';
@@ -85,6 +87,7 @@ export class OperationDetailPage {
   private readonly formBuilder = inject(FormBuilder);
   private readonly operationService = inject(OperationService);
   private readonly auth = inject(AuthService);
+  private readonly loyalty = inject(LoyaltyService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly fuelLabels = FUEL_LEVEL_LABELS;
@@ -102,6 +105,23 @@ export class OperationDetailPage {
   protected readonly isChangingStatus = signal(false);
   protected readonly isSavingInspection = signal(false);
   protected readonly isReleasing = signal(false);
+
+  /**
+   * LA CARTE DE FIDÉLITÉ SE LIT ICI, PAS SUR UN AUTRE ÉCRAN.
+   *
+   * Personne n'ira chercher la carte d'un client sur une page à part
+   * pendant qu'il attend ses clés. Si la récompense ne se propose pas
+   * là où le dossier se règle, elle ne se propose jamais — et un
+   * programme qu'on n'applique pas ne fidélise personne.
+   *
+   * `null` quand l'entreprise n'a pas de programme, ce qui est le cas
+   * par défaut : rien ne s'affiche alors.
+   */
+  protected readonly loyaltyCard = signal<LoyaltyCard | null>(null);
+  protected readonly isRedeeming = signal(false);
+  protected readonly loyaltyWarnings = signal<string[]>([]);
+
+  protected readonly canRedeem = computed(() => this.auth.can('loyalty.redeem'));
 
   protected readonly fieldErrors = signal<Record<string, string>>({});
   protected readonly photoTiles = signal<PhotoTile[]>([]);
@@ -256,6 +276,7 @@ export class OperationDetailPage {
         }
 
         this.loadPayments();
+        this.loadLoyaltyCard(result.operation.customer_id);
       },
       error: (error: HttpErrorResponse) => {
         this.isLoading.set(false);
@@ -264,6 +285,75 @@ export class OperationDetailPage {
             ? "Ce dossier n'existe pas, ou il appartient à une autre entreprise."
             : 'Le chargement du dossier a échoué.',
         );
+      },
+    });
+  }
+
+  /**
+   * Une erreur ne remonte PAS à l'écran : une entreprise sans
+   * programme de fidélité, ou un employé sans le droit de lire les
+   * cartes, ne doit pas voir un message rouge sur un dossier qui va
+   * parfaitement bien. La section disparaît, c'est tout.
+   */
+  private loadLoyaltyCard(customerId: number): void {
+    if (!this.auth.can('loyalty.view')) {
+      return;
+    }
+
+    this.loyalty.card(customerId).subscribe({
+      next: (result) => this.loyaltyCard.set(result.card.has_program ? result.card : null),
+      error: () => this.loyaltyCard.set(null),
+    });
+  }
+
+  /** Le client utilise sa récompense sur ce dossier. */
+  protected applyReward(): void {
+    if (this.isRedeeming()) {
+      return;
+    }
+
+    this.isRedeeming.set(true);
+    this.loyaltyWarnings.set([]);
+
+    this.loyalty.redeem(this.operationId).subscribe({
+      next: (result) => {
+        this.isRedeeming.set(false);
+        this.operation.set(result.operation);
+        this.loyaltyCard.set(result.card);
+        this.loyaltyWarnings.set(result.warnings ?? []);
+        this.noticeMessage.set('Récompense appliquée.');
+        // Le contrôle avant restitution dépend de ce qui reste dû :
+        // il faut le refaire, sinon il continuerait de réclamer une
+        // somme qui vient d'être remisée.
+        this.loadChecklist();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isRedeeming.set(false);
+        this.errorMessage.set(error.error?.message ?? "La récompense n'a pas pu être appliquée.");
+      },
+    });
+  }
+
+  /** Une remise appliquée par erreur. Les tampons sont rendus. */
+  protected cancelReward(): void {
+    if (this.isRedeeming()) {
+      return;
+    }
+
+    this.isRedeeming.set(true);
+
+    this.loyalty.cancelRedeem(this.operationId).subscribe({
+      next: (result) => {
+        this.isRedeeming.set(false);
+        this.operation.set(result.operation);
+        this.loyaltyCard.set(result.card);
+        this.loyaltyWarnings.set(result.warnings ?? []);
+        this.noticeMessage.set('Remise retirée. Les tampons sont rendus au client.');
+        this.loadChecklist();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isRedeeming.set(false);
+        this.errorMessage.set(error.error?.message ?? "La remise n'a pas pu être retirée.");
       },
     });
   }
@@ -474,7 +564,10 @@ export class OperationDetailPage {
 
   protected openPaymentPanel(): void {
     const operation = this.operation();
-    const remaining = operation ? Math.max(0, operation.price - operation.paid_amount) : 0;
+    // `amount_due` et non `price` : une récompense de fidélité a pu
+    // diminuer ce qui reste à encaisser. Pré-remplir le prix plein
+    // ferait payer au client une remise qu'on venait de lui accorder.
+    const remaining = operation ? Math.max(0, operation.amount_due - operation.paid_amount) : 0;
 
     // Le montant restant est PRÉ-REMPLI : neuf fois sur dix, le client
     // règle tout. Le laisser vide ferait ressaisir un nombre déjà

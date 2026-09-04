@@ -23,7 +23,22 @@
 @if (noticeMessage(); as message) {
   <div class="ac-alert ac-alert--success mb-4">
     <i class="bi bi-check-circle-fill"></i>
-    <div>{{ message }}</div>
+    <div>
+      {{ message }}
+
+      <!--
+        Le serveur accepte et prévient : « la récompense vaut 5 000 F
+        mais le dossier n'en coûte que 3 000 : le reste est perdu ».
+        Quelqu'un au comptoir doit pouvoir le dire au client — c'est
+        lui qui décide s'il préfère la garder pour un lavage plus
+        cher.
+      -->
+      @for (warning of loyaltyWarnings(); track warning) {
+        <div class="ac-caption mt-1">
+          <i class="bi bi-info-circle"></i> {{ warning }}
+        </div>
+      }
+    </div>
   </div>
 }
 
@@ -391,7 +406,58 @@
             <dd class="col-7">{{ op.service_name }}</dd>
 
             <dt class="col-5 ac-text-secondary fw-normal">Montant</dt>
-            <dd class="col-7 ac-numeric fw-semibold">{{ op.price | acAmount }}</dd>
+            <dd class="col-7 ac-numeric fw-semibold">
+              <!--
+                LE PRIX BARRÉ EST LE POINT DU MODULE FIDÉLITÉ.
+                Un client qui voit « 5 000 » rayé et « 1 000 » à côté
+                comprend en une seconde ce que sa carte lui a
+                rapporté. Afficher directement 1 000 F lui donnerait
+                une remise dont il ne saurait rien — et une fidélité
+                invisible ne fidélise personne.
+              -->
+              @if (op.discount_amount > 0) {
+                <s class="ac-text-muted fw-normal">{{ op.price | acAmount }}</s>
+                {{ op.amount_due | acAmount }}
+              } @else {
+                {{ op.price | acAmount }}
+              }
+            </dd>
+
+            @if (op.discount_amount > 0) {
+              <dt class="col-5 ac-text-secondary fw-normal">Remise</dt>
+              <dd class="col-7">
+                <span class="ac-badge ac-badge--success">
+                  −{{ op.discount_amount | acAmount }}
+                </span>
+                <div class="ac-caption">{{ op.discount_reason }}</div>
+                @if (canRedeem() && op.status !== 'COMPLETED') {
+                  <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                          (click)="cancelReward()" [disabled]="isRedeeming()">
+                    Retirer la remise
+                  </button>
+                }
+              </dd>
+            } @else if (loyaltyCard()?.rewards_available) {
+              <!--
+                LA RÉCOMPENSE SE PROPOSE LÀ OÙ ELLE SE DÉCIDE : sur le
+                dossier, au moment d'encaisser. Sur un écran séparé,
+                personne ne penserait à aller la chercher pendant
+                qu'un client attend ses clés.
+              -->
+              <dt class="col-5 ac-text-secondary fw-normal">Fidélité</dt>
+              <dd class="col-7">
+                <span class="ac-badge ac-badge--info">
+                  {{ loyaltyCard()!.rewards_available }} récompense(s)
+                </span>
+                @if (canRedeem() && op.status !== 'COMPLETED' && !op.is_settled) {
+                  <button type="button" class="btn btn-sm btn-primary mt-2 d-block"
+                          (click)="applyReward()" [disabled]="isRedeeming()">
+                    <i class="bi bi-award"></i>
+                    Utiliser ({{ loyaltyCard()!.reward_amount | acAmount }})
+                  </button>
+                }
+              </dd>
+            }
 
             <dt class="col-5 ac-text-secondary fw-normal">Réglé</dt>
             <dd class="col-7">
@@ -402,7 +468,7 @@
               } @else {
                 <span class="ac-badge ac-badge--warning">
                   <span class="ac-badge__dot" aria-hidden="true"></span>
-                  {{ op.paid_amount | acAmount }} sur {{ op.price | acAmount }}
+                  {{ op.paid_amount | acAmount }} sur {{ op.amount_due | acAmount }}
                 </span>
                 @if (op.status !== 'CANCELLED') {
                   <button type="button" class="btn btn-sm btn-primary mt-2 d-block"
@@ -528,8 +594,13 @@
           <div class="ac-alert ac-alert--info mb-4">
             <i class="bi bi-receipt"></i>
             <div>
-              <strong class="ac-numeric">{{ op.price | acAmount }}</strong> pour
+              <strong class="ac-numeric">{{ op.amount_due | acAmount }}</strong> pour
               {{ op.service_name }}.
+              @if (op.discount_amount > 0) {
+                <div class="ac-caption">
+                  {{ op.price | acAmount }} moins {{ op.discount_amount | acAmount }} de remise fidélité.
+                </div>
+              }
               @if (op.paid_amount > 0) {
                 <div class="ac-caption">
                   Déjà réglé : {{ op.paid_amount | acAmount }}.

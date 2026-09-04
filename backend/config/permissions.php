@@ -56,6 +56,12 @@ return [
         // décision d'exploitation quotidienne, pas de structure.
         'services.update',
         'bookings.*',
+        // Le manager voit les cartes et applique les récompenses,
+        // mais ne CHANGE PAS les règles : un client qui collecte des
+        // tampons a une promesse en cours, et la modifier au milieu
+        // engage l'entreprise, pas la station.
+        'loyalty.view',
+        'loyalty.redeem',
         'employees.view',
         // Le pointage est de la gestion quotidienne : c'est le
         // responsable de station qui constate les présences et
@@ -134,6 +140,25 @@ return [
         'bookings.view',
         'bookings.create',
         'bookings.update',
+
+        // LA CARTE SE LIT ET S'UTILISE AU COMPTOIR.
+        //
+        // Appliquer une récompense donne de l'argent — le réflexe
+        // serait donc de la réserver à un responsable. Ce serait une
+        // erreur : la règle ne demande AUCUN jugement. Le client a
+        // dix tampons ou il ne les a pas, et le serveur vérifie. Il
+        // n'y a rien à arbitrer, seulement à exécuter.
+        //
+        // Faire venir un responsable pour appuyer sur un bouton dont
+        // le résultat est déterminé, c'est apprendre au comptoir à
+        // dire « votre carte, on verra plus tard » — et un programme
+        // qu'on n'applique pas ne fidélise personne.
+        //
+        // L'annulation d'une remise passe par le même droit : une
+        // erreur de saisie se corrige là où elle est faite. Les deux
+        // gestes sont tracés nominativement.
+        'loyalty.view',
+        'loyalty.redeem',
 
         // CHACUN POINTE POUR SOI.
         // Pointer à la place d'un collègue est le premier

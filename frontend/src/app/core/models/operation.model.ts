@@ -47,8 +47,25 @@ export interface Operation {
   assigned_user_id: number | null;
   assigned_name: string | null;
 
-  /** Prix figé à l'ouverture du dossier, en FCFA. */
+  /**
+   * Prix figé à l'ouverture du dossier, en FCFA.
+   *
+   * ATTENTION : ce n'est PAS ce que le client doit. Depuis le lot 14,
+   * une récompense de fidélité peut le diminuer. Le montant à
+   * encaisser est `amount_due`, et c'est lui qu'il faut utiliser
+   * partout où l'on parle d'argent à recevoir.
+   *
+   * Les deux sont envoyés séparément à dessein : afficher le prix
+   * barré et le dû est la seule façon pour le client de voir ce que
+   * sa fidélité lui a rapporté.
+   */
   price: number;
+  /** Remise accordée, en FCFA. Zéro dans l'immense majorité des cas. */
+  discount_amount: number;
+  /** « Fidélité — 3 lavages (Carte fidélité) ». */
+  discount_reason: string | null;
+  /** `price - discount_amount`, jamais négatif. CE QUE LE CLIENT DOIT. */
+  amount_due: number;
   currency_code: string;
   paid_amount: number;
   is_settled: boolean;

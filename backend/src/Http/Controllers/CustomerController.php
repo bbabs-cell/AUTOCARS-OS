@@ -54,6 +54,14 @@ final class CustomerController
                 static fn (array $v): array => [
                     'id'           => (int) $v['id'],
                     'plate_number' => $v['plate_number'],
+                    // La forme LISIBLE, que le reste du produit
+                    // affiche partout : « DK-1234-AA ». Elle manquait
+                    // ici depuis le lot 6, et la fiche client montrait
+                    // donc une pastille vide à la place de la plaque.
+                    // Le défaut ne se voyait que sur cet écran, parce
+                    // que c'est le seul à construire sa liste de
+                    // véhicules à la main plutôt qu'avec le présentateur.
+                    'plate_display' => \Autocare\Core\PlateNumber::format((string) $v['plate_number']),
                     'brand'        => $v['brand'],
                     'model'        => $v['model'],
                     'color'        => $v['color'],

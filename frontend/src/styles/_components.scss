@@ -202,6 +202,24 @@
 // Véhicules, clients, paiements, employés : la moitié des écrans du
 // produit sont des tableaux. Ils méritent un soin particulier.
 
+// --- Une ligne « libellé à gauche, chiffre à droite » -----------------
+// Montée ici au lot 14, quand un TROISIÈME écran en a eu besoin
+// (rendez-vous, fidélité, fiche client). La règle qu'on s'était
+// donnée au lot 13 : une classe reste locale tant qu'elle n'a qu'un
+// ou deux usages — descendre une classe est facile, retrouver
+// pourquoi cette feuille pèse 40 ko ne l'est pas.
+.ac-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-2) 0;
+
+  & + & {
+    border-top: 1px solid var(--ac-border);
+  }
+}
+
 .ac-table-wrapper {
   // Sur mobile, un tableau de 8 colonnes ne rentre pas. Il défile
   // horizontalement DANS son conteneur — jamais la page entière,

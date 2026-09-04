@@ -6,6 +6,7 @@ namespace Autocare\Http\Presenters;
 
 use Autocare\Core\OperationStatus;
 use Autocare\Core\PlateNumber;
+use Autocare\Models\OperationRepository;
 
 /**
  * Mise en forme d'une opération pour l'API
@@ -39,7 +40,14 @@ final class OperationPresenter
         $status = (string) ($operation['status'] ?? 'WAITING');
         $plate  = (string) ($operation['plate_number'] ?? '');
 
-        $due  = (int) ($operation['price'] ?? 0);
+        // Le PRIX est ce que vaut la prestation ; le DÛ est ce qui
+        // reste à encaisser après une éventuelle remise de fidélité.
+        // Les deux sont envoyés au frontend : afficher « 5 000 F »
+        // barré et « 0 F » à payer est la seule façon pour le client
+        // de voir ce que sa fidélité lui a rapporté.
+        $price    = (int) ($operation['price'] ?? 0);
+        $discount = (int) ($operation['discount_amount'] ?? 0);
+        $due  = OperationRepository::amountDue($operation);
         $paid = (int) ($operation['paid_amount'] ?? 0);
 
         $duration = (int) ($operation['duration_minutes'] ?? 0);
@@ -80,7 +88,10 @@ final class OperationPresenter
                 : (int) $operation['assigned_user_id'],
             'assigned_name'    => $operation['assigned_name'] ?? null,
 
-            'price'         => $due,
+            'price'         => $price,
+            'discount_amount' => $discount,
+            'discount_reason' => $operation['discount_reason'] ?? null,
+            'amount_due'    => $due,
             'currency_code' => $operation['currency_code'] ?? 'XOF',
             'paid_amount'   => $paid,
             'is_settled'    => $paid >= $due,

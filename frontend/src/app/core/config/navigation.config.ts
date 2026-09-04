@@ -66,7 +66,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
   {
     label: 'Finances',
     items: [
-      { label: 'Fidélité',    icon: 'award',       route: null, lot: 14 },
       { label: 'Abonnements', icon: 'arrow-repeat', route: null, lot: 15 },
     ],
   },
@@ -101,6 +100,10 @@ export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   // l'autre pour tout à l'heure.
   { label: 'Rendez-vous',   icon: 'calendar-week', route: '/bookings', lot: 13,
     permission: 'bookings.view' },
+  // Après les clients, pas après les rendez-vous : la fidélité parle
+  // de personnes qui reviennent, pas de l'organisation d'une journée.
+  { label: 'Fidélité',      icon: 'award',      route: '/loyalty',  lot: 14,
+    permission: 'loyalty.view' },
   { label: 'Encaissements', icon: 'credit-card', route: '/payments',   lot: 9,
     permission: 'payments.journal' },
   { label: 'Caisse',        icon: 'cash-stack',  route: '/cash',       lot: 9,

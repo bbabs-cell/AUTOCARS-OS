@@ -395,6 +395,84 @@ organisation, et cinq tests le vérifient.
 
 ---
 
+## 7 quinquies. Fidélité
+
+### Une récompense ne devient jamais de la recette
+
+C'est la règle de sécurité comptable du lot. Un faux encaissement
+« fidélité » aurait fait annoncer au gérant une recette que son tiroir
+ne contient pas — et aurait rendu le coût du programme invisible.
+
+Une récompense diminue `operations.discount_amount`. La recette ne
+compte que de l'argent réellement reçu, la caisse du soir reste juste,
+et un test compare la recette avant et après une remise pour vérifier
+qu'elle **n'a pas bougé d'un franc**.
+
+### Le grand livre est en ajout seul
+
+Aucune route ne modifie ni ne supprime une écriture de
+`loyalty_entries`. Une utilisation annulée est compensée par une
+écriture inverse (`REVERSAL`) qui porte le nom de son auteur.
+
+Effacer aurait fait disparaître le geste — et avec lui la trace d'une
+manipulation possible : appliquer une remise, l'annuler, la
+réappliquer sur un autre dossier. Les deux gestes restent lisibles
+dans l'historique du client.
+
+### Les doublons sont interdits par la base, pas seulement par le code
+
+Trois contraintes d'unicité sur colonnes calculées :
+
+| Règle | Ce qu'elle empêche |
+|---|---|
+| Un seul programme actif par entreprise | Deux règles concurrentes, dont le montant appliqué dépendrait de l'ordre des lignes |
+| Un seul tampon par dossier | Un encaissement rejoué, ou un paiement en deux fois, qui créditerait deux tampons |
+| Une seule annulation par utilisation | Deux appuis sur « Annuler » qui rendraient deux fois les tampons |
+
+Le contrôleur vérifie avant d'écrire ; la base ne peut pas se tromper.
+Et une violation de contrainte n'est pas remontée comme une erreur à
+l'utilisateur : elle signifie simplement que la règle a joué.
+
+### Un tampon ne s'obtient pas par une dérogation
+
+L'attribution se fait au **paiement**, pas à la restitution. Un
+véhicule rendu par dérogation à un client qui n'a rien réglé ne fait
+pas avancer sa carte — sinon la dérogation de paiement (lot 7)
+deviendrait une façon de fabriquer des tampons.
+
+### La fidélité ne peut pas bloquer un encaissement
+
+`LoyaltyLedger::awardIfSettled()` n'écrit jamais de réponse HTTP et ne
+peut pas interrompre le paiement en cours. Un problème de carte de
+fidélité n'a aucune raison d'empêcher de prendre l'argent d'un client.
+
+### Un employé peut appliquer une récompense, pas changer les règles
+
+Appliquer une récompense réduit une facture, ce qui ressemble à une
+décision d'argent. Ce n'en est pas une : **la règle ne demande aucun
+jugement.** Le client a ses tampons ou il ne les a pas, et le serveur
+vérifie le solde avant d'écrire. Il n'y a rien à arbitrer.
+
+Le principe du moindre privilège protège ce qui a de la valeur ; il ne
+consiste pas à restreindre par réflexe un geste déterminé. Faire venir
+un responsable pour appuyer sur ce bouton apprendrait au comptoir à
+remettre la carte à plus tard.
+
+**Changer les règles** (`loyalty.manage`) reste à l'administrateur : un
+client qui collecte des tampons a une promesse en cours.
+
+Toutes les actions sont tracées nominativement
+(`loyalty.redeemed`, `loyalty.redeem_cancelled`,
+`loyalty.program_updated` — cette dernière avec l'avant et l'après).
+
+### Un programme naît inactif
+
+La migration crée les tables sur toutes les installations. Un
+programme actif par défaut se mettrait à distribuer de l'argent sans
+que personne ne l'ait décidé.
+
+---
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -471,4 +549,8 @@ la question centrale en cas de litige sur un véhicule.
 | Statut à effet de bord hors de la route générique | ✅ Lot 13 |
 | Rendez-vous terminé : ni rouvert, ni modifié | ✅ Lot 13 |
 | Prix promis non réécrit par un changement de tarif | ✅ Lot 13 |
+| Récompense = remise, jamais de la recette (vérifié par un test) | ✅ Lot 14 |
+| Grand livre de fidélité en ajout seul | ✅ Lot 14 |
+| Doublons de tampons interdits par la base | ✅ Lot 14 |
+| Programme de fidélité inactif par défaut | ✅ Lot 14 |
 | Audit de sécurité complet | 🔜 Lot 21 |

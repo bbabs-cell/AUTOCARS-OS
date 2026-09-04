@@ -104,6 +104,7 @@ $expectedTables = [
     // l'isolation : c'est la liste ci-dessous qui décide ce qui est
     // contrôlé, et une table oubliée ici n'est contrôlée nulle part.
     'cash_sessions', 'time_entries', 'bookings',
+    'loyalty_programs', 'loyalty_entries',
 ];
 
 $actualTables = $connection->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);

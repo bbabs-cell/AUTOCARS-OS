@@ -31,19 +31,6 @@
   gap: var(--ac-space-2);
 }
 
-// --- Le compte par statut --------------------------------------------
-.ac-count-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ac-space-3);
-  padding: var(--ac-space-2) 0;
-
-  & + & {
-    border-top: 1px solid var(--ac-border);
-  }
-}
-
 // --- La charge d'une journée, heure par heure ------------------------
 // DES BARRES, PAS UN CAMEMBERT.
 // L'œil compare mal des angles et bien des longueurs — c'est la seule

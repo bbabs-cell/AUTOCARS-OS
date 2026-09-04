@@ -1,0 +1,37 @@
+// =====================================================================
+// La carte de fidélité, dessinée comme le carton qu'elle remplace
+// =====================================================================
+// Des cases, et des tampons dedans. C'est tout l'intérêt d'une carte
+// à tampons par rapport à un programme à points : le client comprend
+// son solde sans qu'on le lui explique, et il peut le vérifier.
+//
+// Styles locaux : cette carte ne s'affiche que sur la fiche client.
+
+.ac-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ac-space-2);
+  margin-bottom: var(--ac-space-4);
+}
+
+.ac-stamps__slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--ac-radius-full);
+  // Une case vide est un pointillé : elle se lit comme « à remplir »,
+  // pas comme un élément désactivé.
+  border: 1px dashed var(--ac-border-strong);
+  background-color: var(--ac-surface);
+  color: var(--ac-surface);
+  font-size: var(--ac-text-sm);
+}
+
+.ac-stamps__slot--filled {
+  border-style: solid;
+  border-color: var(--ac-primary-600);
+  background-color: var(--ac-primary-600);
+  color: #ffffff;
+}

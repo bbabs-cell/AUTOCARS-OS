@@ -33,6 +33,7 @@ $tests = [
     'api_dashboard_test.php'  => 'API — tableau de bord',
     'api_team_test.php'       => 'API — équipe et pointage',
     'api_booking_test.php'    => 'API — rendez-vous',
+    'api_loyalty_test.php'    => 'API — fidélité',
 ];
 
 $directory = __DIR__;

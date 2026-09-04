@@ -1,0 +1,323 @@
+<ac-page-header title="Fidélité" [subtitle]="programSentence()">
+  @if (canManage()) {
+    <button type="button" class="btn btn-primary" (click)="openEditor()">
+      <i class="bi bi-sliders"></i>
+      {{ program() ? 'Modifier les règles' : 'Créer le programme' }}
+    </button>
+  }
+</ac-page-header>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+    <button type="button" class="ac-btn-icon ms-auto" (click)="dismissError()" aria-label="Fermer">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--success mb-4">
+    <i class="bi bi-check-circle-fill"></i>
+    <div>{{ message }}</div>
+    <button type="button" class="ac-btn-icon ms-auto" (click)="dismissNotice()" aria-label="Fermer">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body text-center py-5">
+      <span class="spinner-border text-primary"></span>
+    </div>
+  </div>
+} @else if (program() === null) {
+
+  <!--
+    AUCUN PROGRAMME : c'est l'état par défaut de toute installation.
+    La migration crée les tables partout, y compris chez un gérant qui
+    n'a jamais demandé de fidélité. Rien ne se déclenche tant que
+    personne ne l'a décidé.
+  -->
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <ac-empty-state
+        icon="bi-award"
+        title="Aucun programme de fidélité"
+        text="Une carte à tampons : « après 10 lavages, 5 000 F offerts ».
+              Tant que rien n'est créé, aucun tampon n'est distribué."
+      />
+    </div>
+  </div>
+
+} @else {
+
+  @if (!program()!.is_active) {
+    <div class="ac-alert ac-alert--warning mb-4">
+      <i class="bi bi-pause-circle"></i>
+      <div>
+        Ce programme est <strong>inactif</strong>&nbsp;: les lavages payés ne
+        donnent aucun tampon. Les cartes déjà commencées sont conservées.
+      </div>
+    </div>
+  }
+
+  <!--
+    ============================================================
+    1. CEUX QUI ONT GAGNÉ QUELQUE CHOSE — AVANT TOUT LE RESTE
+    ============================================================
+    Le seul bloc de cet écran sur lequel on agit. Ces clients ont une
+    récompense et ne le savent peut-être pas : un appel, et ils
+    reviennent. C'est le même principe qu'au tableau de bord et au
+    registre de pointage — ce qui demande une action passe devant ce
+    qui informe.
+  -->
+  @if (ready().length > 0) {
+    <div class="ac-card ac-card--alert mb-4">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">À rappeler</h2>
+        <span class="ac-badge ac-badge--warning">{{ ready().length }}</span>
+      </div>
+      <div class="ac-card__body">
+        <p class="ac-text-secondary">
+          Ces clients ont une récompense à prendre et ne le savent peut-être pas.
+          La récompense s'applique sur leur prochain dossier, au moment d'encaisser.
+        </p>
+
+        @for (client of ready(); track client.customer_id) {
+          <div class="ac-alert-row">
+            <i class="bi bi-award-fill" style="color: var(--ac-warning-700)"></i>
+            <div>
+              <div class="fw-semibold">{{ client.customer_name }}</div>
+              <div class="ac-caption">{{ client.phone }}</div>
+            </div>
+            <div class="ms-auto text-end">
+              <div class="ac-numeric fw-semibold">{{ client.balance }} tampons</div>
+              <div class="ac-caption">
+                {{ rewardsFor(client.balance) }} récompense(s)
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="row g-4 mb-4">
+    <!-- Les règles, en une phrase -->
+    <div class="col-12 col-lg-5">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">{{ program()!.name }}</h2>
+          @if (program()!.is_active) {
+            <span class="ac-badge ac-badge--success">Actif</span>
+          } @else {
+            <span class="ac-badge ac-badge--neutral">Inactif</span>
+          }
+        </div>
+        <div class="ac-card__body">
+          <dl class="row mb-0">
+            <dt class="col-7 ac-text-secondary fw-normal">Lavages pour une récompense</dt>
+            <dd class="col-5 ac-numeric fw-semibold text-end">
+              {{ program()!.stamps_required }}
+            </dd>
+
+            <dt class="col-7 ac-text-secondary fw-normal">Récompense</dt>
+            <dd class="col-5 ac-numeric fw-semibold text-end">
+              {{ program()!.reward_amount | acAmount }}
+            </dd>
+
+            <dt class="col-7 ac-text-secondary fw-normal">Montant minimum</dt>
+            <dd class="col-5 ac-numeric text-end">
+              @if (program()!.min_operation_amount > 0) {
+                {{ program()!.min_operation_amount | acAmount }}
+              } @else {
+                <span class="ac-text-muted">aucun</span>
+              }
+            </dd>
+          </dl>
+
+          <p class="ac-caption mt-3 mb-0">
+            Un tampon est donné quand le dossier est <strong>entièrement réglé</strong>,
+            jamais avant&nbsp;: un lavage qui n'est pas payé n'est pas un lavage.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!--
+      LE COÛT DU PROGRAMME.
+      Il est lu sur les remises réellement appliquées, pas sur la
+      valeur annoncée des récompenses. Ce chiffre n'existerait pas si
+      une récompense avait été enregistrée comme un encaissement : elle
+      se serait fondue dans la recette du jour.
+    -->
+    <div class="col-12 col-lg-7">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Ce que le programme a coûté</h2>
+        </div>
+        <div class="ac-card__body">
+          <form [formGroup]="filterForm" (ngSubmit)="load()" class="row g-3 align-items-end mb-4">
+            <div class="col-6 col-md-4">
+              <label for="l-from" class="form-label">Du</label>
+              <input id="l-from" type="date" class="form-control" formControlName="from" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label for="l-to" class="form-label">Au</label>
+              <input id="l-to" type="date" class="form-control" formControlName="to" />
+            </div>
+            <div class="col-12 col-md-4">
+              <button type="submit" class="btn btn-primary w-100">Afficher</button>
+            </div>
+          </form>
+
+          @if (summary(); as totals) {
+            <div class="ac-loyalty-cost">
+              <span class="ac-loyalty-cost__value ac-numeric">{{ totals.cost | acAmount }}</span>
+              <span class="ac-loyalty-cost__label">de prestations offertes</span>
+            </div>
+
+            <div class="ac-count-row">
+              <span class="ac-text-secondary">Tampons distribués</span>
+              <span class="ac-numeric fw-semibold">{{ totals.earned }}</span>
+            </div>
+            <div class="ac-count-row">
+              <span class="ac-text-secondary">Tampons utilisés</span>
+              <span class="ac-numeric fw-semibold">{{ totals.redeemed }}</span>
+            </div>
+            @if (totals.reversed > 0) {
+              <div class="ac-count-row">
+                <span class="ac-text-secondary">Utilisations annulées</span>
+                <span class="ac-numeric fw-semibold">{{ totals.reversed }}</span>
+              </div>
+            }
+
+            <p class="ac-caption mt-3 mb-0">
+              Ce montant est ce qui a été <strong>réellement déduit</strong> des dossiers.
+              Il n'apparaît nulle part dans la recette&nbsp;: un lavage offert n'est
+              pas de l'argent reçu.
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @if (ready().length === 0) {
+    <div class="ac-card">
+      <div class="ac-card__body">
+        <ac-empty-state
+          icon="bi-award"
+          title="Personne n'a encore de récompense complète"
+          text="Les tampons se gagnent au fil des lavages payés. Cette liste se remplira toute seule."
+        />
+      </div>
+    </div>
+  }
+}
+
+<!-- ============================================================ -->
+<!-- Les règles du programme                                      -->
+<!-- ============================================================ -->
+@if (isEditing()) {
+  <div class="ac-modal-backdrop" (click)="closeEditor()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="program-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="program-title">Règles du programme</h2>
+      <button type="button" class="ac-btn-icon" (click)="closeEditor()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="programForm" (ngSubmit)="submitProgram()" novalidate>
+      <div class="ac-modal__body">
+        <div class="mb-4">
+          <label for="pr-name" class="form-label">Nom de la carte</label>
+          <input id="pr-name" type="text" class="form-control" formControlName="name"
+                 placeholder="Carte de fidélité" />
+          <span class="ac-caption">C'est ce que le client verra sur sa fiche.</span>
+        </div>
+
+        <div class="mb-4">
+          <label for="pr-stamps" class="form-label">Lavages pour une récompense</label>
+          <input id="pr-stamps" type="number" inputmode="numeric"
+                 class="form-control ac-numeric" formControlName="stamps_required"
+                 min="3" max="50" step="1"
+                 [class.is-invalid]="fieldErrors()['stamps_required']" />
+          <span class="ac-caption">
+            Entre 3 et 50. En dessous, ce n'est plus de la fidélité mais une remise
+            permanente&nbsp;; au-dessus, personne n'ira au bout.
+          </span>
+          @if (fieldErrors()['stamps_required']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="pr-reward" class="form-label">Récompense, en FCFA</label>
+          <input id="pr-reward" type="number" inputmode="numeric"
+                 class="form-control ac-numeric" formControlName="reward_amount"
+                 min="1" step="500"
+                 [class.is-invalid]="fieldErrors()['reward_amount']" />
+          <!--
+            UN MONTANT, ET NON « UN LAVAGE OFFERT ».
+            « Le 11ᵉ est offert » soulève aussitôt : offert jusqu'à
+            quel montant ? Le client qui a collecté ses tampons sur des
+            lavages à 5 000 F revient avec un detailing à 35 000, et il
+            faut trancher au comptoir, devant lui.
+          -->
+          <span class="ac-caption">
+            Une somme déduite du dossier, pas « un lavage offert »&nbsp;: sinon il
+            faudrait décider au comptoir jusqu'à quel montant.
+          </span>
+          @if (fieldErrors()['reward_amount']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="pr-min" class="form-label">
+            Montant minimum <span class="ac-text-muted fw-normal">(0 = aucun)</span>
+          </label>
+          <input id="pr-min" type="number" inputmode="numeric"
+                 class="form-control ac-numeric" formControlName="min_operation_amount"
+                 min="0" step="500" />
+          <span class="ac-caption">
+            En dessous, la prestation ne donne pas de tampon. Un montant plutôt
+            qu'une liste de prestations&nbsp;: il s'applique tout seul à celles qui
+            n'existent pas encore.
+          </span>
+        </div>
+
+        <div>
+          <label for="pr-status" class="form-label">État</label>
+          <select id="pr-status" class="form-select" formControlName="status">
+            <option value="ACTIVE">Actif — les lavages payés donnent un tampon</option>
+            <option value="INACTIVE">Inactif — aucun tampon distribué</option>
+          </select>
+          <span class="ac-caption">
+            Désactiver n'efface rien&nbsp;: les cartes déjà commencées sont conservées
+            et repartiront le jour où le programme est réactivé.
+          </span>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeEditor()">
+          Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            Enregistrer
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Autocare\Http\Controllers;
 
 use Autocare\Core\AuditLogger;
+use Autocare\Core\LoyaltyLedger;
 use Autocare\Core\PlateNumber;
 use Autocare\Core\Request;
 use Autocare\Core\Response;
@@ -84,7 +85,10 @@ final class PaymentController
         }
 
         $amount = (int) $amount;
-        $due    = (int) $operation['price'];
+        // La remise de fidélité (lot 14) diminue ce qui est dû : sans
+        // cela, on refuserait un « trop-perçu » sur un dossier qui
+        // vient d'être ramené à 0.
+        $due    = OperationRepository::amountDue($operation);
         $paid   = (int) $operation['paid_amount'];
 
         // Un trop-perçu se refuse. Ce n'est pas de la rigidité : c'est
@@ -164,11 +168,31 @@ final class PaymentController
 
         $newTotal = $payments->paidAmountFor($operationId);
 
+        // ==============================================================
+        // UN LAVAGE PAYÉ DONNE UN TAMPON (lot 14)
+        // ==============================================================
+        // La règle appartient à la fidélité, mais c'est ICI qu'elle se
+        // déclenche : un lavage qui n'est pas payé n'est pas un
+        // lavage. `LoyaltyLedger` la porte, pour qu'elle ne soit pas
+        // écrite deux fois (voir la note en tête de cette classe).
+        //
+        // ELLE NE PEUT PAS FAIRE ÉCHOUER L'ENCAISSEMENT. Un problème
+        // de carte de fidélité n'a aucune raison d'empêcher de
+        // prendre l'argent d'un client : l'attribution est tentée, et
+        // ce qui en sort n'est qu'une information de plus dans la
+        // réponse.
+        $loyalty = LoyaltyLedger::awardIfSettled(
+            ($operations->findDetailed($operationId) ?? []) + ['paid_amount' => $newTotal]
+        );
+
         Response::success(
             [
                 'payment'      => $this->present($payments->find($id) ?? []),
                 'paid_amount'  => $newTotal,
                 'is_settled'   => $newTotal >= $due,
+                // null quand rien n'a été gagné : le frontend n'a alors
+                // rien à annoncer, et c'est le cas le plus fréquent.
+                'loyalty_balance' => $loyalty['awarded'] ? $loyalty['balance'] : null,
                 'remaining'    => max(0, $due - $newTotal),
                 // Le caissier doit savoir tout de suite si son
                 // encaissement est resté hors caisse : c'est au moment
@@ -197,7 +221,7 @@ final class PaymentController
 
         $payments = new PaymentRepository();
         $paid     = $payments->paidAmountFor($operationId);
-        $due      = (int) $operation['price'];
+        $due      = OperationRepository::amountDue($operation);
 
         Response::success([
             'payments'    => array_map($this->present(...), $payments->forOperation($operationId)),

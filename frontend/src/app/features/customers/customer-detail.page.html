@@ -104,6 +104,82 @@
     </div>
 
     <div class="col-lg-4">
+      <!--
+        ============================================================
+        LA CARTE DE FIDÉLITÉ
+        ============================================================
+        Dessinée comme le carton qu'elle remplace : des cases, des
+        tampons. Un client qui la voit comprend son solde sans qu'on
+        le lui explique — c'est tout l'intérêt d'une carte à tampons
+        par rapport à un programme à points.
+
+        Elle n'apparaît que si l'entreprise a un programme actif.
+      -->
+      @if (loyaltyCard(); as card) {
+        <div class="ac-card mb-4">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Fidélité</h2>
+            @if (card.rewards_available > 0) {
+              <span class="ac-badge ac-badge--success">
+                {{ card.rewards_available }} récompense(s)
+              </span>
+            }
+          </div>
+          <div class="ac-card__body">
+            <div class="ac-stamps" role="img"
+                 [attr.aria-label]="card.balance + ' tampons sur ' + card.stamps_required">
+              @for (filled of stampSlots(); track $index) {
+                <span class="ac-stamps__slot" [class.ac-stamps__slot--filled]="filled">
+                  @if (filled) {
+                    <i class="bi bi-droplet-fill" aria-hidden="true"></i>
+                  }
+                </span>
+              }
+            </div>
+
+            @if (card.rewards_available > 0) {
+              <p class="mb-0">
+                <strong>{{ card.reward_amount | acAmount }} offerts</strong> sur son
+                prochain lavage. La remise s'applique depuis le dossier, au moment
+                d'encaisser.
+              </p>
+            } @else {
+              <p class="mb-0">
+                Encore <strong>{{ card.stamps_to_next }} lavage(s)</strong> pour
+                {{ card.reward_amount | acAmount }} offerts.
+              </p>
+            }
+
+            @if (loyaltyHistory().length > 0) {
+              <hr />
+              <!--
+                L'HISTORIQUE NE SE MODIFIE JAMAIS. Une utilisation
+                annulée apparaît sous forme de DEUX lignes : celle qui
+                a eu lieu, et celle qui la compense. C'est ce qui rend
+                lisible un « j'applique, j'annule, je réapplique
+                ailleurs ».
+              -->
+              @for (entry of loyaltyHistory(); track entry.id) {
+                <div class="ac-count-row">
+                  <span>
+                    <span class="ac-caption d-block">{{ entry.label }}</span>
+                    @if (entry.operation_reference) {
+                      <span class="ac-caption ac-text-muted">
+                        {{ entry.operation_reference }}
+                      </span>
+                    }
+                  </span>
+                  <span class="ac-numeric fw-semibold"
+                        [class.ac-text-muted]="entry.points < 0">
+                    {{ entry.points > 0 ? '+' : '' }}{{ entry.points }}
+                  </span>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
       <div class="ac-card">
         <div class="ac-card__header"><h2 class="ac-card__title">Coordonnées</h2></div>
         <div class="ac-card__body">

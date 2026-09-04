@@ -34,6 +34,7 @@ use Autocare\Http\Controllers\BookingController;
 use Autocare\Http\Controllers\CustomerController;
 use Autocare\Http\Controllers\HealthController;
 use Autocare\Http\Controllers\InspectionController;
+use Autocare\Http\Controllers\LoyaltyController;
 use Autocare\Http\Controllers\OnboardingController;
 use Autocare\Http\Controllers\CashController;
 use Autocare\Http\Controllers\DashboardController;
@@ -152,6 +153,26 @@ return static function (Router $router): void {
     // l'autre.
     $router->post('/api/bookings/{id}/arrive', [BookingController::class, 'arrive'],
         ['auth' => true, 'permission' => 'operations.create']);
+
+    // --- Fidélité -------------------------------------------------------
+    // « program » et « customers/{id} » sont déclarés AVANT les motifs
+    // plus courts pour la même raison qu'ailleurs : le routeur retient
+    // le premier motif qui correspond.
+    $router->get('/api/loyalty', [LoyaltyController::class, 'index'],
+        ['auth' => true, 'permission' => 'loyalty.view']);
+
+    // Modifier les règles d'un programme en cours touche des clients
+    // qui collectent déjà : c'est une décision de propriétaire.
+    $router->put('/api/loyalty/program', [LoyaltyController::class, 'updateProgram'],
+        ['auth' => true, 'permission' => 'loyalty.manage']);
+
+    $router->get('/api/loyalty/customers/{id}', [LoyaltyController::class, 'card'],
+        ['auth' => true, 'permission' => 'loyalty.view']);
+
+    $router->post('/api/loyalty/redeem', [LoyaltyController::class, 'redeem'],
+        ['auth' => true, 'permission' => 'loyalty.redeem']);
+    $router->post('/api/loyalty/redeem/{id}/cancel', [LoyaltyController::class, 'cancelRedeem'],
+        ['auth' => true, 'permission' => 'loyalty.redeem']);
 
     // --- Clients ------------------------------------------------------
     // La vérification de doublon est déclarée AVANT /api/customers/{id} :

@@ -550,6 +550,65 @@ disparaître : c'est l'historique de la journée.
 
 ---
 
+## La fidélité (lot 14)
+
+### La carte se dessine comme le carton qu'elle remplace
+
+Des cases, et des tampons dedans. Un client qui la voit comprend son
+solde sans qu'on le lui explique — c'est tout l'intérêt d'une carte à
+tampons par rapport à un programme à points.
+
+Une case vide est un **pointillé**, pas un cercle grisé : elle se lit
+comme « à remplir », et non comme un élément désactivé.
+
+On n'en dessine jamais plus d'une carte complète. Un client à
+23 tampons sur un programme à 10 a deux récompenses en poche et
+3 tampons entamés : aligner 23 cases ne dirait rien de plus et
+déborderait de l'écran.
+
+### Le prix barré est le point du module
+
+Sur un dossier remisé, le montant s'affiche `10 000` rayé, puis
+`5 000`. Un client qui voit les deux comprend en une seconde ce que sa
+carte lui a rapporté.
+
+Afficher directement 5 000 F lui donnerait une remise dont il ne
+saurait rien — **et une fidélité invisible ne fidélise personne.**
+
+### La récompense se propose là où elle se décide
+
+Le bouton « Utiliser » est sur le **dossier**, à côté du bouton
+« Encaisser » — pas sur l'écran `/loyalty`.
+
+Personne n'ira ouvrir un écran séparé pour vérifier une carte pendant
+qu'un client attend ses clés. Si la récompense ne se propose pas au
+moment où le dossier se règle, elle ne se propose jamais.
+
+L'écran `/loyalty` sert à autre chose : rappeler ceux qui ont gagné
+quelque chose, mesurer ce que le programme coûte, régler les règles.
+
+### Un seul grand chiffre pour le coût
+
+C'est le nombre qu'un gérant vient chercher : « ce programme, il me
+coûte combien ? ». Le noyer parmi trois compteurs de même taille
+l'obligerait à le retrouver à chaque visite.
+
+Il est peint en **couleur de texte**, ni en rouge ni en vert : un coût
+de fidélité n'est ni une bonne ni une mauvaise nouvelle en soi. Le
+colorer porterait un jugement que le logiciel n'a pas à porter.
+
+### Une classe partagée remonte au troisième usage
+
+`.ac-count-row` était locale au carnet de rendez-vous (lot 13), avec
+une note disant qu'elle remonterait au troisième écran. La fidélité et
+la fiche client en ont fait les deuxième et troisième : elle est
+passée dans `_components.scss`.
+
+La règle appliquée, pas seulement écrite : descendre une classe est
+facile, retrouver pourquoi `_components.scss` pèse 40 ko ne l'est pas.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

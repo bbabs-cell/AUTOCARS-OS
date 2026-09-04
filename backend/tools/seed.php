@@ -208,6 +208,7 @@ $tables = [
     'payments'          => 'paiements',
     'time_entries'      => 'pointages',
     'bookings'          => 'rendez-vous',
+    'loyalty_entries'   => 'tampons de fidélité',
     'audit_logs'        => 'entrées de journal',
 ];
 

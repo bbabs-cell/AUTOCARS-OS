@@ -1367,6 +1367,265 @@ logiciel qu'on contourne.**
 
 ---
 
+## Fidélité
+
+Une **carte à tampons** : « après 10 lavages, 5 000 F offerts ».
+
+> **POURQUOI PAS DES POINTS ?**
+> Le modèle à points (« 1 point par 100 F dépensés ») est plus
+> souple, et c'est exactement son problème : le client ne peut pas
+> vérifier son solde de tête. Il doit croire une arithmétique qu'il ne
+> voit pas, faite par un logiciel qu'il ne connaît pas.
+>
+> La carte à tampons est ce que la station fait déjà sur du carton. Le
+> client compte lui-même — et un client qui peut vérifier est un
+> client qui fait confiance. C'est tout ce qu'un programme de fidélité
+> achète.
+>
+> Les points viendront si un gérant les réclame. Pas avant.
+
+---
+
+### La règle qui tient tout le module
+
+> **UNE RÉCOMPENSE EST UNE REMISE, PAS UN ENCAISSEMENT.**
+>
+> La solution facile était d'écrire un paiement de méthode
+> « FIDÉLITÉ » : le dossier devenait réglé, rien d'autre à changer.
+>
+> Elle était fausse. Le tableau de bord additionne les encaissements
+> pour calculer la recette : un lavage offert aurait été compté comme
+> de l'argent reçu, et la recette du jour aurait annoncé une somme que
+> le tiroir ne contient pas.
+>
+> Une récompense diminue donc **ce qui est dû** (`operations.discount_amount`).
+> Trois conséquences, toutes voulues :
+>
+> 1. La recette ne compte que de l'argent réellement reçu.
+> 2. La caisse du soir reste juste.
+> 3. **Le coût du programme devient visible.** Un gérant peut demander
+>    « combien m'a coûté la fidélité ce mois-ci ? » et obtenir un
+>    chiffre. Un programme dont on ne peut pas mesurer le coût est un
+>    programme qu'on ne peut pas juger.
+>
+> Un test compare la recette avant et après une remise et vérifie
+> qu'elle **n'a pas bougé d'un franc**.
+
+Conséquence pour les intégrations : `operations.price` reste le prix
+de la prestation, et un nouveau champ **`amount_due`** porte ce que le
+client doit. Partout où il est question d'argent à encaisser, c'est
+`amount_due` qu'il faut lire.
+
+---
+
+### `GET /api/loyalty?from=&to=` — le programme et son bilan
+
+Droit requis : `loyalty.view`.
+
+```json
+{
+  "program": {
+    "id": 1, "name": "Carte de fidélité",
+    "stamps_required": 10, "reward_amount": 5000,
+    "min_operation_amount": 3000,
+    "status": "ACTIVE", "is_active": true
+  },
+  "summary": { "earned": 42, "redeemed": 20, "reversed": 0, "cost": 10000 },
+  "ready": [
+    { "customer_id": 4, "customer_name": "Ibrahima Gueye", "phone": "+221776445566", "balance": 10 }
+  ],
+  "period": { "from": "2026-09-01", "to": "2026-09-04" }
+}
+```
+
+`program` vaut `null` tant qu'aucun programme n'a été créé — l'état par
+défaut de toute installation.
+
+`summary.cost` est lu sur les remises **réellement appliquées**, pas
+sur la valeur annoncée des récompenses : une récompense de 5 000 F
+posée sur un dossier de 3 000 F ne coûte que 3 000 F.
+
+`ready` liste les clients qui ont au moins une récompense complète.
+Ils ne le savent peut-être pas : c'est la seule liste de cet écran sur
+laquelle on agit.
+
+---
+
+### `PUT /api/loyalty/program` — les règles
+
+Droit requis : `loyalty.manage` — **administrateur seulement**.
+
+```json
+{
+  "name": "Carte de fidélité",
+  "stamps_required": 10,
+  "reward_amount": 5000,
+  "min_operation_amount": 3000,
+  "status": "ACTIVE"
+}
+```
+
+| Refus | Code | Pourquoi |
+|---|---|---|
+| `stamps_required` hors de 3–50 | `422` | En dessous de 3, ce n'est plus de la fidélité mais une remise permanente ; au-dessus de 50, personne n'ira au bout et la carte ne sert qu'à décevoir. |
+| `reward_amount` à zéro | `422` | Une récompense sans montant n'est pas une récompense. |
+
+> **UN PROGRAMME NAÎT INACTIF.**
+> La migration crée les tables sur toutes les installations, y compris
+> celles qui n'ont jamais entendu parler de fidélité. Un programme
+> actif par défaut se mettrait à distribuer des tampons — donc de
+> l'argent — sans que personne ne l'ait décidé.
+
+> **UN MONTANT, ET NON « UN LAVAGE OFFERT ».**
+> « Le 11ᵉ est offert » soulève aussitôt : offert jusqu'à quel
+> montant ? Le client qui a collecté ses tampons sur des lavages à
+> 5 000 F revient avec un detailing à 35 000 F, et il faut trancher au
+> comptoir, devant lui. Un montant ferme la question avant qu'elle se
+> pose — et il se compte.
+
+> **UN MONTANT PLANCHER, ET NON UNE LISTE DE PRESTATIONS.**
+> Une liste doit être tenue à jour : la prestation ajoutée le mois
+> prochain n'y sera pas, et personne ne s'en apercevra avant qu'un
+> client réclame. Un plancher s'applique tout seul à ce qui n'existe
+> pas encore.
+
+Changer les règles **ne réécrit pas l'histoire** : chaque écriture du
+grand livre emporte la valeur de la récompense au moment où elle a été
+faite (`loyalty_entries.reward_amount`).
+
+---
+
+### `GET /api/loyalty/customers/{id}` — la carte d'un client
+
+Droit requis : `loyalty.view`.
+
+```json
+{
+  "card": {
+    "has_program": true, "balance": 4, "stamps_required": 5,
+    "reward_amount": 5000, "rewards_available": 0, "stamps_to_next": 1
+  },
+  "history": [
+    { "id": 12, "type": "EARN", "label": "Tampon gagné", "points": 1,
+      "operation_reference": "DKP-2609-0021", "created_by_name": "Awa Ndiaye" }
+  ]
+}
+```
+
+`stamps_to_next` est ce que le client demande vraiment : « il m'en
+reste combien ? »
+
+---
+
+### Quand un tampon est-il gagné ?
+
+**Au moment où le dossier devient entièrement réglé**, et jamais
+avant.
+
+> **POURQUOI AU PAIEMENT, ET NON À LA RESTITUTION ?**
+> Parce qu'un lavage qui n'est pas payé n'est pas un lavage. Un
+> véhicule rendu par dérogation à un client qui n'a rien réglé ne doit
+> pas faire avancer sa carte — sinon la dérogation devient une façon
+> de gagner des tampons.
+
+Rien n'est attribué si : l'entreprise n'a pas de programme actif, le
+dossier n'est pas soldé, le **prix** de la prestation est sous le
+plancher, ou un tampon a déjà été donné pour ce dossier.
+
+Le plancher se mesure sur le **prix**, pas sur ce qui a été encaissé :
+sinon un lavage réglé pour moitié avec une récompense passerait sous
+le seuil, et le client serait puni d'être fidèle. Pour la même raison,
+**un lavage réglé avec une récompense donne quand même un tampon** —
+c'est le lavage qui compte, pas la façon dont il a été payé.
+
+L'attribution **ne peut pas faire échouer un encaissement** : un
+problème de carte de fidélité n'a aucune raison d'empêcher de prendre
+l'argent d'un client. La réponse de
+`POST /api/operations/{id}/payments` porte simplement un champ de plus,
+`loyalty_balance`, à `null` quand rien n'a été gagné.
+
+---
+
+### `POST /api/loyalty/redeem` — le client utilise sa récompense
+
+Droit requis : `loyalty.redeem`.
+
+```json
+{ "operation_id": 24 }
+```
+
+Deux écritures, **une seule transaction** : la ligne au grand livre et
+la remise sur le dossier. L'une sans l'autre, et soit le client perd
+ses tampons sans rien recevoir, soit il reçoit une remise sans que
+personne ne puisse dire pourquoi.
+
+| Refus | Code |
+|---|---|
+| Pas assez de tampons | `409` |
+| Une récompense est déjà appliquée à ce dossier | `409` |
+| Dossier restitué ou annulé | `409` |
+| Aucun programme actif | `409` |
+
+**La remise ne dépasse jamais le montant du dossier** — sinon la
+station devrait de l'argent à un client parce qu'il est fidèle. Le
+surplus est perdu, et le serveur **prévient** (même principe qu'au
+lot 13) :
+
+```json
+{ "warnings": ["La récompense vaut 5 000 FCFA mais le dossier n'en coûte que 3 000 : le reste est perdu."] }
+```
+
+Le logiciel ne refuse pas : c'est au client de décider s'il préfère
+garder sa carte pour un lavage plus cher.
+
+---
+
+### `POST /api/loyalty/redeem/{operationId}/cancel` — retirer une remise
+
+Droit requis : `loyalty.redeem`.
+
+Les tampons sont rendus par une **écriture inverse** (`REVERSAL`),
+jamais par une suppression.
+
+> Un employé qui applique une remise par erreur, puis l'annule, a fait
+> **deux gestes**. Effacer le premier ferait disparaître le fait qu'il
+> a eu lieu — et avec lui la seule trace d'une manipulation possible :
+> appliquer, annuler, réappliquer sur un autre dossier.
+
+Refusé (`409`) sur un dossier déjà restitué : l'annulation créerait un
+solde à réclamer à un client parti. Si le dossier avait déjà été réglé
+en partie, le serveur prévient que le montant redevient dû.
+
+---
+
+### Qui a le droit de quoi
+
+| Action | Droit | ADMIN | MANAGER | EMPLOYEE |
+|---|---|:-:|:-:|:-:|
+| Lire une carte, voir le bilan | `loyalty.view` | ✅ | ✅ | ✅ |
+| Appliquer / retirer une récompense | `loyalty.redeem` | ✅ | ✅ | ✅ |
+| Changer les règles | `loyalty.manage` | ✅ | ❌ | ❌ |
+
+> **POURQUOI UN EMPLOYÉ PEUT DONNER DE L'ARGENT.**
+> Appliquer une récompense réduit une facture — le réflexe serait donc
+> de la réserver à un responsable. Ce serait une erreur : **la règle
+> ne demande aucun jugement.** Le client a ses tampons ou il ne les a
+> pas, et le serveur vérifie. Il n'y a rien à arbitrer, seulement à
+> exécuter.
+>
+> Faire venir un responsable pour appuyer sur un bouton dont le
+> résultat est déterminé, c'est apprendre au comptoir à dire « votre
+> carte, on verra plus tard » — et un programme qu'on n'applique pas
+> ne fidélise personne.
+>
+> **Changer les règles**, en revanche, engage l'entreprise : un client
+> qui collecte des tampons a une promesse en cours, et la modifier au
+> milieu touche des gens qui ont déjà commencé. Ce n'est pas une
+> décision d'exploitation quotidienne, contrairement à l'ajustement
+> d'un prix (lot 4).
+
+---
+
 ## À venir
 
 | Lot | Endpoints |

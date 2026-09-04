@@ -29,6 +29,76 @@ final class OperationRepository extends TenantRepository
     }
 
     /**
+     * ==================================================================
+     * CE QUE LE CLIENT DOIT VRAIMENT PAYER
+     * ==================================================================
+     * Jusqu'au lot 14, cette formule était simplement `price`, et
+     * elle était recopiée à CINQ endroits : le contrôle avant
+     * restitution, la restitution elle-même, la saisie d'un paiement,
+     * la liste des paiements d'un dossier, et le total des impayés du
+     * tableau de bord.
+     *
+     * Tant que la formule tenait en un mot, la duplication ne se
+     * voyait pas. L'arrivée d'une remise de fidélité l'a rendue
+     * dangereuse : un seul de ces cinq endroits oublié, et un client
+     * se voit refuser sa voiture pour un solde qu'il ne doit pas — ou
+     * repart sans avoir payé ce qu'il devait.
+     *
+     * Une règle d'argent s'écrit UNE FOIS.
+     *
+     * @param array<string,mixed> $operation Une ligne de `operations`
+     */
+    public static function amountDue(array $operation): int
+    {
+        $price    = (int) ($operation['price'] ?? 0);
+        $discount = (int) ($operation['discount_amount'] ?? 0);
+
+        // La remise ne peut pas rendre un dossier négatif : on ne doit
+        // pas d'argent à un client parce qu'il est fidèle.
+        return max(0, $price - $discount);
+    }
+
+    /**
+     * Le total des remises accordées sur une période.
+     *
+     * C'EST LE COÛT RÉEL DU PROGRAMME DE FIDÉLITÉ, et la raison pour
+     * laquelle une récompense est une remise et non un faux
+     * encaissement : ce chiffre-là n'existerait pas autrement.
+     *
+     * Il porte sur ce qui a été RÉELLEMENT déduit, pas sur la valeur
+     * annoncée des récompenses : une récompense de 5 000 F appliquée
+     * à un dossier de 3 000 F ne coûte que 3 000 F.
+     */
+    public function discountTotal(string $from, string $to, ?int $stationId = null): int
+    {
+        $extra = '';
+        $parameters = [
+            'organization_id' => $this->organizationId(),
+            'from' => $from . ' 00:00:00',
+            'to'   => $to . ' 23:59:59',
+        ];
+
+        if ($stationId !== null) {
+            $extra = ' AND station_id = :station_id';
+            $parameters['station_id'] = $stationId;
+        }
+
+        $statement = $this->db->prepare(
+            "SELECT COALESCE(SUM(discount_amount), 0)
+               FROM operations
+              WHERE organization_id = :organization_id
+                AND discount_amount > 0
+                AND discounted_at >= :from
+                AND discounted_at <= :to
+                    {$extra}"
+        );
+
+        $statement->execute($parameters);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
      * Génère la référence remise au client : « DKP-2609-0042 ».
      *
      * TROIS PARTIES, CHACUNE UTILE :

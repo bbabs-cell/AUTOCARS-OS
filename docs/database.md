@@ -336,6 +336,93 @@ comprendrait. Le cas est fréquent dans la zone visée.
 Un test le vérifie explicitement : deux rendez-vous, même numéro, même
 créneau, même station, tous deux acceptés.
 
+### La fidélité : un grand livre, pas un compteur
+
+La tentation était une colonne `customers.loyalty_points` qu'on
+incrémente. Elle aurait été fausse au premier incident : un paiement
+rejoué, une remise annulée, une transaction interrompue au mauvais
+moment, et le nombre affiché ne correspond plus à rien. Personne ne
+peut alors dire s'il est trop haut ou trop bas, ni depuis quand.
+
+`loyalty_entries` est un **grand livre** : une ligne par événement, en
+ajout seul, et le solde est la **somme** des lignes.
+
+```sql
+type   ENUM('EARN', 'REDEEM', 'REVERSAL')
+points SMALLINT NOT NULL     -- SIGNÉ : +1, −10, +10
+```
+
+`points` est la seule colonne numérique **signée** du projet, et c'est
+le propre d'un grand livre : le solde s'obtient par une simple somme,
+sans soustraction à faire ni cas particulier à connaître.
+
+On ne modifie jamais une ligne — on en écrit une qui la compense. Même
+règle que pour les encaissements (lot 9), et pour la même raison : un
+solde qu'on ne peut pas expliquer ne vaut rien.
+
+### Trois colonnes calculées, chacune pour une règle vraie toujours
+
+C'est la troisième fois que le projet emploie le mécanisme des lots 9
+et 12 — une colonne calculée sous contrainte `UNIQUE` :
+
+```sql
+-- Un seul programme actif par entreprise
+active_organization_id AS (IF(status = 'ACTIVE', organization_id, NULL)) STORED
+
+-- Un lavage ne donne qu'un seul tampon
+earn_operation_id AS (IF(type = 'EARN', operation_id, NULL)) STORED
+
+-- Une utilisation ne s'annule qu'une fois
+reversed_entry_id AS (IF(type = 'REVERSAL', related_entry_id, NULL)) STORED
+```
+
+Chacune interdit un doublon que le contrôleur vérifie déjà, mais qu'il
+ne peut pas garantir : deux encaissements partis à la même seconde
+soldent le dossier en même temps, deux appuis sur « Annuler » rendent
+deux fois les tampons. Le contrôleur est la règle ; la base est le
+filet.
+
+Le contraste avec le lot 13 est volontaire : là-bas, la contrainte
+« évidente » sur (station, heure, téléphone) aurait refusé un vrai
+client. **Une contrainte ne se pose que sur une règle vraie toujours.**
+
+⚠️ Les clés étrangères lues par ces colonnes sont en `ON UPDATE
+RESTRICT` — MySQL et MariaDB refusent une colonne calculée qui
+s'appuie sur une colonne en cascade (erreur 1901). Voir la note de
+`cash_sessions`.
+
+### Ce qui était vrai le jour de l'écriture
+
+`loyalty_entries.reward_amount` recopie la valeur de la récompense au
+moment de l'écriture. Les règles peuvent changer ; un client qui a
+collecté sous « 10 tampons, 5 000 F » ne doit pas se retrouver avec un
+historique réécrit parce que le gérant est passé à « 12 tampons,
+6 000 F » hier soir.
+
+C'est la même règle que le prix figé d'une opération (lot 7) et d'un
+rendez-vous (lot 13).
+
+### `operations.discount_amount` : une remise, pas un encaissement
+
+Quatre colonnes ajoutées à `operations` : `discount_amount`,
+`discount_reason`, `discount_by_user_id`, `discounted_at`.
+
+Le raisonnement complet est dans `docs/api.md`. En deux lignes : un
+faux paiement « fidélité » aurait fait compter un lavage offert dans
+la recette du jour. Une remise diminue **ce qui est dû**, la recette
+reste vraie, et le coût du programme devient un chiffre lisible.
+
+Les colonnes sont volontairement **génériques** et non nommées
+`loyalty_*` : un geste commercial suivra un jour le même chemin. Elles
+ne sont pour autant écrites aujourd'hui que par la fidélité — aucune
+route ne permet une remise à la main, parce qu'une remise décidée au
+comptoir est une décision d'argent qui mérite son propre examen.
+
+**Conséquence directe :** la formule « ce que le client doit » n'est
+plus `price`. Elle était recopiée à cinq endroits ; elle est désormais
+écrite une seule fois, dans `OperationRepository::amountDue()`. Une
+règle d'argent s'écrit une fois.
+
 ### `payments.cash_session_id` : quelle vacation ?
 
 On aurait pu rattacher les encaissements à leur session **par la

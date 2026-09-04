@@ -358,7 +358,17 @@ final class DashboardRepository
         [$filter, $parameters] = $this->stationFilter($stationId, 'o');
 
         $statement = $this->db->prepare(
-            "SELECT COUNT(*) AS dossiers, COALESCE(SUM(o.price - regle.paye), 0) AS reste
+            // `price - discount_amount` et non `price` : la remise de
+            // fidélité (lot 14) n'est pas un impayé. Sans cette
+            // soustraction, le tableau de bord réclamerait tous les
+            // matins l'argent d'un lavage qu'on a décidé d'offrir.
+            //
+            // C'est la même formule que `OperationRepository::amountDue()`,
+            // écrite ici en SQL parce qu'elle porte sur un ensemble de
+            // lignes. Les deux doivent être modifiées ensemble — un
+            // test le vérifie.
+            "SELECT COUNT(*) AS dossiers,
+                    COALESCE(SUM(GREATEST(o.price - o.discount_amount, 0) - regle.paye), 0) AS reste
                FROM operations o
                JOIN (SELECT o2.id,
                             COALESCE((SELECT SUM(p.amount) FROM payments p
@@ -367,7 +377,7 @@ final class DashboardRepository
                       WHERE o2.organization_id = :organization_id_inner) AS regle ON regle.id = o.id
               WHERE o.organization_id = :organization_id
                 AND o.status = 'READY'
-                AND regle.paye < o.price
+                AND regle.paye < GREATEST(o.price - o.discount_amount, 0)
                     {$filter}"
         );
 

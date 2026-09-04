@@ -317,6 +317,53 @@ INSERT INTO bookings
  DATE_SUB(CURDATE(), INTERVAL 2 DAY) + INTERVAL 14 HOUR, 60, 10000, 'CANCELLED',
  DATE_SUB(CURDATE(), INTERVAL 3 DAY) + INTERVAL 18 HOUR, 2, 'Le client a eu un imprévu, rappellera.', NULL, 2);
 
+-- --- La fidélité ---------------------------------------------------
+-- Un programme ACTIF, et quatre clients à des stades différents pour
+-- que l'écran ait immédiatement quelque chose à montrer : un qui a sa
+-- récompense en poche, un à qui il manque un lavage, et deux qui
+-- commencent.
+--
+-- LES TAMPONS SONT RATTACHÉS À DES DOSSIERS RÉELS de ce jeu de
+-- démonstration, et à des dossiers RESTITUÉS. Dans le produit, un
+-- tampon n'existe jamais sans le lavage payé qui l'a fait gagner —
+-- un jeu de démonstration qui l'oublierait montrerait un écran
+-- impossible à obtenir en vrai.
+--
+-- La contrainte d'unicité sur `earn_operation_id` interdit d'ailleurs
+-- deux tampons sur le même dossier : ces lignes ne passeraient pas.
+INSERT INTO loyalty_programs
+    (id, organization_id, name, stamps_required, reward_amount,
+     min_operation_amount, status, created_by_user_id) VALUES
+(1, 1, 'Carte de fidélité', 5, 5000, 3000, 'ACTIVE', 1);
+
+INSERT INTO loyalty_entries
+    (organization_id, program_id, customer_id, type, points, operation_id,
+     reward_amount, note, created_by_user_id, created_at) VALUES
+-- LE COÛT DU PROGRAMME EST À ZÉRO dans ce jeu de démonstration, et
+-- c'est volontaire : personne n'a encore utilisé sa récompense. Le
+-- chiffre apparaîtra à la première remise appliquée — c'est
+-- exactement ce que vit un gérant qui vient de lancer sa carte.
+--
+-- Ibrahima Gueye : cinq tampons. Sa récompense l'attend, et il ne le
+-- sait probablement pas — c'est lui qui apparaît dans « à rappeler ».
+(1, 1, 4, 'EARN', 1, 13, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 62 DAY),
+(1, 1, 4, 'EARN', 1, 15, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 48 DAY),
+(1, 1, 4, 'EARN', 1, 18, 5000, 'Dossier restitué', 3, NOW() - INTERVAL 31 DAY),
+(1, 1, 4, 'EARN', 1, 20, 5000, 'Dossier restitué', 3, NOW() - INTERVAL 17 DAY),
+(1, 1, 4, 'EARN', 1, 23, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 1 DAY),
+-- Cheikh Fall : quatre tampons, il lui en manque un seul.
+(1, 1, 1, 'EARN', 1, 1,  5000, 'Dossier DKP-2608-0001', 2, NOW() - INTERVAL 55 DAY),
+(1, 1, 1, 'EARN', 1, 11, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 40 DAY),
+(1, 1, 1, 'EARN', 1, 16, 5000, 'Dossier restitué', 3, NOW() - INTERVAL 21 DAY),
+(1, 1, 1, 'EARN', 1, 21, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 2 DAY),
+-- Fatou Ndiaye : trois tampons.
+(1, 1, 2, 'EARN', 1, 12, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 44 DAY),
+(1, 1, 2, 'EARN', 1, 17, 5000, 'Dossier restitué', 3, NOW() - INTERVAL 26 DAY),
+(1, 1, 2, 'EARN', 1, 22, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 3 DAY),
+-- Aminata Sarr : elle commence.
+(1, 1, 3, 'EARN', 1, 14, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 35 DAY),
+(1, 1, 3, 'EARN', 1, 19, 5000, 'Dossier restitué', 3, NOW() - INTERVAL 12 DAY);
+
 -- --- Le journal d'audit -------------------------------------------
 -- Quelques lignes montrant le format attendu. Ce journal sera
 -- alimenté automatiquement par l'API à partir du lot 4.

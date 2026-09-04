@@ -1,0 +1,47 @@
+// =====================================================================
+// La fidélité
+// =====================================================================
+// Styles LOCAUX à l'écran, comme pour la page d'accueil publique
+// (lot 11) et le carnet de rendez-vous (lot 13) : `_components.scss`
+// est téléchargée par chaque employé à chaque connexion, on n'y met
+// que ce que plusieurs écrans partagent.
+//
+// `.ac-count-row` servait ici et sur le carnet de rendez-vous ; la
+// fiche client en a fait un TROISIÈME usage au cours de ce lot, elle
+// est donc remontée dans `_components.scss`. C'est la règle qu'on
+// s'était donnée au lot 13, appliquée.
+//
+// Aucune couleur ni espacement écrit en dur : tout vient des jetons
+// validés au lot 2 (règle §37 — la charte ne change plus).
+
+// --- Le coût du programme --------------------------------------------
+// UN SEUL GRAND CHIFFRE, et ce qu'il veut dire juste en dessous.
+//
+// C'est le nombre qu'un gérant vient chercher sur cet écran : « ce
+// programme, il me coûte combien ? ». Le noyer parmi trois compteurs
+// de même taille l'obligerait à le retrouver à chaque visite.
+.ac-loyalty-cost {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ac-space-1);
+  padding-bottom: var(--ac-space-4);
+  margin-bottom: var(--ac-space-2);
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-loyalty-cost__value {
+  font-size: var(--ac-text-3xl);
+  font-weight: 700;
+  line-height: 1.1;
+  // La couleur du texte, pas une couleur d'alerte : un coût de
+  // fidélité n'est ni une bonne ni une mauvaise nouvelle en soi. Le
+  // peindre en rouge suggérerait une perte, en vert un gain — deux
+  // jugements que le logiciel n'a pas à porter.
+  color: var(--ac-text);
+}
+
+.ac-loyalty-cost__label {
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-secondary);
+}
+

@@ -405,7 +405,10 @@ final class OperationController
         }
 
         // --- 4. Le règlement ---------------------------------------
-        $due  = (int) $operation['price'];
+        // `amountDue()` et non `price` : depuis le lot 14, une remise
+        // de fidélité peut diminuer ce qui reste dû. La formule est
+        // écrite une seule fois, dans le dépôt.
+        $due  = OperationRepository::amountDue($operation);
         $paid = (int) $operation['paid_amount'];
 
         $overrideReason = $validator->stringOrNull('override_reason');
@@ -486,7 +489,7 @@ final class OperationController
      */
     private function buildChecklist(array $operation): array
     {
-        $due  = (int) ($operation['price'] ?? 0);
+        $due  = OperationRepository::amountDue($operation);
         $paid = (int) ($operation['paid_amount'] ?? 0);
 
         $exitInspection = (new InspectionRepository())
