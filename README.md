@@ -88,6 +88,7 @@ AUTOCARS-OS/
 
 | Document | Contenu |
 |---|---|
+| [docs/cahier-des-charges.md](docs/cahier-des-charges.md) | **Ce que le produit doit faire, et ce qu'il ne fera pas** |
 | [docs/setup.md](docs/setup.md) | Installation pas à pas et dépannage |
 | [docs/design-system.md](docs/design-system.md) | Couleurs, typographie, composants, règles visuelles |
 | [docs/architecture.md](docs/architecture.md) | Choix techniques et leur justification |
