@@ -318,6 +318,11 @@ final class LoyaltyController
 
             $operations->update($operationId, [
                 'discount_amount' => (int) $operation['discount_amount'] + $applied,
+                // La SOURCE, ajoutée au lot 15 : une remise de
+                // fidélité est un coût pour la station, une remise
+                // d'abonnement est une dette qu'on solde. Sans elle,
+                // le coût du programme compterait les deux.
+                'discount_source' => 'LOYALTY',
                 'discount_reason' => sprintf(
                     'Fidélité — %d lavages (%s)',
                     $required,
@@ -434,6 +439,7 @@ final class LoyaltyController
 
             $operations->update($operationId, [
                 'discount_amount' => 0,
+                'discount_source' => null,
                 'discount_reason' => null,
                 'discount_by_user_id' => AuthContext::current()->userId,
                 'discounted_at' => date('Y-m-d H:i:s'),

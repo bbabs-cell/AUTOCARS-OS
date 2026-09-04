@@ -68,14 +68,24 @@ final class OperationRepository extends TenantRepository
      * Il porte sur ce qui a été RÉELLEMENT déduit, pas sur la valeur
      * annoncée des récompenses : une récompense de 5 000 F appliquée
      * à un dossier de 3 000 F ne coûte que 3 000 F.
+     *
+     * `$source` vaut LOYALTY par défaut, parce que c'est le seul cas
+     * qui soit un COÛT. Passer SUBSCRIPTION donne la valeur des
+     * lavages livrés au titre d'un forfait : ce n'est pas un coût,
+     * c'est une dette qu'on solde.
      */
-    public function discountTotal(string $from, string $to, ?int $stationId = null): int
-    {
+    public function discountTotal(
+        string $from,
+        string $to,
+        ?int $stationId = null,
+        string $source = 'LOYALTY',
+    ): int {
         $extra = '';
         $parameters = [
             'organization_id' => $this->organizationId(),
             'from' => $from . ' 00:00:00',
             'to'   => $to . ' 23:59:59',
+            'source' => $source,
         ];
 
         if ($stationId !== null) {
@@ -88,6 +98,19 @@ final class OperationRepository extends TenantRepository
                FROM operations
               WHERE organization_id = :organization_id
                 AND discount_amount > 0
+                -- ==================================================
+                -- LA SOURCE COMPTE AUTANT QUE LE MONTANT
+                -- ==================================================
+                -- Sans ce filtre, ajouté au lot 15, le « coût du
+                -- programme de fidélité » compterait aussi les
+                -- lavages d'abonnés — et annoncerait au gérant qu'il
+                -- offre un argent qu'il a encaissé six mois plus tôt.
+                --
+                -- Les deux remises se ressemblent (le dû tombe à
+                -- zéro) et ne veulent pas dire la même chose : la
+                -- fidélité est un coût, l'abonnement est une dette
+                -- qu'on solde.
+                AND discount_source = :source
                 AND discounted_at >= :from
                 AND discounted_at <= :to
                     {$extra}"
@@ -238,7 +261,7 @@ final class OperationRepository extends TenantRepository
             $conditions[] = "o.status IN ({$quoted})";
         }
 
-        foreach (['station_id', 'vehicle_id', 'customer_id', 'assigned_user_id'] as $column) {
+        foreach (['station_id', 'vehicle_id', 'customer_id', 'assigned_user_id', 'subscription_id'] as $column) {
             if (isset($filters[$column]) && $filters[$column] !== null) {
                 $conditions[] = "o.{$column} = :{$column}";
                 $parameters[$column] = (int) $filters[$column];

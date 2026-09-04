@@ -609,6 +609,47 @@ facile, retrouver pourquoi `_components.scss` pèse 40 ko ne l'est pas.
 
 ---
 
+## Les abonnements (lot 15)
+
+### Trois chiffres à la même taille, et un seul encadré
+
+VENDU, LIVRÉ, RESTE À LIVRER. Les mettre à la même taille est ce qui
+permet de les comparer d'un regard : une station qui vend beaucoup
+plus qu'elle ne livre accumule une dette qu'il faudra honorer, avec
+des employés à payer ce jour-là.
+
+**Seul le troisième est signalé, et par une bordure, pas par une
+couleur de texte.** Une dette de forfaits n'est ni une bonne ni une
+mauvaise nouvelle : c'est le signe qu'on a bien vendu, et le rappel
+qu'il faudra livrer. La peindre en rouge porterait un jugement que le
+logiciel n'a pas à porter ; ne rien faire du tout la ferait passer
+pour une recette à venir.
+
+La bordure attire l'œil sans qualifier.
+
+### Le forfait passe avant la récompense
+
+Sur un dossier, quand le client a **et** un forfait utilisable **et**
+une récompense de fidélité, c'est le forfait qui est proposé.
+
+Il a déjà été payé : le lui faire régler pendant qu'on lui offre un
+cadeau serait absurde, et lui ferait perdre des tampons pour rien.
+
+### Une barre, pas un pourcentage
+
+« 3 sur 10 » se lit déjà juste à côté. La barre sert à repérer d'un
+coup d'œil, dans une liste de vingt lignes, les forfaits presque au
+bout — pas à répéter un chiffre.
+
+### Le libellé dit d'où vient la remise
+
+Sur un dossier remisé, l'étiquette est « Forfait » ou « Remise » selon
+la source, et le bouton de retrait appelle une route différente. Les
+deux ramènent le dû à zéro et ne veulent pas dire la même chose ;
+l'écran doit le dire aussi.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

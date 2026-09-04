@@ -43,6 +43,7 @@ use Autocare\Http\Controllers\PaymentController;
 use Autocare\Http\Controllers\QueueController;
 use Autocare\Http\Controllers\ServiceController;
 use Autocare\Http\Controllers\StationController;
+use Autocare\Http\Controllers\SubscriptionController;
 use Autocare\Http\Controllers\TeamController;
 use Autocare\Http\Controllers\VehicleController;
 
@@ -173,6 +174,43 @@ return static function (Router $router): void {
         ['auth' => true, 'permission' => 'loyalty.redeem']);
     $router->post('/api/loyalty/redeem/{id}/cancel', [LoyaltyController::class, 'cancelRedeem'],
         ['auth' => true, 'permission' => 'loyalty.redeem']);
+
+    // --- Abonnements ----------------------------------------------------
+    // Les motifs les plus SPÉCIFIQUES d'abord : « plans » et
+    // « overview » ont le même nombre de segments que « {id} », et le
+    // routeur retient le premier qui correspond.
+    $router->get('/api/subscriptions/plans', [SubscriptionController::class, 'plans'],
+        ['auth' => true, 'permission' => 'subscriptions.view']);
+    $router->post('/api/subscriptions/plans', [SubscriptionController::class, 'storePlan'],
+        ['auth' => true, 'permission' => 'subscriptions.manage']);
+    $router->put('/api/subscriptions/plans/{id}', [SubscriptionController::class, 'updatePlan'],
+        ['auth' => true, 'permission' => 'subscriptions.manage']);
+
+    $router->get('/api/subscriptions/overview', [SubscriptionController::class, 'overview'],
+        ['auth' => true, 'permission' => 'subscriptions.view']);
+
+    // Consommer un lavage : geste de comptoir, comme la récompense de
+    // fidélité et pour la même raison — la règle ne demande aucun
+    // jugement, le serveur vérifie tout.
+    $router->post('/api/subscriptions/use', [SubscriptionController::class, 'useForOperation'],
+        ['auth' => true, 'permission' => 'subscriptions.use']);
+    $router->post('/api/subscriptions/use/{id}/cancel', [SubscriptionController::class, 'cancelUse'],
+        ['auth' => true, 'permission' => 'subscriptions.use']);
+
+    $router->get('/api/subscriptions', [SubscriptionController::class, 'index'],
+        ['auth' => true, 'permission' => 'subscriptions.view']);
+    $router->get('/api/subscriptions/{id}', [SubscriptionController::class, 'show'],
+        ['auth' => true, 'permission' => 'subscriptions.view']);
+
+    // VENDRE prend de l'argent : le droit d'encaisser est donc exigé
+    // en plus, et c'est bien le même geste au comptoir.
+    $router->post('/api/subscriptions', [SubscriptionController::class, 'store'],
+        ['auth' => true, 'permission' => 'subscriptions.sell']);
+
+    // Annuler un forfait déjà payé engage un remboursement éventuel :
+    // décision de responsable.
+    $router->post('/api/subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel'],
+        ['auth' => true, 'permission' => 'subscriptions.manage']);
 
     // --- Clients ------------------------------------------------------
     // La vérification de doublon est déclarée AVANT /api/customers/{id} :

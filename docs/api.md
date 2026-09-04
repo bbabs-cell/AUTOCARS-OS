@@ -1626,6 +1626,274 @@ en partie, le serveur prévient que le montant redevient dû.
 
 ---
 
+## Abonnements
+
+Des **lavages payés d'avance** : « 10 lavages standard pour 40 000 F,
+valables 6 mois ».
+
+> **POURQUOI UN FORFAIT ET PAS UN « ILLIMITÉ MENSUEL » ?**
+> L'illimité se vend bien et se gère mal : il suppose une règle
+> d'usage raisonnable (« pas plus d'un lavage par jour », « hors
+> detailing ») que le logiciel devrait arbitrer à la place du gérant,
+> devant un client. Le forfait, lui, se compte : « il vous en reste
+> trois ». Même raisonnement qu'au lot 14 pour la carte à tampons.
+
+---
+
+### LA QUESTION COMPTABLE, ET LA RÉPONSE
+
+Un client paie 40 000 F aujourd'hui pour dix lavages qu'il prendra sur
+six mois. Est-ce la recette d'aujourd'hui ?
+
+En comptabilité d'engagement, **non** : ce sont des produits constatés
+d'avance, reconnus au fur et à mesure des prestations livrées. **Ce
+produit ne fait pas cette comptabilité, et c'est un choix.**
+
+- **L'argent est bien entré dans le tiroir aujourd'hui.** Il doit être
+  dans la caisse du soir, et la clôture doit tomber juste. C'est non
+  négociable : une caisse fausse est le pire défaut possible de ce
+  produit.
+- Un gérant de station à Dakar ne tient pas une comptabilité
+  d'engagement. Lui afficher « 4 000 F » un jour où il a encaissé
+  40 000 F le ferait douter du logiciel, à raison.
+
+La vente d'un forfait est donc un **encaissement ordinaire** : même
+table `payments`, même caisse, même journal, même remboursement. Les
+lavages qui suivent ne rapportent **rien** — ils ont déjà été payés.
+
+**En échange, le module apporte le chiffre qui manquerait sinon : ce
+qui reste à livrer.** Une station qui a vendu 200 lavages d'avance doit
+200 lavages. C'est une dette, et elle se voit.
+
+Le jour où un comptable réclamera de vrais produits constatés
+d'avance, tout est là pour les calculer : la date de vente, le nombre
+livré, le prix figé.
+
+---
+
+### Un lavage d'abonné n'est pas un cadeau
+
+Le lot 14 a créé `operations.discount_amount` pour les récompenses de
+fidélité. Un lavage couvert par un forfait ramène lui aussi le dû à
+zéro et emprunte la même colonne — mais `discount_source` les
+distingue :
+
+| Source | Sens |
+|---|---|
+| `LOYALTY` | La station **donne**. C'est un coût. |
+| `SUBSCRIPTION` | Le client a **déjà payé**. C'est une dette qu'on solde. |
+
+Sans cette colonne, le « coût du programme de fidélité » (lot 14)
+compterait les lavages d'abonnés, et annoncerait au gérant qu'il offre
+un argent qu'il a encaissé six mois plus tôt. Un test le vérifie.
+
+> La migration 021 **rattrape le passé** : les remises antérieures
+> venaient toutes de la fidélité, elles reçoivent donc
+> `discount_source = 'LOYALTY'`. Une migration qui ajoute une colonne
+> à des lignes existantes doit toujours se demander ce qu'elle vaut
+> pour le passé.
+
+---
+
+### `GET /api/subscriptions/plans?active=1` — ce que la station vend
+
+Droit requis : `subscriptions.view`.
+
+```json
+{
+  "plans": [{
+    "id": 1, "name": "Forfait 10 lavages",
+    "service_id": 1, "service_name": "Lavage standard", "service_price": 5000,
+    "washes": 10, "price": 40000, "validity_days": 180,
+    "status": "ACTIVE", "is_active": true, "sold_count": 2,
+    "full_price": 50000, "saving": 10000
+  }]
+}
+```
+
+`saving` est l'argument de vente, calculé par le serveur pour être
+identique sur tous les écrans qui l'affichent.
+
+### `POST` / `PUT /api/subscriptions/plans[/{id}]`
+
+Droit requis : `subscriptions.manage` (MANAGER et ADMIN).
+
+| Refus | Code | Pourquoi |
+|---|---|---|
+| Moins de 2 ou plus de 50 lavages | `422` | Un seul lavage n'est pas un forfait ; au-delà de 50, la station s'engage sur une durée qu'elle ne maîtrise plus. |
+| Prix nul | `422` | Un forfait a un prix. |
+| Validité hors de 7–730 jours | `422` | Un forfait sans date de fin est une dette éternelle. |
+
+> **UN FORFAIT PORTE SUR UNE PRESTATION PRÉCISE.**
+> « 10 lavages » ne veut rien dire tant qu'on n'a pas dit lesquels.
+> Sans ce lien, le client qui a acheté dix lavages standard se
+> présenterait pour un detailing à 35 000 F, et il faudrait trancher
+> au comptoir, devant lui. Une station qui veut couvrir deux
+> prestations vend deux forfaits.
+
+Modifier un forfait **ne change rien aux abonnements déjà vendus** :
+tout a été recopié au moment de l'achat.
+
+---
+
+### `POST /api/subscriptions` — vendre un forfait
+
+Droit requis : `subscriptions.sell`.
+
+```json
+{ "customer_id": 1, "plan_id": 1, "station_id": 1, "method": "CASH" }
+```
+
+Deux écritures, **une seule transaction** : l'abonnement et
+l'encaissement. L'un sans l'autre, et soit le client a payé sans rien
+recevoir, soit la station a donné dix lavages sans contrepartie dans
+la caisse.
+
+L'encaissement passe par la table habituelle et hérite donc
+gratuitement de la session de caisse, du journal, de la recette du
+jour et du remboursement. Il porte `subscription_id` et **aucun**
+`operation_id` — le journal affiche alors le nom du forfait à la place
+de la référence de dossier.
+
+Comme au lot 9, le serveur prévient si la caisse n'est pas ouverte :
+l'encaissement ne serait pas dans la clôture du soir.
+
+---
+
+### `POST /api/subscriptions/use` — décompter un lavage
+
+Droit requis : `subscriptions.use`.
+
+```json
+{ "operation_id": 24 }
+```
+
+**Le serveur choisit le forfait**, l'appelant ne le désigne pas : il
+prend celui qui **expire le plus tôt**.
+
+> C'est le seul choix qui soit dans l'intérêt du client : consommer
+> d'abord le périssable lui évite de perdre des lavages qu'il a payés.
+> L'ordre inverse ferait périmer le premier forfait pendant qu'on
+> entame le second, et la station gagnerait de l'argent sur une
+> distraction.
+
+| Refus | Code |
+|---|---|
+| Aucun forfait utilisable **pour cette prestation** | `409` |
+| Dossier déjà couvert par un forfait | `409` |
+| Dossier déjà remisé par la fidélité | `409` |
+| Dossier déjà réglé, même en partie | `409` |
+| Dossier restitué ou annulé | `409` |
+
+Un lavage d'abonné **rapporte un tampon de fidélité** : il a été payé
+— d'avance, mais payé. Le contraire punirait le client le plus fidèle
+de la station.
+
+> Corollaire découvert en écrivant ce lot : un lavage **entièrement
+> offert** par une récompense, lui, ne rapporte **pas** de tampon.
+> Sinon le programme se nourrirait lui-même, et dix lavages offerts en
+> produiraient un onzième. C'est une lacune du lot 14 que celui-ci
+> corrige.
+
+### `POST /api/subscriptions/use/{operationId}/cancel`
+
+Le forfait a été appliqué au mauvais dossier. Il suffit de détacher
+l'opération : **c'est elle qui compte**.
+
+---
+
+### `GET /api/subscriptions/overview?from=&to=` — le bilan
+
+```json
+{
+  "sold":        { "count": 2, "amount": 80000 },
+  "delivered":   { "washes": 2, "value": 10000 },
+  "outstanding": { "subscriptions": 2, "washes": 17, "value": 85000 },
+  "expiring":    [ … ]
+}
+```
+
+Trois chiffres qui ne disent **pas** la même chose :
+
+| | Sens |
+|---|---|
+| `sold` | De l'argent réellement reçu. Il est dans la recette et dans la caisse. |
+| `delivered` | Des lavages faits au titre d'un forfait. Ils ne rapportent **rien** : déjà payés. |
+| `outstanding` | **La dette.** Ce que la station doit encore livrer. |
+
+Les mettre côte à côte est tout l'intérêt de l'écran : une station qui
+vend beaucoup plus qu'elle ne livre accumule une dette qu'elle devra
+honorer, avec des employés à payer ce jour-là.
+
+Les forfaits **périmés** ne figurent pas dans `outstanding` : la
+station ne les doit plus. C'est justement pourquoi la durée de
+validité est obligatoire.
+
+---
+
+### `POST /api/subscriptions/{id}/cancel`
+
+Droit requis : `subscriptions.manage`. Le motif est **obligatoire**.
+
+> Contrairement à l'annulation d'un rendez-vous (lot 13), où le motif
+> est facultatif. La différence : ici, de l'argent a été encaissé. Un
+> client qui réclame six mois plus tard doit trouver une explication,
+> pas une ligne muette.
+
+> **ON N'INVENTE AUCUN REMBOURSEMENT AU PRORATA.**
+> Combien rendre à un client qui a pris trois lavages sur dix est une
+> décision commerciale, pas un calcul : le forfait était vendu moins
+> cher que trois lavages à l'unité, et la station peut vouloir garder
+> la différence, ou pas.
+>
+> L'annulation **arrête** le forfait. Le remboursement éventuel passe
+> par la route existante, sur l'encaissement d'origine, où il est
+> tracé comme n'importe quelle sortie d'argent.
+
+---
+
+### Les quatre états, dont trois sont calculés
+
+| État | D'où il vient |
+|---|---|
+| `ACTIVE` | Ni annulé, ni périmé, ni épuisé |
+| `EXPIRED` | **Calculé** : `expires_at < aujourd'hui` |
+| `EXHAUSTED` | **Calculé** : autant d'opérations rattachées que de lavages |
+| `CANCELLED` | **Stocké** : c'est la seule décision humaine |
+
+> **UN STATUT QUI SE CALCULE NE SE STOCKE PAS.**
+> Stocker « périmé » et « épuisé », c'est promettre de les tenir à
+> jour — donc écrire une tâche planifiée qui passe chaque nuit, et
+> vivre avec un forfait qui reste actif parce que la tâche a échoué.
+
+De même, **il n'y a pas de compteur `washes_used`** : c'est
+`COUNT(operations WHERE subscription_id = X)`. Un lavage annulé
+revient donc tout seul dans le solde du client, sans que personne
+n'ait à y penser — un compteur stocké aurait fallu se souvenir de le
+décrémenter, et personne n'y pense jamais.
+
+---
+
+### Qui a le droit de quoi
+
+| Action | Droit | ADMIN | MANAGER | EMPLOYEE |
+|---|---|:-:|:-:|:-:|
+| Voir les forfaits et les abonnements | `subscriptions.view` | ✅ | ✅ | ✅ |
+| Vendre un forfait | `subscriptions.sell` | ✅ | ✅ | ✅ |
+| Décompter un lavage | `subscriptions.use` | ✅ | ✅ | ✅ |
+| Régler les forfaits, annuler un abonnement | `subscriptions.manage` | ✅ | ✅ | ❌ |
+
+Vendre un forfait, c'est encaisser — l'employé le fait déjà toute la
+journée. Décompter un lavage ne demande aucun jugement : le serveur
+vérifie la prestation, la date de péremption et le solde avant
+d'écrire.
+
+En revanche il ne **règle** pas les forfaits et n'en **annule** aucun :
+modifier un prix engage l'entreprise, et annuler un forfait déjà payé
+ouvre la question d'un remboursement.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |

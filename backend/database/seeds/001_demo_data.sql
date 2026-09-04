@@ -364,6 +364,78 @@ INSERT INTO loyalty_entries
 (1, 1, 3, 'EARN', 1, 14, 5000, 'Dossier restitué', 2, NOW() - INTERVAL 35 DAY),
 (1, 1, 3, 'EARN', 1, 19, 5000, 'Dossier restitué', 3, NOW() - INTERVAL 12 DAY);
 
+-- --- Les abonnements -----------------------------------------------
+-- Un forfait proposé, et deux clients à des stades différents : l'un
+-- a bien entamé le sien, l'autre arrive au bout de sa validité — la
+-- ligne qui apparaît dans « à rappeler ».
+--
+-- LES LAVAGES CONSOMMÉS NE SONT PAS UN COMPTEUR : ce sont les
+-- opérations rattachées, plus bas. Un jeu de démonstration qui
+-- écrirait « 3 lavages utilisés » sans les trois opérations
+-- montrerait un écran impossible à obtenir en vrai.
+INSERT INTO subscription_plans
+    (id, organization_id, name, service_id, washes, price, validity_days,
+     status, created_by_user_id) VALUES
+(1, 1, 'Forfait 10 lavages', 1, 10, 40000, 180, 'ACTIVE', 1);
+
+INSERT INTO subscriptions
+    (id, organization_id, customer_id, plan_id, station_id, service_id,
+     washes_total, price_paid, starts_at, expires_at, status,
+     sold_by_user_id, created_at) VALUES
+-- Cheikh Fall : forfait entamé, il lui reste de la marge.
+(1, 1, 1, 1, 1, 1, 10, 40000,
+ CURDATE() - INTERVAL 40 DAY, CURDATE() + INTERVAL 140 DAY, 'ACTIVE',
+ 2, NOW() - INTERVAL 40 DAY),
+-- Fatou Ndiaye : son forfait périme dans deux semaines et il lui
+-- reste des lavages. C'est elle qu'il faut appeler.
+(2, 1, 2, 1, 1, 1, 10, 40000,
+ CURDATE() - INTERVAL 166 DAY, CURDATE() + INTERVAL 14 DAY, 'ACTIVE',
+ 2, NOW() - INTERVAL 166 DAY);
+
+-- L'ENCAISSEMENT DE CHAQUE VENTE. L'argent est entré le jour de
+-- l'achat : il doit être dans le journal, comme n'importe quel
+-- encaissement. Un forfait vendu sans ligne de paiement laisserait
+-- croire que la station a donné dix lavages.
+INSERT INTO payments
+    (organization_id, station_id, operation_id, subscription_id, customer_id,
+     amount, method, status, paid_at, recorded_by_user_id, notes) VALUES
+(1, 1, NULL, 1, 1, 40000, 'CASH', 'PAID', NOW() - INTERVAL 40 DAY, 2,
+ 'Forfait « Forfait 10 lavages »'),
+(1, 1, NULL, 2, 2, 40000, 'MOBILE_MONEY', 'PAID', NOW() - INTERVAL 166 DAY, 2,
+ 'Forfait « Forfait 10 lavages »');
+
+-- Les lavages déjà pris sur ces forfaits : ce sont des OPÉRATIONS
+-- restituées, marquées comme couvertes. Le dû est à zéro et la source
+-- de la remise dit pourquoi — un lavage d'abonné n'est pas un cadeau.
+-- ATTENTION : SEULES LES OPÉRATIONS DE LA PRESTATION COUVERTE.
+-- Le forfait porte sur le lavage standard (prestation 1). Rattacher
+-- un detailing à 35 000 F produirait une donnée que l'API refuserait
+-- de créer — et un jeu de démonstration qui montre un écran
+-- impossible à obtenir en vrai ne démontre rien.
+UPDATE operations
+   SET subscription_id = 1,
+       discount_amount = price,
+       discount_source = 'SUBSCRIPTION',
+       discount_reason = 'Forfait « Forfait 10 lavages »',
+       discount_by_user_id = 2,
+       discounted_at = created_at
+ WHERE id IN (11) AND service_id = 1;
+
+UPDATE operations
+   SET subscription_id = 2,
+       discount_amount = price,
+       discount_source = 'SUBSCRIPTION',
+       discount_reason = 'Forfait « Forfait 10 lavages »',
+       discount_by_user_id = 2,
+       discounted_at = created_at
+ WHERE id IN (17, 22) AND service_id = 1;
+
+-- Ces lavages n'ont donc rien encaissé : on retire les paiements que
+-- le jeu de démonstration leur avait attribués, sinon la recette
+-- compterait deux fois le même argent — une fois à la vente du
+-- forfait, une fois au lavage.
+DELETE FROM payments WHERE operation_id IN (11, 17, 22);
+
 -- --- Le journal d'audit -------------------------------------------
 -- Quelques lignes montrant le format attendu. Ce journal sera
 -- alimenté automatiquement par l'API à partir du lot 4.

@@ -1,0 +1,646 @@
+<ac-page-header title="Abonnements" subtitle="Des lavages payés d'avance">
+  @if (canSell()) {
+    <button type="button" class="btn btn-primary" (click)="openSaleForm()">
+      <i class="bi bi-bag-plus"></i> Vendre un forfait
+    </button>
+  }
+</ac-page-header>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+    <button type="button" class="ac-btn-icon ms-auto" (click)="dismissError()" aria-label="Fermer">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--success mb-4">
+    <i class="bi bi-check-circle-fill"></i>
+    <div>
+      {{ message }}
+      @for (warning of warnings(); track warning) {
+        <div class="ac-caption mt-1">
+          <i class="bi bi-info-circle"></i> {{ warning }}
+        </div>
+      }
+    </div>
+    <button type="button" class="ac-btn-icon ms-auto" (click)="dismissNotice()" aria-label="Fermer">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body text-center py-5">
+      <span class="spinner-border text-primary"></span>
+    </div>
+  </div>
+} @else {
+
+  <!--
+    ============================================================
+    1. LES FORFAITS QUI ARRIVENT À ÉCHÉANCE
+    ============================================================
+    Ces clients ont payé des lavages qu'ils vont perdre. Un appel, et
+    ils viennent les prendre. C'est le seul bloc actionnable de la
+    page — même principe qu'au tableau de bord, au registre de
+    pointage et au carnet de rendez-vous.
+  -->
+  @if (expiring().length > 0) {
+    <div class="ac-card ac-card--alert mb-4">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">À rappeler</h2>
+        <span class="ac-badge ac-badge--warning">{{ expiring().length }}</span>
+      </div>
+      <div class="ac-card__body">
+        <p class="ac-text-secondary">
+          Ces forfaits périment dans moins d'un mois. Les lavages restants seront
+          perdus&nbsp;: l'argent, lui, a été encaissé il y a longtemps.
+        </p>
+
+        @for (item of expiring(); track item.id) {
+          <div class="ac-alert-row">
+            <i class="bi bi-hourglass-split" style="color: var(--ac-warning-700)"></i>
+            <div>
+              <div class="fw-semibold">{{ item.customer_name }}</div>
+              <div class="ac-caption">
+                {{ item.customer_phone }} · {{ item.plan_name }}
+              </div>
+            </div>
+            <div class="ms-auto text-end">
+              <div class="ac-numeric fw-semibold">{{ item.washes_left }} lavage(s)</div>
+              <div class="ac-caption">
+                @if (item.days_left === 0) {
+                  périme aujourd'hui
+                } @else {
+                  encore {{ item.days_left }} jour(s)
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!--
+    ============================================================
+    2. TROIS CHIFFRES QUI NE DISENT PAS LA MÊME CHOSE
+    ============================================================
+    Les mettre côte à côte est tout l'intérêt de l'écran. Une station
+    qui vend beaucoup plus qu'elle ne livre accumule une dette qu'il
+    faudra honorer un jour — avec des employés à payer ce jour-là.
+  -->
+  <div class="ac-card mb-4">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Vendu, livré, dû</h2>
+    </div>
+    <div class="ac-card__body">
+      <form [formGroup]="filterForm" (ngSubmit)="load()" class="row g-3 align-items-end mb-4">
+        <div class="col-6 col-md-3">
+          <label for="s-from" class="form-label">Du</label>
+          <input id="s-from" type="date" class="form-control" formControlName="from" />
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="s-to" class="form-label">Au</label>
+          <input id="s-to" type="date" class="form-control" formControlName="to" />
+        </div>
+        <div class="col-12 col-md-3">
+          <button type="submit" class="btn btn-primary w-100">Afficher</button>
+        </div>
+      </form>
+
+      @if (data(); as bilan) {
+        <div class="row g-4">
+          <div class="col-12 col-md-4">
+            <div class="ac-money">
+              <span class="ac-money__label">Vendu sur la période</span>
+              <span class="ac-money__value ac-numeric">{{ bilan.sold.amount | acAmount }}</span>
+              <span class="ac-caption">
+                {{ bilan.sold.count }} forfait(s). De l'argent réellement reçu&nbsp;: il est
+                dans la recette et dans la caisse.
+              </span>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <div class="ac-money">
+              <span class="ac-money__label">Livré sur la période</span>
+              <span class="ac-money__value ac-numeric">{{ bilan.delivered.value | acAmount }}</span>
+              <span class="ac-caption">
+                {{ bilan.delivered.washes }} lavage(s). Ces lavages ne rapportent
+                <strong>rien</strong>&nbsp;: ils ont déjà été payés.
+              </span>
+            </div>
+          </div>
+
+          <!--
+            LA DETTE : le chiffre qui n'existerait pas sans ce module.
+            Une station qui a vendu 200 lavages d'avance doit 200
+            lavages, et l'argent est dépensé depuis longtemps.
+          -->
+          <div class="col-12 col-md-4">
+            <div class="ac-money ac-money--debt">
+              <span class="ac-money__label">Reste à livrer</span>
+              <span class="ac-money__value ac-numeric">
+                {{ bilan.outstanding.value | acAmount }}
+              </span>
+              <span class="ac-caption">
+                {{ bilan.outstanding.washes }} lavage(s) sur
+                {{ bilan.outstanding.subscriptions }} forfait(s) en cours. C'est une
+                <strong>dette</strong>, pas une recette à venir.
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Les forfaits proposés -->
+  <div class="ac-card mb-4">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Ce que la station vend</h2>
+      @if (canManage()) {
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                (click)="openPlanForm(null)">
+          <i class="bi bi-plus-lg"></i> Nouveau forfait
+        </button>
+      }
+    </div>
+
+    @if (plans().length === 0) {
+      <div class="ac-card__body">
+        <ac-empty-state
+          icon="bi-bag"
+          title="Aucun forfait"
+          text="Un forfait, c'est « 10 lavages pour 40 000 F, valables 6 mois ». Le client paie d'avance et revient."
+        />
+      </div>
+    } @else {
+      <div class="ac-table-wrapper">
+        <table class="ac-table">
+          <thead>
+            <tr>
+              <th>Forfait</th>
+              <th>Prestation</th>
+              <th class="ac-table__amount">Prix</th>
+              <th class="ac-table__amount">À l'unité</th>
+              <th>Validité</th>
+              <th>Vendus</th>
+              <th>État</th>
+              @if (canManage()) {
+                <th class="ac-table__actions">Actions</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (plan of plans(); track plan.id) {
+              <tr [class.ac-table__row--muted]="!plan.is_active">
+                <td class="fw-semibold">{{ plan.name }}</td>
+                <td>
+                  {{ plan.service_name }}
+                  <div class="ac-caption">{{ plan.washes }} lavages</div>
+                </td>
+                <td class="ac-table__amount ac-numeric fw-semibold">
+                  {{ plan.price | acAmount }}
+                </td>
+                <!--
+                  L'ARGUMENT DE VENTE, calculé par le serveur pour
+                  qu'il soit identique partout où il s'affiche.
+                -->
+                <td class="ac-table__amount ac-numeric">
+                  <s class="ac-text-muted">{{ plan.full_price | acAmount }}</s>
+                  @if (plan.saving > 0) {
+                    <div class="ac-caption">
+                      −{{ plan.saving | acAmount }} pour le client
+                    </div>
+                  }
+                </td>
+                <td class="ac-numeric">{{ plan.validity_days }} j</td>
+                <td class="ac-numeric">{{ plan.sold_count }}</td>
+                <td>
+                  @if (plan.is_active) {
+                    <span class="ac-badge ac-badge--success">Actif</span>
+                  } @else {
+                    <span class="ac-badge ac-badge--neutral">Retiré</span>
+                  }
+                </td>
+                @if (canManage()) {
+                  <td class="ac-table__actions">
+                    <button type="button" class="ac-btn-icon" (click)="openPlanForm(plan)"
+                            title="Modifier" aria-label="Modifier">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Les abonnements vendus -->
+  <div class="ac-card">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Abonnements des clients</h2>
+      <span class="ac-caption">{{ sold().length }} ligne(s)</span>
+    </div>
+
+    @if (sold().length === 0) {
+      <div class="ac-card__body">
+        <ac-empty-state
+          icon="bi-person-badge"
+          title="Aucun abonnement vendu"
+          text="Les forfaits vendus apparaîtront ici, avec ce qu'il reste à livrer à chaque client."
+        />
+      </div>
+    } @else {
+      <div class="ac-table-wrapper">
+        <table class="ac-table">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Forfait</th>
+              <th>Lavages</th>
+              <th>Échéance</th>
+              <th class="ac-table__amount">Payé</th>
+              <th>État</th>
+              @if (canManage()) {
+                <th class="ac-table__actions">Actions</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of sold(); track item.id) {
+              <tr [class.ac-table__row--muted]="!item.is_usable">
+                <td>
+                  <a [routerLink]="['/customers', item.customer_id]" class="fw-semibold">
+                    {{ item.customer_name }}
+                  </a>
+                  <div class="ac-caption">{{ item.customer_phone }}</div>
+                </td>
+                <td>
+                  {{ item.plan_name }}
+                  <div class="ac-caption">{{ item.service_name }}</div>
+                </td>
+                <td>
+                  <div class="ac-numeric fw-semibold">
+                    {{ item.washes_left }} / {{ item.washes_total }}
+                  </div>
+                  <!--
+                    Le compteur est un COUNT sur les opérations : un
+                    lavage annulé revient tout seul dans le solde,
+                    sans que personne n'ait à y penser.
+                  -->
+                  <span class="ac-progress">
+                    <span class="ac-progress__bar" [style.width]="progress(item)"></span>
+                  </span>
+                </td>
+                <td class="ac-numeric ac-nowrap">
+                  {{ item.expires_at }}
+                  @if (item.is_usable && item.days_left <= 30) {
+                    <div class="ac-caption">encore {{ item.days_left }} j</div>
+                  }
+                </td>
+                <td class="ac-table__amount ac-numeric">{{ item.price_paid | acAmount }}</td>
+                <td>
+                  <span class="ac-badge {{ badgeFor(item.state) }}">{{ item.state_label }}</span>
+                  @if (item.cancellation_reason) {
+                    <div class="ac-caption">{{ item.cancellation_reason }}</div>
+                  }
+                </td>
+                @if (canManage()) {
+                  <td class="ac-table__actions">
+                    @if (item.state === 'ACTIVE') {
+                      <button type="button" class="ac-btn-icon"
+                              (click)="openCancel(item)"
+                              title="Annuler" aria-label="Annuler">
+                        <i class="bi bi-x-circle"></i>
+                      </button>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}
+
+<!-- ============================================================ -->
+<!-- Le forfait proposé                                           -->
+<!-- ============================================================ -->
+@if (isPlanFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closePlanForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="plan-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="plan-title">
+        {{ editingPlan() ? 'Modifier le forfait' : 'Nouveau forfait' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closePlanForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="planForm" (ngSubmit)="submitPlan()" novalidate>
+      <div class="ac-modal__body">
+        @if (editingPlan()) {
+          <div class="ac-alert ac-alert--info mb-4">
+            <i class="bi bi-info-circle"></i>
+            <div>
+              Les abonnements <strong>déjà vendus ne changent pas</strong>&nbsp;: leurs
+              conditions ont été recopiées au moment de l'achat.
+            </div>
+          </div>
+        }
+
+        <div class="mb-4">
+          <label for="pl-name" class="form-label">Nom du forfait</label>
+          <input id="pl-name" type="text" class="form-control" formControlName="name"
+                 placeholder="Forfait 10 lavages"
+                 [class.is-invalid]="fieldErrors()['name']" />
+        </div>
+
+        <div class="mb-4">
+          <label for="pl-service" class="form-label">Prestation couverte</label>
+          <select id="pl-service" class="form-select" formControlName="service_id"
+                  [class.is-invalid]="fieldErrors()['service_id']">
+            @for (service of services(); track service.id) {
+              <option [value]="service.id">
+                {{ service.name }} — {{ service.price | acAmount }}
+              </option>
+            }
+          </select>
+          <!--
+            UNE prestation, pas une liste : « 10 lavages » ne veut rien
+            dire tant qu'on n'a pas dit lesquels, et il faudrait
+            trancher au comptoir devant un client venu pour un
+            detailing.
+          -->
+          <span class="ac-caption">
+            Une seule prestation par forfait. Pour en couvrir deux, créez deux forfaits.
+          </span>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-6">
+            <label for="pl-washes" class="form-label">Nombre de lavages</label>
+            <input id="pl-washes" type="number" inputmode="numeric"
+                   class="form-control ac-numeric" formControlName="washes"
+                   min="2" max="50" step="1"
+                   [class.is-invalid]="fieldErrors()['washes']" />
+            @if (fieldErrors()['washes']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+          <div class="col-6">
+            <label for="pl-price" class="form-label">Prix du forfait</label>
+            <input id="pl-price" type="number" inputmode="numeric"
+                   class="form-control ac-numeric" formControlName="price"
+                   min="1" step="500"
+                   [class.is-invalid]="fieldErrors()['price']" />
+            @if (fieldErrors()['price']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="pl-validity" class="form-label">Validité, en jours</label>
+          <input id="pl-validity" type="number" inputmode="numeric"
+                 class="form-control ac-numeric" formControlName="validity_days"
+                 min="7" max="730" step="1"
+                 [class.is-invalid]="fieldErrors()['validity_days']" />
+          <!--
+            La durée est OBLIGATOIRE : un forfait sans fin est une
+            dette éternelle. Le client qui revient trois ans plus tard
+            avec quatre lavages a raison de les réclamer.
+          -->
+          <span class="ac-caption">
+            Un forfait sans date de fin est une dette éternelle&nbsp;: la durée borne
+            l'engagement de la station, et elle est annoncée au client.
+          </span>
+          @if (fieldErrors()['validity_days']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div>
+          <label for="pl-status" class="form-label">État</label>
+          <select id="pl-status" class="form-select" formControlName="status">
+            <option value="ACTIVE">Proposé à la vente</option>
+            <option value="INACTIVE">Retiré — les abonnements en cours continuent</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closePlanForm()">
+          Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            Enregistrer
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ============================================================ -->
+<!-- Vendre un forfait                                            -->
+<!-- ============================================================ -->
+@if (isSaleFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeSaleForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="sale-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="sale-title">Vendre un forfait</h2>
+      <button type="button" class="ac-btn-icon" (click)="closeSaleForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="saleForm" (ngSubmit)="submitSale()" novalidate>
+      <div class="ac-modal__body">
+        <div class="mb-4">
+          <label for="sa-customer" class="form-label">Client</label>
+          <select id="sa-customer" class="form-select" formControlName="customer_id"
+                  [class.is-invalid]="fieldErrors()['customer_id']">
+            <option [value]="0" disabled>Choisir un client…</option>
+            @for (customer of customers(); track customer.id) {
+              <option [value]="customer.id">
+                {{ customer.full_name }} — {{ customer.phone }}
+              </option>
+            }
+          </select>
+          <!--
+            Un forfait est nominatif : sans fiche client, personne ne
+            saurait à qui appartiennent les lavages restants.
+          -->
+          <span class="ac-caption">
+            Un forfait appartient à une personne&nbsp;: la fiche client est nécessaire.
+          </span>
+          @if (fieldErrors()['customer_id']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="sa-plan" class="form-label">Forfait</label>
+          <select id="sa-plan" class="form-select" formControlName="plan_id"
+                  [class.is-invalid]="fieldErrors()['plan_id']">
+            @for (plan of plans(); track plan.id) {
+              @if (plan.is_active) {
+                <option [value]="plan.id">
+                  {{ plan.name }} — {{ plan.price | acAmount }}
+                </option>
+              }
+            }
+          </select>
+          @if (selectedPlan(); as plan) {
+            <span class="ac-caption">
+              {{ plan.washes }} × {{ plan.service_name }}, valables {{ plan.validity_days }} jours.
+              @if (plan.saving > 0) {
+                Le client économise <strong>{{ plan.saving | acAmount }}</strong>.
+              }
+            </span>
+          }
+          @if (fieldErrors()['plan_id']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        @if (stations().length > 1) {
+          <div class="mb-4">
+            <label for="sa-station" class="form-label">Station</label>
+            <select id="sa-station" class="form-select" formControlName="station_id">
+              @for (station of stations(); track station.id) {
+                <option [value]="station.id">{{ station.name }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div>
+          <label for="sa-method" class="form-label">Moyen de paiement</label>
+          <select id="sa-method" class="form-select" formControlName="method">
+            <option value="CASH">Espèces</option>
+            <option value="MOBILE_MONEY">Mobile money</option>
+            <option value="CARD">Carte</option>
+            <option value="BANK_TRANSFER">Virement</option>
+            <option value="OTHER">Autre</option>
+          </select>
+          <!--
+            L'argent entre AUJOURD'HUI. C'est un encaissement ordinaire
+            qui va dans la caisse et dans la recette du jour ; les
+            lavages, eux, seront livrés plus tard sans rien rapporter.
+          -->
+          <span class="ac-caption">
+            L'argent entre dans la caisse <strong>aujourd'hui</strong>. Les lavages
+            seront livrés plus tard&nbsp;: ils ne rapporteront rien ce jour-là,
+            puisqu'ils sont déjà payés.
+          </span>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeSaleForm()">
+          Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            Encaisser et créer le forfait
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ============================================================ -->
+<!-- Annuler un abonnement                                        -->
+<!-- ============================================================ -->
+@if (cancelling(); as item) {
+  <div class="ac-modal-backdrop" (click)="closeCancel()"></div>
+
+  <div class="ac-modal ac-modal--sm" role="dialog" aria-modal="true"
+       aria-labelledby="cancel-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="cancel-title">Annuler l'abonnement</h2>
+      <button type="button" class="ac-btn-icon" (click)="closeCancel()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="cancelForm" (ngSubmit)="submitCancel()" novalidate>
+      <div class="ac-modal__body">
+        <div class="ac-alert ac-alert--warning mb-4">
+          <i class="bi bi-exclamation-triangle"></i>
+          <div>
+            <strong>{{ item.customer_name }}</strong> — {{ item.plan_name }}
+            <div class="ac-caption">
+              Il reste {{ item.washes_left }} lavage(s) sur {{ item.washes_total }},
+              payés {{ item.price_paid | acAmount }}.
+            </div>
+          </div>
+        </div>
+
+        <!--
+          ON N'INVENTE AUCUN REMBOURSEMENT AU PRORATA.
+          Combien rendre à un client qui a pris trois lavages sur dix
+          est une décision commerciale, pas un calcul : le forfait
+          était vendu moins cher que trois lavages à l'unité.
+        -->
+        <p class="ac-text-secondary">
+          L'annulation <strong>arrête</strong> le forfait. Elle ne rembourse rien&nbsp;:
+          combien rendre est une décision commerciale, pas un calcul. Un remboursement
+          éventuel se fait depuis le journal des encaissements, où il sera tracé comme
+          n'importe quelle sortie d'argent.
+        </p>
+
+        <div>
+          <label for="ca-reason" class="form-label">Motif</label>
+          <input id="ca-reason" type="text" class="form-control" formControlName="reason"
+                 placeholder="Le client déménage."
+                 [class.is-invalid]="fieldErrors()['reason']" />
+          <span class="ac-caption">
+            Obligatoire&nbsp;: de l'argent a été encaissé, et un client qui réclame six
+            mois plus tard doit trouver une explication.
+          </span>
+          @if (fieldErrors()['reason']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeCancel()">
+          Retour
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            Annuler l'abonnement
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

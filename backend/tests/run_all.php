@@ -34,6 +34,7 @@ $tests = [
     'api_team_test.php'       => 'API — équipe et pointage',
     'api_booking_test.php'    => 'API — rendez-vous',
     'api_loyalty_test.php'    => 'API — fidélité',
+    'api_subscription_test.php' => 'API — abonnements',
 ];
 
 $directory = __DIR__;

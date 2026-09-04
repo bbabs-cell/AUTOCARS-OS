@@ -64,6 +64,16 @@ export interface Operation {
   discount_amount: number;
   /** « Fidélité — 3 lavages (Carte fidélité) ». */
   discount_reason: string | null;
+  /**
+   * D'OÙ VIENT LA REMISE, et ce n'est pas un détail.
+   *
+   *   LOYALTY       la station donne. C'est un coût.
+   *   SUBSCRIPTION  le client a déjà payé. C'est une dette qu'on solde.
+   *
+   * Les deux ramènent le dû à zéro et ne veulent pas dire la même
+   * chose : le bilan de la fidélité ne compte que les premières.
+   */
+  discount_source: 'LOYALTY' | 'SUBSCRIPTION' | null;
   /** `price - discount_amount`, jamais négatif. CE QUE LE CLIENT DOIT. */
   amount_due: number;
   currency_code: string;

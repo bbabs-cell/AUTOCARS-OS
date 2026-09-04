@@ -87,6 +87,25 @@ final class LoyaltyLedger
             return self::outcome(false, 'not_settled');
         }
 
+        // ==============================================================
+        // UN LAVAGE ENTIÈREMENT OFFERT NE RAPPORTE PAS DE TAMPON
+        // ==============================================================
+        // Ajouté au lot 15, quand les abonnements ont obligé à
+        // regarder ce cas de près.
+        //
+        // Un dossier dont le dû est tombé à zéro grâce à une
+        // RÉCOMPENSE, et pour lequel le client n'a rien sorti de sa
+        // poche, ne doit pas faire avancer sa carte : le programme se
+        // nourrirait lui-même, et dix lavages offerts en produiraient
+        // un onzième.
+        //
+        // Un lavage couvert par un ABONNEMENT, lui, rapporte un
+        // tampon : il a bien été payé — d'avance, mais payé. Le
+        // contraire punirait le client le plus fidèle de la station.
+        if ($paid === 0 && ($operation['discount_source'] ?? null) === 'LOYALTY') {
+            return self::outcome(false, 'fully_rewarded');
+        }
+
         // Le plancher se mesure sur le PRIX de la prestation, pas sur
         // ce qui a été encaissé. Sinon un lavage payé pour moitié avec
         // une récompense passerait sous le plancher et ne donnerait

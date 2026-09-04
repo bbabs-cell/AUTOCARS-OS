@@ -124,13 +124,20 @@ final class PaymentRepository extends TenantRepository
                     v.plate_number,
                     s.name AS station_name,
                     CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
-                    CONCAT(u.first_name, ' ', u.last_name) AS recorded_by_name
+                    CONCAT(u.first_name, ' ', u.last_name) AS recorded_by_name,
+                    -- La vente d'un forfait (lot 15) n'a pas de
+                    -- dossier : sans ce nom, elle apparaîtrait dans le
+                    -- journal comme une ligne sans objet, et le
+                    -- caissier se demanderait d'où viennent 40 000 F.
+                    plan.name AS subscription_plan_name
                FROM payments p
                JOIN stations   s ON s.id = p.station_id
                JOIN users      u ON u.id = p.recorded_by_user_id
           LEFT JOIN operations o ON o.id = p.operation_id
           LEFT JOIN vehicles   v ON v.id = o.vehicle_id
           LEFT JOIN customers  c ON c.id = p.customer_id
+          LEFT JOIN subscriptions sub ON sub.id = p.subscription_id
+          LEFT JOIN subscription_plans plan ON plan.id = sub.plan_id
               WHERE p.organization_id = :organization_id
                     {$extra}
            ORDER BY p.paid_at DESC, p.id DESC

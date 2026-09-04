@@ -62,6 +62,10 @@ return [
         // engage l'entreprise, pas la station.
         'loyalty.view',
         'loyalty.redeem',
+        // Le manager vend les forfaits, en règle les conditions et
+        // annule si nécessaire. C'est de l'exploitation : le prix d'un
+        // forfait se décide comme celui d'une prestation (lot 4).
+        'subscriptions.*',
         'employees.view',
         // Le pointage est de la gestion quotidienne : c'est le
         // responsable de station qui constate les présences et
@@ -159,6 +163,22 @@ return [
         // gestes sont tracés nominativement.
         'loyalty.view',
         'loyalty.redeem',
+
+        // LES FORFAITS SE VENDENT ET SE CONSOMMENT AU COMPTOIR.
+        //
+        // Vendre un forfait, c'est encaisser — l'employé le fait déjà
+        // toute la journée (payments.create). Consommer un lavage ne
+        // demande aucun jugement : le client a des lavages restants ou
+        // il n'en a pas, et le serveur vérifie la prestation, la date
+        // de péremption et le solde avant d'écrire.
+        //
+        // En revanche il ne RÈGLE pas les forfaits et n'en ANNULE
+        // aucun : modifier un prix engage l'entreprise, et annuler un
+        // forfait déjà payé ouvre la question d'un remboursement —
+        // deux décisions qui ne se prennent pas au comptoir.
+        'subscriptions.view',
+        'subscriptions.sell',
+        'subscriptions.use',
 
         // CHACUN POINTE POUR SOI.
         // Pointer à la place d'un collègue est le premier

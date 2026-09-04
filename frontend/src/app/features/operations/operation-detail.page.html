@@ -424,16 +424,59 @@
             </dd>
 
             @if (op.discount_amount > 0) {
-              <dt class="col-5 ac-text-secondary fw-normal">Remise</dt>
+              <!--
+                LA SOURCE DE LA REMISE CHANGE TOUT.
+                Fidélité : la station donne. Abonnement : le client a
+                déjà payé. Le libellé le dit, et le bouton de retrait
+                appelle une route différente.
+              -->
+              <dt class="col-5 ac-text-secondary fw-normal">
+                {{ op.discount_source === 'SUBSCRIPTION' ? 'Forfait' : 'Remise' }}
+              </dt>
               <dd class="col-7">
-                <span class="ac-badge ac-badge--success">
+                <span class="ac-badge"
+                      [class.ac-badge--info]="op.discount_source === 'SUBSCRIPTION'"
+                      [class.ac-badge--success]="op.discount_source !== 'SUBSCRIPTION'">
                   −{{ op.discount_amount | acAmount }}
                 </span>
                 <div class="ac-caption">{{ op.discount_reason }}</div>
-                @if (canRedeem() && op.status !== 'COMPLETED') {
+
+                @if (op.discount_source === 'SUBSCRIPTION') {
+                  <div class="ac-caption">
+                    Ce lavage a été payé à l'achat du forfait&nbsp;: il n'y a rien à encaisser.
+                  </div>
+                  @if (canUseSubscription() && op.status !== 'COMPLETED') {
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                            (click)="cancelSubscriptionUse()" [disabled]="isUsingSubscription()">
+                      Retirer le forfait
+                    </button>
+                  }
+                } @else if (canRedeem() && op.status !== 'COMPLETED') {
                   <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
                           (click)="cancelReward()" [disabled]="isRedeeming()">
                     Retirer la remise
+                  </button>
+                }
+              </dd>
+            } @else if (matchingSubscription(); as forfait) {
+              <!--
+                LE FORFAIT PASSE AVANT LA RÉCOMPENSE.
+                Le client a déjà payé ce lavage : le lui faire régler
+                pendant qu'on lui offre un cadeau serait absurde, et
+                lui ferait perdre des tampons pour rien.
+              -->
+              <dt class="col-5 ac-text-secondary fw-normal">Forfait</dt>
+              <dd class="col-7">
+                <span class="ac-badge ac-badge--info">
+                  {{ forfait.washes_left }} lavage(s) restant(s)
+                </span>
+                <div class="ac-caption">
+                  {{ forfait.plan_name }} — jusqu'au {{ forfait.expires_at }}
+                </div>
+                @if (canUseSubscription() && op.status !== 'COMPLETED' && !op.is_settled) {
+                  <button type="button" class="btn btn-sm btn-primary mt-2 d-block"
+                          (click)="useSubscription()" [disabled]="isUsingSubscription()">
+                    <i class="bi bi-arrow-repeat"></i> Décompter du forfait
                   </button>
                 }
               </dd>

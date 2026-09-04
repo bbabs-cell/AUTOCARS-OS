@@ -66,7 +66,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
   {
     label: 'Finances',
     items: [
-      { label: 'Abonnements', icon: 'arrow-repeat', route: null, lot: 15 },
     ],
   },
   {
@@ -104,6 +103,10 @@ export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   // de personnes qui reviennent, pas de l'organisation d'une journée.
   { label: 'Fidélité',      icon: 'award',      route: '/loyalty',  lot: 14,
     permission: 'loyalty.view' },
+  // Juste après la fidélité : les deux parlent d'un client qui
+  // revient. L'une le récompense, l'autre le fait payer d'avance.
+  { label: 'Abonnements',   icon: 'arrow-repeat', route: '/subscriptions', lot: 15,
+    permission: 'subscriptions.view' },
   { label: 'Encaissements', icon: 'credit-card', route: '/payments',   lot: 9,
     permission: 'payments.journal' },
   { label: 'Caisse',        icon: 'cash-stack',  route: '/cash',       lot: 9,

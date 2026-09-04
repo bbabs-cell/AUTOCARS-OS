@@ -105,6 +105,7 @@ $expectedTables = [
     // contrôlé, et une table oubliée ici n'est contrôlée nulle part.
     'cash_sessions', 'time_entries', 'bookings',
     'loyalty_programs', 'loyalty_entries',
+    'subscription_plans', 'subscriptions',
 ];
 
 $actualTables = $connection->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);

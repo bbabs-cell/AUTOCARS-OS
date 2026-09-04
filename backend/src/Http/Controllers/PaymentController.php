@@ -414,6 +414,16 @@ final class PaymentController
                 ? null
                 : (int) $payment['operation_id'],
             'operation_reference' => $payment['operation_reference'] ?? null,
+
+            // Un encaissement peut ne porter sur AUCUN dossier : c'est
+            // le cas d'une vente de forfait (lot 15). Le journal
+            // affiche alors le nom du forfait à la place de la
+            // référence — une ligne sans objet ferait douter de la
+            // caisse.
+            'subscription_id' => ($payment['subscription_id'] ?? null) === null
+                ? null
+                : (int) $payment['subscription_id'],
+            'subscription_plan_name' => $payment['subscription_plan_name'] ?? null,
             // La forme lisible, pas celle stockée : « DK-9087-DE » se
             // relit contre un pare-chocs, « DK9087DE » non.
             'plate_number'  => ($payment['plate_number'] ?? null) === null

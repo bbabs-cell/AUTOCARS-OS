@@ -423,6 +423,81 @@ plus `price`. Elle était recopiée à cinq endroits ; elle est désormais
 écrite une seule fois, dans `OperationRepository::amountDue()`. Une
 règle d'argent s'écrit une fois.
 
+### Les abonnements : ce qu'on a choisi de NE PAS stocker
+
+Deux tables, `subscription_plans` et `subscriptions`, et deux absences
+volontaires qui résument la philosophie du projet.
+
+**Pas de compteur `washes_used`.** Le nombre de lavages consommés est
+`COUNT(operations WHERE subscription_id = X AND status <> 'CANCELLED')`.
+Une consommation **est** une opération : il n'y a rien d'autre à
+enregistrer. Même raisonnement qu'au lot 8 pour la file d'attente, et
+même conséquence heureuse — un lavage annulé revient tout seul dans le
+solde du client. Un compteur stocké aurait fallu penser à le
+décrémenter là, et personne n'y pense jamais.
+
+**Pas de statuts `EXPIRED` ni `EXHAUSTED`.** « Périmé » se lit dans
+`expires_at`, « épuisé » se compte dans les opérations. Les stocker,
+c'est promettre de les tenir à jour — donc écrire une tâche planifiée
+qui passe chaque nuit, et vivre avec un forfait qui reste actif parce
+que la tâche a échoué. La colonne `status` ne connaît donc que
+`ACTIVE` et `CANCELLED` : **seule l'annulation est une décision
+humaine.**
+
+> **UN STATUT QUI SE CALCULE NE SE STOCKE PAS.**
+
+### Tout est recopié au moment de la vente
+
+`service_id`, `washes_total`, `price_paid` : troisième application de
+la règle après le prix d'une opération (lot 7) et celui d'un
+rendez-vous (lot 13). Le gérant qui passe son forfait de 10 à
+8 lavages le mois prochain ne doit pas en retirer deux à ceux qui ont
+déjà payé.
+
+### La validité est obligatoire
+
+Un forfait sans date de fin est une **dette éternelle**. Le client qui
+revient trois ans plus tard avec quatre lavages non utilisés a raison
+de les réclamer, et la station a encaissé cet argent depuis longtemps.
+La durée borne l'engagement, et elle est annoncée au client à l'achat.
+
+### `operations.discount_source` : deux remises qui se ressemblent
+
+Un lavage couvert par un forfait ramène le dû à zéro, exactement comme
+une récompense de fidélité. Ils empruntent donc la même colonne
+`discount_amount` — mais ne veulent pas dire la même chose :
+
+| `LOYALTY` | La station **donne**. C'est un coût. |
+|---|---|
+| `SUBSCRIPTION` | Le client a **déjà payé**. C'est une dette qu'on solde. |
+
+Sans cette distinction, le « coût du programme de fidélité » de
+l'écran `/loyalty` compterait les lavages d'abonnés.
+
+**La migration 021 rattrape le passé** : les remises antérieures
+venaient toutes de la fidélité, elles reçoivent donc
+`discount_source = 'LOYALTY'`. Une migration qui ajoute une colonne à
+des lignes existantes doit toujours se demander ce que cette colonne
+vaut pour le passé — sans quoi un chiffre baisse tout seul le jour de
+la mise à jour, et personne ne comprend pourquoi.
+
+### `payments.subscription_id` : un encaissement sans dossier
+
+`payments.operation_id` était **déjà nullable** depuis le lot 9 : un
+encaissement n'a jamais été obligé de porter sur un dossier. La vente
+d'un forfait s'y glisse donc sans rien casser, et hérite de la
+session de caisse, du journal, de la recette et du remboursement.
+
+Un circuit parallèle aurait fallu tout reconstruire — et aurait fini
+par en oublier un.
+
+### Une contrainte de plus qu'on ne pose pas
+
+Troisième refus du projet, après (station, heure, téléphone) au lot 13
+et « un seul forfait actif » ici : une station en propose plusieurs,
+c'est même tout l'intérêt. **On ne contraint que ce qui est vrai
+toujours.**
+
 ### `payments.cash_session_id` : quelle vacation ?
 
 On aurait pu rattacher les encaissements à leur session **par la

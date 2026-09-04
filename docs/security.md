@@ -473,6 +473,81 @@ que personne ne l'ait décidé.
 
 ---
 
+## 7 sexies. Abonnements
+
+### L'argent encaissé entre dans la caisse le jour où il est reçu
+
+C'est le point non négociable de ce lot. La vente d'un forfait est un
+encaissement ordinaire : même table, même session de caisse, même
+journal. Une comptabilité d'engagement afficherait 0 F le jour de la
+vente et fausserait la clôture du soir — **une caisse fausse est le
+pire défaut possible de ce produit.**
+
+Un test compare la recette avant et après la vente et vérifie que les
+40 000 F y sont.
+
+### Un lavage d'abonné n'est jamais compté deux fois
+
+Il a été payé à la vente du forfait. Le jour du lavage, le dossier est
+ramené à zéro par une remise — aucun encaissement n'est créé. Un test
+vérifie que la recette ne bouge pas au moment du lavage.
+
+### Un lavage d'abonné n'est pas un cadeau
+
+`discount_source` distingue une remise de fidélité (un coût) d'un
+lavage prépayé (une dette soldée). Sans elle, le bilan de la fidélité
+compterait un argent déjà encaissé. Un test le vérifie, et la
+migration 021 rattrape les remises antérieures.
+
+### Ce qu'un forfait ne couvre pas, le serveur le refuse
+
+- une **autre prestation** que celle du forfait (`409`) ;
+- un dossier **déjà couvert**, **déjà remisé** ou **déjà payé, même en
+  partie** (`409`) ;
+- un dossier **restitué ou annulé** (`409`) ;
+- un forfait **périmé, épuisé ou annulé** (`409`).
+
+Les trois derniers états sont **calculés à la lecture**, jamais lus
+dans une colonne : un forfait ne peut donc pas rester utilisable parce
+qu'une tâche planifiée a échoué. Un test antidate la péremption en
+base sans toucher au statut et vérifie que le forfait cesse de servir.
+
+### Le choix du forfait n'appartient pas à l'appelant
+
+L'API ne prend pas d'identifiant de forfait : le serveur choisit
+**celui qui expire le plus tôt**. C'est le seul ordre qui soit dans
+l'intérêt du client — l'inverse ferait périmer un forfait pendant
+qu'on entame le suivant, et la station gagnerait de l'argent sur une
+distraction.
+
+### Aucun remboursement inventé
+
+Annuler un abonnement **arrête** le forfait ; cela ne rend pas
+d'argent. Combien rendre à un client qui a pris trois lavages sur dix
+est une décision commerciale, pas un calcul. Le remboursement éventuel
+passe par la route existante, où il est tracé comme n'importe quelle
+sortie d'argent.
+
+Le **motif d'annulation est obligatoire** — contrairement au lot 13
+pour un rendez-vous. La différence est qu'ici de l'argent a été
+encaissé.
+
+### Un employé vend et décompte, il ne règle rien
+
+Vendre un forfait, c'est encaisser : l'employé le fait déjà toute la
+journée. Décompter un lavage ne demande aucun jugement — le serveur
+vérifie la prestation, la péremption et le solde.
+
+Régler les conditions d'un forfait engage l'entreprise, et annuler un
+abonnement payé ouvre la question d'un remboursement : ces deux-là
+restent au responsable (`subscriptions.manage`).
+
+Toutes les actions sont tracées nominativement, et la trace d'une
+consommation garde la **valeur** du lavage livré — c'est ce qui permet
+de vérifier des mois plus tard qu'un forfait a bien été honoré.
+
+---
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -553,4 +628,9 @@ la question centrale en cas de litige sur un véhicule.
 | Grand livre de fidélité en ajout seul | ✅ Lot 14 |
 | Doublons de tampons interdits par la base | ✅ Lot 14 |
 | Programme de fidélité inactif par défaut | ✅ Lot 14 |
+| Vente de forfait dans la caisse du jour (vérifié par un test) | ✅ Lot 15 |
+| Lavage d'abonné jamais compté deux fois | ✅ Lot 15 |
+| Remise de fidélité et lavage prépayé distingués | ✅ Lot 15 |
+| Forfait périmé / épuisé calculé, jamais stocké | ✅ Lot 15 |
+| Aucun remboursement au prorata inventé | ✅ Lot 15 |
 | Audit de sécurité complet | 🔜 Lot 21 |

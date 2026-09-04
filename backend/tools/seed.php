@@ -209,6 +209,7 @@ $tables = [
     'time_entries'      => 'pointages',
     'bookings'          => 'rendez-vous',
     'loyalty_entries'   => 'tampons de fidélité',
+    'subscriptions'     => 'abonnements',
     'audit_logs'        => 'entrées de journal',
 ];
 

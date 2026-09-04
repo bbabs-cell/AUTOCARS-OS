@@ -121,6 +121,12 @@ export const routes: Routes = [
           import('./features/loyalty/loyalty.page').then((m) => m.LoyaltyPage),
       },
       {
+        path: 'subscriptions',
+        title: 'Abonnements — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/subscriptions/subscriptions.page').then((m) => m.SubscriptionsPage),
+      },
+      {
         path: 'team',
         title: 'Équipe — AUTOCARE OS',
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),

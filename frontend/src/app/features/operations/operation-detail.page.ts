@@ -8,6 +8,8 @@ import { RelativeDatePipe } from '../../shared/pipes/relative-date.pipe';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge.component';
 import { AuthService } from '../../core/services/auth.service';
 import { LoyaltyService } from '../../core/services/loyalty.service';
+import { SubscriptionService } from '../../core/services/subscription.service';
+import { Subscription } from '../../core/models/subscription.model';
 import { LoyaltyCard } from '../../core/models/loyalty.model';
 import { OperationService } from '../../core/services/operation.service';
 import { PaymentService } from '../../core/services/payment.service';
@@ -88,6 +90,7 @@ export class OperationDetailPage {
   private readonly operationService = inject(OperationService);
   private readonly auth = inject(AuthService);
   private readonly loyalty = inject(LoyaltyService);
+  private readonly subscriptions = inject(SubscriptionService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly fuelLabels = FUEL_LEVEL_LABELS;
@@ -122,6 +125,35 @@ export class OperationDetailPage {
   protected readonly loyaltyWarnings = signal<string[]>([]);
 
   protected readonly canRedeem = computed(() => this.auth.can('loyalty.redeem'));
+
+  /**
+   * LE FORFAIT SE DÉCOMPTE ICI, comme la récompense de fidélité et
+   * pour la même raison : c'est le moment où le client est devant le
+   * comptoir. Un écran séparé ne serait jamais ouvert.
+   *
+   * On ne montre que les forfaits qui couvrent LA PRESTATION de ce
+   * dossier : proposer un forfait « lavage standard » sur un
+   * detailing ferait cliquer, puis refuser — et le refus arriverait
+   * devant le client.
+   */
+  protected readonly usableSubscriptions = signal<Subscription[]>([]);
+  protected readonly isUsingSubscription = signal(false);
+
+  protected readonly canUseSubscription = computed(() => this.auth.can('subscriptions.use'));
+
+  protected readonly matchingSubscription = computed(() => {
+    const operation = this.operation();
+
+    if (operation === null) {
+      return null;
+    }
+
+    return (
+      this.usableSubscriptions().find(
+        (item) => item.service_id === operation.service_id && item.is_usable,
+      ) ?? null
+    );
+  });
 
   protected readonly fieldErrors = signal<Record<string, string>>({});
   protected readonly photoTiles = signal<PhotoTile[]>([]);
@@ -277,6 +309,7 @@ export class OperationDetailPage {
 
         this.loadPayments();
         this.loadLoyaltyCard(result.operation.customer_id);
+        this.loadSubscriptions(result.operation.customer_id);
       },
       error: (error: HttpErrorResponse) => {
         this.isLoading.set(false);
@@ -303,6 +336,76 @@ export class OperationDetailPage {
     this.loyalty.card(customerId).subscribe({
       next: (result) => this.loyaltyCard.set(result.card.has_program ? result.card : null),
       error: () => this.loyaltyCard.set(null),
+    });
+  }
+
+  /**
+   * Une erreur ne remonte pas à l'écran : une entreprise sans
+   * forfaits, ou un employé sans le droit de les lire, ne doit pas
+   * voir un message rouge sur un dossier qui va bien.
+   */
+  private loadSubscriptions(customerId: number): void {
+    if (!this.auth.can('subscriptions.view')) {
+      return;
+    }
+
+    this.subscriptions.list({ customer_id: customerId, usable: true }).subscribe({
+      next: (result) => this.usableSubscriptions.set(result.subscriptions),
+      error: () => this.usableSubscriptions.set([]),
+    });
+  }
+
+  /** Décompter ce lavage du forfait du client. */
+  protected useSubscription(): void {
+    if (this.isUsingSubscription()) {
+      return;
+    }
+
+    this.isUsingSubscription.set(true);
+    this.loyaltyWarnings.set([]);
+
+    this.subscriptions.use(this.operationId).subscribe({
+      next: (result) => {
+        this.isUsingSubscription.set(false);
+        this.operation.set(result.operation);
+        this.noticeMessage.set(
+          `Lavage décompté du forfait. Il en reste ${result.subscription.washes_left}.`,
+        );
+        // Le solde du forfait et la carte de fidélité ont bougé : un
+        // lavage d'abonné rapporte un tampon, parce qu'il a été payé.
+        this.loadSubscriptions(result.subscription.customer_id);
+        this.loadLoyaltyCard(result.subscription.customer_id);
+        this.loadChecklist();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isUsingSubscription.set(false);
+        this.errorMessage.set(
+          error.error?.message ?? "Le forfait n'a pas pu être appliqué.",
+        );
+      },
+    });
+  }
+
+  /** Le forfait a été appliqué au mauvais dossier. */
+  protected cancelSubscriptionUse(): void {
+    if (this.isUsingSubscription()) {
+      return;
+    }
+
+    this.isUsingSubscription.set(true);
+
+    this.subscriptions.cancelUse(this.operationId).subscribe({
+      next: (result) => {
+        this.isUsingSubscription.set(false);
+        this.operation.set(result.operation);
+        this.noticeMessage.set('Forfait retiré. Le lavage est rendu au client.');
+        this.loadSubscriptions(result.subscription.customer_id);
+        this.loadChecklist();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isUsingSubscription.set(false);
+        this.errorMessage.set(error.error?.message ?? "Le forfait n'a pas pu être retiré.");
+      },
     });
   }
 
