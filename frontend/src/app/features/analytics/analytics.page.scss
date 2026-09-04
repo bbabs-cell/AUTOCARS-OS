@@ -1,0 +1,99 @@
+// =====================================================================
+// Les statistiques
+// =====================================================================
+// Styles locaux, comme pour les écrans des lots 11 et 13 à 15.
+// Aucune couleur ni espacement en dur : tout vient des jetons validés
+// au lot 2 (règle §37 — la charte ne change plus).
+
+// --- Le chiffre qui porte un panneau ----------------------------------
+// « Le nombre EST le graphique » : une valeur unique n'a pas besoin
+// d'une barre pour se comprendre, et une barre seule serait un
+// graphique à une colonne — c'est-à-dire un nombre écrit de travers.
+.ac-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ac-space-1);
+}
+
+.ac-figure__value {
+  font-size: var(--ac-text-3xl);
+  font-weight: 700;
+  line-height: 1.1;
+  // Encre de texte, pas la couleur d'une série : un chiffre n'est pas
+  // une catégorie, et le peindre en bleu suggérerait qu'il en est une.
+  color: var(--ac-text);
+}
+
+.ac-figure__label {
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-secondary);
+}
+
+// --- Une prestation dans le classement des ventes ---------------------
+.ac-service-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-2) 0;
+
+  & + & {
+    border-top: 1px solid var(--ac-border);
+  }
+}
+
+.ac-service-row__name {
+  flex: 0 0 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-service-row__track {
+  flex: 1 1 auto;
+  height: 0.5rem;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-chart-track);
+  overflow: hidden;
+}
+
+.ac-service-row__bar {
+  display: block;
+  height: 100%;
+  border-radius: var(--ac-radius-full);
+  // UNE SEULE COULEUR pour toutes les barres : il n'y a qu'une série,
+  // la valeur. Une teinte par prestation ferait croire à des
+  // catégories indépendantes ; un dégradé du clair au foncé
+  // répéterait ce que la longueur dit déjà, et gaspillerait le seul
+  // canal encore libre.
+  background-color: var(--ac-chart-1);
+}
+
+.ac-service-row__value {
+  flex: 0 0 7rem;
+  text-align: right;
+  font-weight: 600;
+}
+
+.ac-service-row__count {
+  flex: 0 0 8rem;
+  text-align: right;
+  font-size: var(--ac-text-sm);
+}
+
+// Sur mobile, le nom passe au-dessus : dix centimètres de libellé plus
+// une piste plus deux nombres ne tiennent pas sur 390 pixels.
+@media (max-width: 767.98px) {
+  .ac-service-row {
+    flex-wrap: wrap;
+  }
+
+  .ac-service-row__name {
+    flex: 1 0 100%;
+    font-weight: 600;
+  }
+
+  .ac-service-row__value,
+  .ac-service-row__count {
+    flex: 0 0 auto;
+  }
+}

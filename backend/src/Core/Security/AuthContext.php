@@ -43,6 +43,18 @@ final class AuthContext
     }
 
     /**
+     * Cache des stations de l'entreprise, rempli à la demande.
+     *
+     * Le seul champ mutable de cette classe, et il ne porte qu'un
+     * résultat de lecture — jamais une décision. Le rendre `readonly`
+     * aurait obligé à charger la liste à chaque authentification, y
+     * compris pour les requêtes qui ne filtrent aucune station.
+     *
+     * @var list<int>|null
+     */
+    private ?array $organizationStationIds = null;
+
+    /**
      * @param list<int> $stationIds
      */
     public static function set(
@@ -95,16 +107,69 @@ final class AuthContext
     /**
      * L'utilisateur a-t-il accès à cette station ?
      *
-     * Un administrateur voit toutes les stations de son entreprise,
+     * Un administrateur voit toutes les stations DE SON ENTREPRISE,
      * même celles où il n'est pas explicitement rattaché : c'est le
      * propriétaire, il pilote l'ensemble du réseau.
+     *
+     * ==================================================================
+     * « DE SON ENTREPRISE » A ÉTÉ AJOUTÉ AU LOT 16
+     * ==================================================================
+     * La version précédente renvoyait `true` pour TOUT administrateur,
+     * sans regarder à qui appartenait la station. Un administrateur de
+     * l'entreprise B qui passait l'identifiant d'une station de
+     * l'entreprise A passait donc ce contrôle.
+     *
+     * AUCUNE DONNÉE NE FUYAIT POUR AUTANT : toutes les requêtes
+     * portent `organization_id`, et le filtre d'isolation renvoyait
+     * simplement zéro ligne. C'est exactement le rôle d'une défense en
+     * profondeur — la première barrière a cédé, la seconde a tenu.
+     *
+     * Le défaut restait réel : l'API répondait « 200, rien à voir ici »
+     * là où elle devait répondre « cette station n'est pas la vôtre ».
+     * Un test des statistiques l'a révélé, parce que c'est le premier
+     * écran à filtrer par station sans jamais écrire.
+     *
+     * Le coût de la correction est d'une requête par requête HTTP, et
+     * seulement pour les administrateurs qui filtrent par station.
      */
     public function canAccessStation(int $stationId): bool
     {
         if ($this->role === 'ADMIN') {
-            return true;
+            return in_array($stationId, $this->organizationStationIds(), true);
         }
 
         return in_array($stationId, $this->stationIds, true);
+    }
+
+    /**
+     * Les stations de l'entreprise courante.
+     *
+     * Chargées au plus une fois par requête HTTP, et seulement si un
+     * administrateur filtre effectivement par station : la plupart des
+     * requêtes ne paient rien.
+     *
+     * La requête porte `organization_id` comme toutes les autres —
+     * c'est ce qui rend la réponse fiable.
+     *
+     * @return list<int>
+     */
+    private function organizationStationIds(): array
+    {
+        if ($this->organizationStationIds !== null) {
+            return $this->organizationStationIds;
+        }
+
+        $statement = \Autocare\Core\Database::connection()->prepare(
+            'SELECT id FROM stations WHERE organization_id = :organization_id'
+        );
+
+        $statement->execute(['organization_id' => $this->organizationId]);
+
+        $this->organizationStationIds = array_map(
+            static fn (mixed $id): int => (int) $id,
+            $statement->fetchAll(\PDO::FETCH_COLUMN),
+        );
+
+        return $this->organizationStationIds;
     }
 }

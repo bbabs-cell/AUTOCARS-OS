@@ -1,0 +1,123 @@
+// =====================================================================
+// Graphique en haltères
+// =====================================================================
+// Deux points reliés par un segment : la valeur annoncée, la valeur
+// mesurée, et l'écart entre les deux — qui est l'information.
+//
+// Aucune couleur en dur : les deux intensités viennent de la même
+// teinte du design system (--ac-chart-1 et son fond clair).
+
+.ac-dumbbell {
+  margin: 0;
+}
+
+.ac-dumbbell__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-2) 0;
+}
+
+.ac-dumbbell__label {
+  flex: 0 0 9rem;
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// La piste ne porte AUCUN fond : une bande grise derrière chaque
+// ligne ferait plus de décor que de donnée.
+.ac-dumbbell__track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 1rem;
+}
+
+// Le segment de liaison — 2px, comme toutes les lignes du produit.
+.ac-dumbbell__link {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-chart-1);
+  opacity: 0.35;
+}
+
+.ac-dumbbell__dot {
+  position: absolute;
+  top: 50%;
+  // 10 px : au-delà du minimum de 8 px, pour rester visible sur un
+  // écran de téléphone tenu à bout de bras.
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-left: -0.3125rem;
+  transform: translateY(-50%);
+  border-radius: var(--ac-radius-full);
+  // L'anneau de la couleur de fond évite que deux points qui se
+  // chevauchent forment une tache illisible.
+  box-shadow: 0 0 0 2px var(--ac-surface);
+}
+
+// LA MÊME TEINTE, DEUX INTENSITÉS : ce n'est pas deux catégories,
+// c'est une grandeur à deux moments.
+.ac-dumbbell__dot--from {
+  background-color: var(--ac-primary-200);
+}
+
+.ac-dumbbell__dot--to {
+  background-color: var(--ac-chart-1);
+}
+
+.ac-dumbbell__gap {
+  flex: 0 0 3.5rem;
+  text-align: right;
+  font-size: var(--ac-text-sm);
+  font-weight: 600;
+  // NEUTRE PAR DÉFAUT : un dépassement n'est pas une faute en soi.
+  color: var(--ac-text-secondary);
+}
+
+// Un dépassement est simplement mis en avant, sans couleur d'alerte :
+// le graphique montre l'écart, il ne le juge pas.
+.ac-dumbbell__gap--over {
+  color: var(--ac-text);
+}
+
+.ac-dumbbell__legend {
+  display: flex;
+  gap: var(--ac-space-4);
+  margin: var(--ac-space-2) 0 var(--ac-space-4) 9.75rem;
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-secondary);
+}
+
+.ac-dumbbell__key {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: var(--ac-space-2);
+  border-radius: var(--ac-radius-full);
+  vertical-align: middle;
+}
+
+.ac-dumbbell__key--from { background-color: var(--ac-primary-200); }
+.ac-dumbbell__key--to   { background-color: var(--ac-chart-1); }
+
+// Sur mobile, l'étiquette passe au-dessus de la piste : neuf
+// centimètres de libellé plus une piste ne tiennent pas sur 390 px.
+@media (max-width: 575.98px) {
+  .ac-dumbbell__row {
+    flex-wrap: wrap;
+  }
+
+  .ac-dumbbell__label {
+    flex: 1 0 100%;
+  }
+
+  .ac-dumbbell__legend {
+    margin-left: 0;
+  }
+}

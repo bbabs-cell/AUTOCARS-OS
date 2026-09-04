@@ -71,7 +71,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
   {
     label: 'Pilotage',
     items: [
-      { label: 'Analytics', icon: 'graph-up', route: null, lot: 16 },
       { label: 'Stations',  icon: 'geo-alt',  route: null, lot: 17 },
     ],
   },
@@ -93,6 +92,12 @@ export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
  */
 export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   { label: 'Tableau de bord', icon: 'grid-1x2',  route: '/dashboard',  lot: 10 },
+  // Juste après le tableau de bord, et pas ailleurs : les deux
+  // parlent de chiffres, mais l'un dit « qu'est-ce qui demande une
+  // action aujourd'hui » et l'autre « comment se porte l'affaire ».
+  // Les voisiner rend la différence lisible dans le menu lui-même.
+  { label: 'Statistiques',  icon: 'graph-up',  route: '/analytics',  lot: 16,
+    permission: 'reports.view' },
   { label: "File d'attente", icon: 'kanban',      route: '/queue',      lot: 8 },
   // Juste après la file : les deux écrans répondent à la même
   // question — « qu'est-ce qui arrive ? » — l'un pour maintenant,

@@ -1,7 +1,5 @@
 import { Component, computed, input } from '@angular/core';
 
-import { AmountPipe } from '../pipes/amount.pipe';
-
 export interface ColumnPoint {
   label: string;
   value: number;
@@ -49,7 +47,6 @@ export interface ColumnPoint {
  */
 @Component({
   selector: 'ac-column-chart',
-  imports: [AmountPipe],
   template: `
     <figure class="ac-chart">
       <svg
@@ -92,7 +89,7 @@ export interface ColumnPoint {
             [attr.height]="plotHeight"
             fill="transparent"
           >
-            <title>{{ bar.detail ?? bar.label }} — {{ bar.value | acAmount }}</title>
+            <title>{{ bar.detail ?? bar.label }} — {{ formatted(bar.value) }}</title>
           </rect>
         }
       </svg>
@@ -107,7 +104,7 @@ export interface ColumnPoint {
 
       @if (highlight(); as top) {
         <figcaption class="ac-caption">
-          Meilleure journée : {{ top.label }} à {{ top.value | acAmount }}.
+          {{ peakLabel() }} : {{ top.detail ?? top.label }} — {{ formatted(top.value) }}.
         </figcaption>
       }
     </figure>
@@ -116,6 +113,27 @@ export interface ColumnPoint {
 export class ColumnChartComponent {
   readonly points = input.required<ColumnPoint[]>();
   readonly caption = input<string>('Graphique');
+
+  /**
+   * CE QUE MESURENT LES COLONNES.
+   *
+   * ==================================================================
+   * AJOUTÉ AU LOT 16, APRÈS UN DÉFAUT BIEN VISIBLE
+   * ==================================================================
+   * Ce composant est né au lot 10 pour une seule série : la recette.
+   * Le formatage monétaire était donc écrit en dur — et le jour où
+   * l'écran des statistiques s'en est servi pour compter des
+   * véhicules, il a affiché « meilleure journée : 4 à 5 FCFA » pour
+   * cinq voitures.
+   *
+   * La leçon vaut d'être notée : un composant réutilisé hors de son
+   * usage d'origine ment sans prévenir. Ce n'est pas la réutilisation
+   * qui était fautive, c'est l'hypothèse cachée qu'elle a révélée.
+   */
+  readonly unit = input<'amount' | 'count'>('amount');
+
+  /** Le mot qui introduit la valeur la plus haute. */
+  readonly peakLabel = input<string>('Meilleure journée');
 
   /**
    * Le SVG travaille dans un repère fixe et s'étire à la largeur
@@ -129,6 +147,18 @@ export class ColumnChartComponent {
   // laissent respirer, et la donnée reste plus visible que l'espace
   // qui la sépare de sa voisine.
   protected readonly barWidth = 56;
+
+  /**
+   * La valeur, dans son unité.
+   *
+   * Le pipe `acAmount` reste utilisé pour l'argent ; un simple nombre
+   * suffit pour un comptage, et « 5 » se lit mieux que « 5 unités ».
+   */
+  protected formatted(value: number): string {
+    return this.unit() === 'amount'
+      ? `${new Intl.NumberFormat('fr-FR').format(value)} FCFA`
+      : new Intl.NumberFormat('fr-FR').format(value);
+  }
 
   protected readonly bars = computed(() => {
     const points = this.points();

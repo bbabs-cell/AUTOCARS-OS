@@ -548,6 +548,62 @@ de vérifier des mois plus tard qu'un forfait a bien été honoré.
 
 ---
 
+## 7 septies. Statistiques, et une faille refermée
+
+### Aucun nouveau droit
+
+`reports.view` existe depuis le lot 4 et veut dire exactement cela :
+voir les chiffres de l'entreprise. Un employé reçoit `403`.
+
+Créer `analytics.view` à côté aurait donné **deux droits pour une même
+notion** — et le jour où quelqu'un en accorde un sans l'autre, la
+règle devient impossible à raisonner. On n'invente pas une permission
+quand il en existe une juste.
+
+### La faille que ce lot a refermée
+
+`AuthContext::canAccessStation()` renvoyait **`true` pour tout
+administrateur**, sans regarder à quelle entreprise appartenait la
+station. L'administrateur de l'entreprise B qui passait l'identifiant
+d'une station de l'entreprise A franchissait donc ce contrôle.
+
+**Aucune donnée ne fuyait pour autant.** Toutes les requêtes portent
+`organization_id`, et le filtre d'isolation renvoyait zéro ligne.
+C'est exactement le rôle d'une défense en profondeur : la première
+barrière avait cédé, la seconde a tenu.
+
+Le défaut restait réel : l'API répondait « 200, rien à voir ici » là
+où elle devait répondre « cette station n'est pas la vôtre ». Un
+utilisateur pouvait sonder l'existence d'identifiants de stations
+d'autres entreprises par la seule différence entre un 200 vide et un
+403.
+
+**La règle vérifie désormais que la station appartient bien à
+l'entreprise de l'appelant.** Le coût est d'une requête, faite au plus
+une fois par requête HTTP, et seulement quand un administrateur filtre
+effectivement par station.
+
+> **Comment le défaut a été trouvé.** Par le test d'un écran qui n'a
+> rien à voir avec la sécurité : les statistiques sont le premier
+> module à filtrer par station **sans jamais écrire**, et donc le
+> premier à rendre visible qu'un contrôle d'accès laissait passer.
+>
+> Le test de sécurité a été renforcé en conséquence : il travaillait
+> sur des identifiants inventés, il travaille maintenant sur deux
+> entreprises réelles, et vérifie **les deux sens** — un
+> administrateur atteint les stations sœurs de son entreprise, et
+> aucune autre.
+
+### Ce que l'écran ne cache pas
+
+Quand l'identité `livré = encaissé + offert + prépayé + impayé` ne
+tombe pas juste, l'écran affiche un bandeau disant que **c'est un
+défaut du logiciel**, pas une erreur de saisie. Un produit qui masque
+ses incohérences apprend à ses utilisateurs à ne pas croire ses
+chiffres.
+
+---
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -633,4 +689,7 @@ la question centrale en cas de litige sur un véhicule.
 | Remise de fidélité et lavage prépayé distingués | ✅ Lot 15 |
 | Forfait périmé / épuisé calculé, jamais stocké | ✅ Lot 15 |
 | Aucun remboursement au prorata inventé | ✅ Lot 15 |
+| Accès station vérifié par organisation, admins compris | ✅ Lot 16 |
+| Statistiques réservées à `reports.view` | ✅ Lot 16 |
+| Incohérence comptable affichée, jamais masquée | ✅ Lot 16 |
 | Audit de sécurité complet | 🔜 Lot 21 |

@@ -127,6 +127,12 @@ export const routes: Routes = [
           import('./features/subscriptions/subscriptions.page').then((m) => m.SubscriptionsPage),
       },
       {
+        path: 'analytics',
+        title: 'Statistiques — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/analytics/analytics.page').then((m) => m.AnalyticsPage),
+      },
+      {
         path: 'team',
         title: 'Équipe — AUTOCARE OS',
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),

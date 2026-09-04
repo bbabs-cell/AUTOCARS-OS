@@ -650,6 +650,70 @@ l'écran doit le dire aussi.
 
 ---
 
+## Les statistiques (lot 16)
+
+Le premier écran entièrement fait de graphiques. Les règles posées au
+lot 10 s'y appliquent toutes, et trois s'y ajoutent.
+
+### Jamais deux axes verticaux
+
+Des véhicules et des francs ne partagent aucune échelle. Les tracer
+ensemble avec un axe à gauche et un à droite **inventerait une
+corrélation que la donnée ne contient pas** : l'alignement des deux
+échelles serait arbitraire, et le lecteur y verrait un rapport qui
+n'existe pas.
+
+Deux graphiques côte à côte disent la même chose sans mentir. C'est
+l'erreur de graphique la plus fréquente, et la plus difficile à
+défaire une fois publiée.
+
+### Une seule couleur quand il n'y a qu'une série
+
+Le classement des prestations est une seule mesure — la valeur.
+Colorer chaque barre différemment ferait croire à des catégories
+indépendantes ; colorer plus foncé quand c'est plus haut répéterait ce
+que la longueur dit déjà, et **gaspillerait le seul canal encore
+libre**.
+
+Les quatre couleurs de la palette ne servent qu'à la barre de
+décomposition, où elles portent quatre notions réellement
+différentes — et chaque part garde son emplacement quelle que soit sa
+taille (règle du lot 10 : la couleur suit l'entité, jamais son rang).
+
+### L'haltère : la forme d'un « avant → après »
+
+Pour comparer le temps annoncé et le temps mesuré, deux barres
+groupées obligeraient l'œil à comparer deux longueurs partant du même
+bord. L'haltère montre **l'écart directement**, comme un segment qu'on
+mesure du regard — et c'est l'écart qui est la question.
+
+Une seule teinte, deux intensités : ce ne sont pas deux catégories,
+c'est la même grandeur à deux moments. Et **aucune couleur d'alerte** :
+un dépassement peut vouloir dire que l'équipe soigne son travail comme
+que le catalogue est trop optimiste. Le graphique montre l'écart, il
+ne le juge pas.
+
+### Le nombre est parfois le graphique
+
+« 0 % des clients étaient déjà venus » n'a pas besoin d'un camembert à
+deux parts. Trois panneaux de cet écran sont de simples grands
+chiffres suivis de leur phrase — c'est la forme juste quand la donnée
+est **une** valeur.
+
+### Un composant réutilisé ment sans prévenir
+
+Le graphique en colonnes est né au lot 10 pour la recette, et son
+formatage monétaire était écrit en dur. Le jour où cet écran s'en est
+servi pour compter des véhicules, il a affiché *« meilleure journée :
+4 à 5 FCFA »* pour cinq voitures.
+
+Ce n'est pas la réutilisation qui était fautive : c'est **l'hypothèse
+cachée** qu'elle a révélée. Le composant prend désormais son unité en
+paramètre, et le libellé de son extremum aussi — « meilleure journée »
+n'a pas de sens sur un axe des heures.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

@@ -122,7 +122,7 @@ suivant.
 - [x] **Lot 13** — Rendez-vous : le prix promis est le prix facturé, aucun refus pour créneau plein, aucun SMS, 62 tests de plus
 - [x] **Lot 14** — Fidélité : une carte à tampons, une récompense est une remise et jamais de la recette, 61 tests de plus
 - [x] **Lot 15** — Abonnements : des lavages payés d'avance, l'argent dans la caisse le jour de la vente, la dette rendue visible, 62 tests de plus
-- [ ] Lot 16 — Analytics
+- [x] **Lot 16** — Statistiques : aucune table ajoutée, l'identité comptable du produit vérifiée à l'écran, une faille de contrôle d'accès refermée, 49 tests de plus
 - [ ] Lot 17 — Multi-stations et paramètres
 - [ ] Lot 18 — Aide et pages d'erreur
 
@@ -141,7 +141,7 @@ restitution :
 et le tableau de bord qui dit, le lendemain matin, ce qui demande une
 action.
 
-**688 tests** (650 backend, 38 frontend) tiennent l'ensemble.
+**739 tests** (697 backend, 42 frontend) tiennent l'ensemble.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie
 station : les modules restants gagneront à être conçus sur ce qu'un

@@ -1894,11 +1894,168 @@ ouvre la question d'un remboursement.
 
 ---
 
+## Statistiques
+
+**Le premier module qui n'ajoute rien au métier.** Aucune table,
+aucune colonne, aucune migration : quinze lots ont enregistré
+honnêtement ce qui se passait, celui-ci se contente de leur poser des
+questions.
+
+C'est aussi la meilleure preuve que le modèle tient. Un schéma qui
+aurait pris des raccourcis — un compteur ici, un statut stocké là —
+obligerait à ajouter des tables pour analyser ce qu'il a lui-même
+rendu incalculable.
+
+---
+
+### `GET /api/analytics?from=&to=&station_id=`
+
+Droit requis : **`reports.view`** — celui du lot 4.
+
+> **AUCUN NOUVEAU DROIT.**
+> `reports.view` veut dire exactement cela : voir les chiffres de
+> l'entreprise. Créer `analytics.view` à côté aurait donné deux droits
+> pour une même notion, et un jour quelqu'un en aurait accordé un sans
+> l'autre. **On n'invente pas une permission quand il en existe une
+> juste.**
+
+**Tout l'écran en une seule requête.** Sept appels séparés donneraient
+sept états qui ne se rafraîchissent pas ensemble : on verrait une
+décomposition calculée sur mars à côté d'un graphique d'avril, et
+personne ne comprendrait pourquoi les totaux ne tombent pas.
+
+Période par défaut : les 30 derniers jours. Des bornes inversées sont
+remises à l'endroit — c'est une faute de saisie, pas une demande.
+Au-delà de **366 jours**, refus en `422` : une moyenne sur trois ans
+mélange des tarifs, des équipes et des prestations qui n'ont plus rien
+à voir, et un chiffre qu'on ne peut pas interpréter vaut moins que pas
+de chiffre.
+
+---
+
+### L'identité comptable du produit
+
+```
+valeur livrée = encaissé + offert + prépayé + jamais réglé
+```
+
+```json
+"delivered": {
+  "operations": 14, "delivered": 127500,
+  "paid": 112500, "gifted": 0, "prepaid": 15000, "unpaid": 0,
+  "reconciles": true
+}
+```
+
+Les quatre termes viennent de **quatre modules écrits à des lots
+différents** : les paiements (lot 9), la fidélité (lot 14), les
+abonnements (lot 15) et le prix figé de l'opération (lot 7). C'est le
+seul endroit du produit où ils parlent ensemble — et donc le seul
+endroit où une incohérence entre eux se verrait.
+
+`unpaid` est un **reste**, pas une mesure : il se déduit des trois
+autres. Une cinquième requête qui compterait les impayés séparément
+pourrait diverger, et on aurait deux chiffres sans savoir lequel
+croire. Il peut être **négatif** si un dossier a été trop encaissé —
+on ne le masque pas, c'est précisément ce qu'il faut voir.
+
+`reconciles` dit si l'égalité tombe juste. **L'écran l'affiche plutôt
+que de la supposer** : quand elle est fausse, un bandeau rouge dit que
+c'est un défaut du logiciel, pas une erreur de saisie.
+
+---
+
+### Encaissé n'est pas livré
+
+```json
+"collected": { "total": 117500, "on_operations": 117500, "on_subscriptions": 0 }
+```
+
+Deux périmètres qu'il ne faut **jamais** confondre :
+
+| | Ce que c'est |
+|---|---|
+| **Encaissé** | L'argent reçu pendant la période, forfaits compris — dont les lavages seront livrés plus tard. |
+| **Livré** | La valeur des prestations rendues pendant la période, dont des lavages payés il y a six mois et des lavages offerts. |
+
+Les deux sont vrais, ils ne sont pas égaux, et un écran qui les
+mélangerait produirait des chiffres que personne ne pourrait
+expliquer. L'API les calcule séparément ; l'écran montre comment on
+passe de l'un à l'autre.
+
+---
+
+### Le reste de la réponse
+
+| Clé | Ce qu'elle porte |
+|---|---|
+| `daily` | Véhicules et encaissements, jour par jour. **Les jours vides sont présents, à zéro.** |
+| `services` | Volume, valeur et panier moyen par prestation. |
+| `hours` | **Les 24 heures**, toujours, même à zéro. |
+| `weekdays` | Les 7 jours, **du lundi au dimanche**. |
+| `durations` | Le temps annoncé contre le temps mesuré. |
+| `customers` | Nouveaux et clients qui reviennent. |
+
+**Un jour vide est un zéro affiché, pas une ligne absente.** Un
+graphique qui saute les dimanches fermés écrase l'axe du temps : deux
+colonnes voisines paraissent consécutives alors qu'une semaine les
+sépare. Même règle pour les heures.
+
+> ⚠️ **`DAYOFWEEK()` de MySQL renvoie 1 pour DIMANCHE.** Une semaine
+> française commence le lundi. La conversion se fait une seule fois,
+> côté serveur, plutôt que dans chaque écran — c'est le genre de
+> décalage qu'on ne remarque qu'en production, quand le gérant dit
+> « mais le samedi n'est pas mon plus gros jour ».
+
+---
+
+### Le temps annoncé contre le temps réel
+
+```json
+"durations": [
+  { "service": "Lavage standard", "announced": 30, "actual": 36, "samples": 7, "excluded": 0 }
+]
+```
+
+**C'est la question que le lot 8 avait laissée ouverte.** Les seuils
+d'alerte de la file d'attente étaient explicitement « des points de
+départ, pas des vérités : elles viennent du bon sens, pas de mesures,
+aucune station ne tourne encore avec le produit ». Les mesures
+arrivent ici.
+
+Si toutes les prestations dépassent systématiquement leur durée
+annoncée, ce n'est pas l'équipe qui est lente : **c'est le catalogue
+qui ment aux clients** — et c'est là qu'on s'en aperçoit.
+
+Deux garde-fous :
+
+- **Moins de trois mesures, pas de moyenne.** Une moyenne sur deux
+  passages est une anecdote. Même règle qu'au tableau de bord.
+- **Les dossiers ouverts plus de huit heures sont écartés.** Un
+  véhicule laissé pour la nuit n'est pas un lavage long ; le compter
+  tirerait la moyenne au point de la rendre inutile. Le nombre
+  d'exclusions est renvoyé plutôt que tu.
+
+---
+
+### Les clients qui reviennent
+
+```json
+"customers": { "total": 42, "returning": 26, "new": 16 }
+```
+
+> **« Qui revient » veut dire venu AVANT le début de la période**, pas
+> deux fois cette semaine. La nuance décide du sens du chiffre : la
+> première mesure la fidélité, la seconde mesurerait surtout la
+> longueur de la période qu'on regarde.
+
+---
+
 ## À venir
 
-| Lot | Endpoints |
-|---|---|
-| 16 | `/api/analytics` |
+Tous les endpoints prévus au plan existent. Les lots 17 à 22 portent
+sur le paramétrage, l'aide, et l'industrialisation — pas sur de
+nouvelles ressources métier.
 
 ---
 

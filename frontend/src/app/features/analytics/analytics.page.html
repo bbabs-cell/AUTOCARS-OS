@@ -1,0 +1,355 @@
+<ac-page-header
+  title="Statistiques"
+  [subtitle]="period() ? 'Du ' + period()!.from + ' au ' + period()!.to + ' — ' + period()!.days + ' jours' : 'Chargement…'"
+/>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<!-- La période -->
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <form [formGroup]="filterForm" (ngSubmit)="load()" class="row g-3 align-items-end">
+      <div class="col-6 col-md-3">
+        <label for="an-from" class="form-label">Du</label>
+        <input id="an-from" type="date" class="form-control" formControlName="from" />
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="an-to" class="form-label">Au</label>
+        <input id="an-to" type="date" class="form-control" formControlName="to" />
+      </div>
+
+      @if (stations().length > 1) {
+        <div class="col-12 col-md-3">
+          <label for="an-station" class="form-label">Station</label>
+          <select id="an-station" class="form-select" formControlName="station_id">
+            <option [value]="0">Toutes les stations</option>
+            @for (station of stations(); track station.id) {
+              <option [value]="station.id">{{ station.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <div class="col-12 col-md-3">
+        <button type="submit" class="btn btn-primary w-100">Afficher</button>
+      </div>
+    </form>
+
+    <div class="d-flex gap-2 mt-3 flex-wrap">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setRange(7)">
+        7 jours
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setRange(30)">
+        30 jours
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setRange(90)">
+        90 jours
+      </button>
+    </div>
+  </div>
+</div>
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body text-center py-5">
+      <span class="spinner-border text-primary"></span>
+    </div>
+  </div>
+} @else if (!hasActivity()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <ac-empty-state
+        icon="bi-graph-up"
+        title="Aucune activité sur cette période"
+        text="Les statistiques se remplissent toutes seules à mesure que les véhicules passent. Essayez une période plus large."
+      />
+    </div>
+  </div>
+} @else {
+
+  <!--
+    ============================================================
+    1. LE PANNEAU QUI VÉRIFIE QUE LE PRODUIT NE SE CONTREDIT PAS
+    ============================================================
+    valeur livrée = encaissé + offert + prépayé + jamais réglé
+
+    Les quatre termes viennent de quatre modules écrits à des lots
+    différents : les paiements (9), la fidélité (14), les abonnements
+    (15) et le prix figé de l'opération (7). C'est le seul endroit du
+    produit où ils parlent ensemble.
+  -->
+  @if (delivered(); as livre) {
+    <div class="ac-card mb-4">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">Ce qui a été livré, et comment c'est couvert</h2>
+        @if (!livre.reconciles) {
+          <span class="ac-badge ac-badge--danger">Les comptes ne tombent pas</span>
+        }
+      </div>
+      <div class="ac-card__body">
+        @if (!livre.reconciles) {
+          <!--
+            ON NE CACHE PAS UNE INCOHÉRENCE. Si l'égalité ne tombe pas
+            juste, c'est qu'un des quatre modules ment — et le gérant
+            doit le savoir avant de prendre une décision sur ces
+            chiffres.
+          -->
+          <div class="ac-alert ac-alert--danger mb-4">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+              La décomposition ne retombe pas sur la valeur livrée. Signalez-le&nbsp;:
+              c'est un défaut du logiciel, pas une erreur de saisie.
+            </div>
+          </div>
+        }
+
+        <div class="ac-figure mb-4">
+          <span class="ac-figure__value ac-numeric">{{ livre.delivered | acAmount }}</span>
+          <span class="ac-figure__label">
+            de prestations livrées, sur {{ livre.operations }} véhicule(s) restitué(s)
+          </span>
+        </div>
+
+        <ac-split-bar [segments]="deliveredSegments()" />
+
+        <p class="ac-caption mt-3 mb-0">
+          <strong>Encaissé</strong> : l'argent reçu sur ces dossiers.
+          <strong>Prépayé</strong> : des lavages réglés à l'achat d'un forfait, parfois
+          il y a des mois. <strong>Offert</strong> : ce que la fidélité a coûté.
+          <strong>Jamais réglé</strong> : des véhicules rendus sans paiement, par
+          dérogation.
+        </p>
+
+        @if (livre.unpaid < 0) {
+          <p class="ac-caption mb-0">
+            Le reste est <strong>négatif</strong>&nbsp;: des dossiers ont été encaissés
+            au-delà de leur montant. À vérifier dans le journal des encaissements.
+          </p>
+        }
+      </div>
+    </div>
+  }
+
+  <!--
+    ============================================================
+    2. ENCAISSÉ N'EST PAS LIVRÉ
+    ============================================================
+    Les deux chiffres diffèrent, les deux sont vrais, et l'écart
+    s'explique. Choisir d'en montrer un seul aurait laissé croire que
+    c'était LE chiffre.
+  -->
+  @if (collected(); as encaisse) {
+    <div class="ac-card mb-4">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">Ce qui est entré dans la caisse</h2>
+      </div>
+      <div class="ac-card__body">
+        <div class="ac-figure mb-3">
+          <span class="ac-figure__value ac-numeric">{{ encaisse.total | acAmount }}</span>
+          <span class="ac-figure__label">encaissés sur la période</span>
+        </div>
+
+        <div class="ac-count-row">
+          <span class="ac-text-secondary">Sur des dossiers</span>
+          <span class="ac-numeric fw-semibold">{{ encaisse.on_operations | acAmount }}</span>
+        </div>
+        <div class="ac-count-row">
+          <span class="ac-text-secondary">Sur des forfaits vendus</span>
+          <span class="ac-numeric fw-semibold">{{ encaisse.on_subscriptions | acAmount }}</span>
+        </div>
+
+        <p class="ac-caption mt-3 mb-0">
+          Ce montant <strong>n'est pas</strong> celui des prestations livrées, et c'est
+          normal&nbsp;: il comprend des forfaits dont les lavages seront rendus plus tard,
+          et ignore les lavages offerts ou déjà payés il y a des mois.
+        </p>
+      </div>
+    </div>
+  }
+
+  <!--
+    ============================================================
+    3. L'ACTIVITÉ — DEUX GRAPHIQUES, JAMAIS DEUX AXES
+    ============================================================
+    Des véhicules et des francs ne partagent pas d'échelle. Les
+    superposer avec un axe à gauche et un à droite inventerait une
+    corrélation que la donnée ne contient pas.
+  -->
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-xl-6">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Véhicules par jour</h2>
+        </div>
+        <div class="ac-card__body">
+          <ac-column-chart [points]="vehiclePoints()" unit="count"
+                           caption="Véhicules accueillis par jour" />
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Encaissements par jour</h2>
+        </div>
+        <div class="ac-card__body">
+          <ac-column-chart [points]="revenuePoints()" caption="Encaissements par jour" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Ce qui se vend -->
+  <div class="ac-card mb-4">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Ce qui se vend</h2>
+    </div>
+    <div class="ac-card__body">
+      <p class="ac-text-secondary">
+        Le volume et la valeur ensemble&nbsp;: soixante lavages à 5 000 F et deux
+        detailings à 35 000 F, ce n'est pas la même conversation. Le premier remplit
+        la station, le second remplit la caisse.
+      </p>
+
+      @for (service of services(); track service.service) {
+        <div class="ac-service-row">
+          <span class="ac-service-row__name">{{ service.service }}</span>
+          <span class="ac-service-row__track">
+            <!--
+              UNE SEULE COULEUR : il n'y a qu'une série, la valeur.
+              Colorer chaque barre différemment ferait croire à des
+              catégories indépendantes ; colorer plus foncé quand
+              c'est plus haut répéterait ce que la longueur dit déjà.
+            -->
+            <span class="ac-service-row__bar" [style.width]="serviceWidth(service.value)"></span>
+          </span>
+          <span class="ac-service-row__value ac-numeric">{{ service.value | acAmount }}</span>
+          <span class="ac-service-row__count ac-numeric ac-text-secondary">
+            {{ service.operations }} × {{ service.average | acAmount }}
+          </span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!--
+    ============================================================
+    5. QUAND LES CLIENTS VIENNENT
+    ============================================================
+    Le chiffre qui sert à décider des horaires d'équipe. Un gérant qui
+    voit que la moitié de sa journée se joue entre 8 h et 11 h
+    n'organise pas ses relèves comme celui dont l'activité est plate.
+  -->
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-xl-7">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Arrivées par heure</h2>
+        </div>
+        <div class="ac-card__body">
+          <ac-column-chart [points]="hourPoints()" unit="count" peakLabel="Heure la plus chargée"
+                           caption="Arrivées par heure de la journée" />
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-5">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Arrivées par jour</h2>
+        </div>
+        <div class="ac-card__body">
+          <ac-column-chart [points]="weekdayPoints()" unit="count" peakLabel="Jour le plus chargé"
+                           caption="Arrivées par jour de la semaine" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    ============================================================
+    6. LE TEMPS ANNONCÉ CONTRE LE TEMPS RÉEL
+    ============================================================
+    La question laissée ouverte au lot 8 : les seuils d'alerte de la
+    file d'attente venaient « du bon sens, pas de mesures ». Les
+    mesures arrivent ici.
+  -->
+  @if (durationRows().length > 0) {
+    <div class="ac-card mb-4">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">Le temps annoncé, et le temps réel</h2>
+        @if (overrunning() > 0) {
+          <span class="ac-badge ac-badge--warning">
+            {{ overrunning() }} prestation(s) au-dessus
+          </span>
+        }
+      </div>
+      <div class="ac-card__body">
+        <p class="ac-text-secondary">
+          Si toutes les prestations dépassent leur durée annoncée, ce n'est pas
+          l'équipe qui est lente&nbsp;: c'est le catalogue qui promet trop. Ces mesures
+          servent aussi à régler les seuils d'alerte de la file d'attente, posés
+          « au bon sens » avant qu'aucune station ne tourne.
+        </p>
+
+        <ac-dumbbell-chart
+          [rows]="durationRows()"
+          caption="Prestation"
+          unit=" min"
+          fromLabel="Annoncé"
+          toLabel="Mesuré"
+        />
+
+        <p class="ac-caption mb-0">
+          Une moyenne n'apparaît qu'au-delà de trois passages&nbsp;: en dessous, c'est une
+          anecdote. Les dossiers ouverts plus de huit heures sont écartés — un véhicule
+          laissé pour la nuit n'est pas un lavage long.
+        </p>
+      </div>
+    </div>
+  }
+
+  <!--
+    ============================================================
+    7. LES CLIENTS QUI REVIENNENT
+    ============================================================
+    Deux nombres et un ratio : le chiffre EST l'information. Un
+    camembert à deux parts n'apporterait rien qu'une décoration.
+  -->
+  @if (customers(); as clients) {
+    <div class="ac-card">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">Les clients qui reviennent</h2>
+      </div>
+      <div class="ac-card__body">
+        <div class="ac-figure mb-3">
+          <span class="ac-figure__value ac-numeric">{{ returningShare() }} %</span>
+          <span class="ac-figure__label">
+            des {{ clients.total }} client(s) de la période étaient déjà venus avant
+          </span>
+        </div>
+
+        <div class="ac-count-row">
+          <span class="ac-text-secondary">Clients déjà venus</span>
+          <span class="ac-numeric fw-semibold">{{ clients.returning }}</span>
+        </div>
+        <div class="ac-count-row">
+          <span class="ac-text-secondary">Nouveaux clients</span>
+          <span class="ac-numeric fw-semibold">{{ clients.new }}</span>
+        </div>
+
+        <p class="ac-caption mt-3 mb-0">
+          « Déjà venu » veut dire <strong>avant le début de la période</strong>, pas deux
+          fois cette semaine. La nuance décide du sens du chiffre&nbsp;: la première mesure
+          la fidélité, la seconde mesurerait surtout la longueur de la période regardée.
+        </p>
+      </div>
+    </div>
+  }
+}

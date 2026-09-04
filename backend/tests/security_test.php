@@ -337,6 +337,23 @@ check("un rôle inconnu n'a aucun droit",       !$unknownRole);
 echo "\n6. Accès aux stations\n";
 // ==================================================================
 
+// ------------------------------------------------------------------
+// Une SECONDE station pour l'entreprise A.
+//
+// Jusqu'au lot 16, ce bloc travaillait sur des identifiants inventés :
+// la règle « un administrateur voit tout » ne consultait rien, elle
+// répondait `true` sans regarder. Elle vérifie désormais À QUI
+// APPARTIENT la station — il faut donc de vraies lignes, et cela
+// permet enfin de tester le cas qui manquait.
+//
+// On réutilise les deux entreprises déjà en place plus haut : A
+// (9001) et B (9002).
+// ------------------------------------------------------------------
+$connection->prepare(
+    "INSERT INTO stations (id, organization_id, name, code)
+     VALUES (9003, 9001, 'Seconde station de A', 'T9003')"
+)->execute();
+
 AuthContext::set(
     userId: 9001, organizationId: 9001, email: 'e@test.local',
     fullName: 'Employe', role: 'EMPLOYEE', stationIds: [9001],
@@ -348,7 +365,7 @@ check(
 );
 check(
     "un employé n'accède pas à une autre station",
-    !AuthContext::current()->canAccessStation(9002)
+    !AuthContext::current()->canAccessStation(9003)
 );
 
 AuthContext::set(
@@ -358,7 +375,26 @@ AuthContext::set(
 
 check(
     "un administrateur accède à toutes les stations de son entreprise",
-    AuthContext::current()->canAccessStation(9002)
+    AuthContext::current()->canAccessStation(9003)
+);
+
+// ==================================================================
+// LE CAS QUI MANQUAIT, ET QUI PASSAIT AVANT LE LOT 16.
+// ==================================================================
+// La règle renvoyait `true` pour TOUT administrateur, sans regarder
+// l'entreprise propriétaire de la station : l'administrateur de B qui
+// passait l'identifiant d'une station de A franchissait ce contrôle.
+//
+// AUCUNE DONNÉE NE FUYAIT POUR AUTANT — toutes les requêtes portent
+// `organization_id`, et le filtre d'isolation renvoyait zéro ligne.
+// C'est exactement le rôle d'une défense en profondeur : la première
+// barrière avait cédé, la seconde a tenu. Les deux doivent tenir.
+//
+// Le défaut était réel : l'API répondait « 200, rien à voir ici » là
+// où elle devait répondre « cette station n'est pas la vôtre ».
+check(
+    "un administrateur n'accède PAS à la station d'une AUTRE entreprise",
+    !AuthContext::current()->canAccessStation(9002)
 );
 
 // ==================================================================

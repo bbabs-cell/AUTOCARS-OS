@@ -28,6 +28,7 @@ declare(strict_types=1);
  */
 
 use Autocare\Core\Router;
+use Autocare\Http\Controllers\AnalyticsController;
 use Autocare\Http\Controllers\AttendanceController;
 use Autocare\Http\Controllers\AuthController;
 use Autocare\Http\Controllers\BookingController;
@@ -211,6 +212,14 @@ return static function (Router $router): void {
     // décision de responsable.
     $router->post('/api/subscriptions/{id}/cancel', [SubscriptionController::class, 'cancel'],
         ['auth' => true, 'permission' => 'subscriptions.manage']);
+
+    // --- Statistiques ---------------------------------------------------
+    // AUCUN NOUVEAU DROIT : `reports.view` existe depuis le lot 4 et
+    // veut dire exactement cela — voir les chiffres de l'entreprise.
+    // En créer un second à côté aurait donné deux droits pour une même
+    // notion, et un jour quelqu'un en aurait accordé un sans l'autre.
+    $router->get('/api/analytics', [AnalyticsController::class, 'index'],
+        ['auth' => true, 'permission' => 'reports.view']);
 
     // --- Clients ------------------------------------------------------
     // La vérification de doublon est déclarée AVANT /api/customers/{id} :
