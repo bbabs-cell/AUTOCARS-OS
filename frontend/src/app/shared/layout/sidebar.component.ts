@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import {
@@ -6,6 +6,7 @@ import {
   NAVIGATION_AVAILABLE,
   NAVIGATION_FOOTER,
 } from '../../core/config/navigation.config';
+import { AuthService } from '../../core/services/auth.service';
 
 /**
  * Barre latérale de navigation
@@ -31,7 +32,24 @@ export class SidebarComponent {
   /** Émis quand l'utilisateur clique un lien : la coque referme le panneau. */
   readonly navigate = output<void>();
 
-  protected readonly available = NAVIGATION_AVAILABLE;
+  private readonly auth = inject(AuthService);
+
+  /**
+   * Les modules disponibles, filtrés selon les droits.
+   *
+   * Un employé ne voit ni « Encaissements » ni « Caisse » : l'API les
+   * lui refuserait, et proposer une porte fermée fait passer le
+   * logiciel pour cassé.
+   *
+   * Ce filtrage est du CONFORT D'AFFICHAGE. Taper /cash dans la barre
+   * d'adresse afficherait l'écran, qui resterait vide : le serveur ne
+   * lui envoie aucune donnée.
+   */
+  protected readonly available = computed(() =>
+    NAVIGATION_AVAILABLE.filter(
+      (item) => item.permission === undefined || this.auth.can(item.permission),
+    ),
+  );
   protected readonly groups = NAVIGATION;
   protected readonly footerItems = NAVIGATION_FOOTER;
 }

@@ -13,7 +13,7 @@
   <nav class="ac-sidebar__nav" aria-label="Navigation principale">
 
     <!-- Modules déjà développés -->
-    @for (item of available; track item.label) {
+    @for (item of available(); track item.label) {
       <a
         class="ac-nav-item"
         [routerLink]="item.route"

@@ -347,7 +347,11 @@ au lieu des 2 004.
 - 4 utilisateurs couvrant les 3 rôles
 - 5 prestations, 4 clients, 5 véhicules
 - 4 opérations à différents stades du parcours
-- 3 inspections, 5 photos (fichiers réels, empreintes recalculées), 2 paiements
+- 3 inspections, 5 photos (fichiers réels, empreintes recalculées)
+- 13 dossiers clos répartis sur les six jours précédents, avec leurs
+  15 encaissements — sans quoi la courbe du tableau de bord n'aurait
+  qu'une barre, et un graphique à une barre fait croire que l'écran
+  est cassé
 
 **Les dates sont relatives à maintenant** (`NOW() - INTERVAL n MINUTE`),
 jamais écrites en dur. La file d'attente ne montre pas un état mais une

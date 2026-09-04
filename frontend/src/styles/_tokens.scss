@@ -71,6 +71,48 @@
   --ac-info:        #3b82f6;
   --ac-info-700:    #1d4ed8;
 
+  // --- Couleurs de graphique (ajoutées au lot 10) -----------------
+  //
+  // CE N'EST PAS UNE MODIFICATION DU DESIGN SYSTEM, C'EST UN AJOUT.
+  // Aucune couleur existante ne change. On complète une palette qui
+  // manquait : jusqu'ici, rien ne servait à distinguer plusieurs
+  // séries dans un même graphique.
+  //
+  // POURQUOI PAS RÉUTILISER LES COULEURS DE SENS ?
+  // Parce que vert, orange et rouge veulent déjà dire quelque chose
+  // dans ce produit : réussi, à surveiller, en échec. Les employer
+  // pour « Espèces » et « Carte bancaire » ferait lire une alerte là
+  // où il n'y a qu'une catégorie.
+  //
+  // COMMENT ELLES ONT ÉTÉ CHOISIES
+  // Quatre teintes, vérifiées par un calcul et non à l'œil :
+  //   - toutes dans la même bande de clarté (aucune ne domine) ;
+  //   - assez saturées pour ne pas virer au gris ;
+  //   - séparables par un daltonien (écart perceptuel ≥ 8 sur les
+  //     trois formes de daltonisme, mesuré à 12 au minimum ici) ;
+  //   - contraste ≥ 3:1 sur fond blanc, pour rester visibles.
+  //
+  // Les deux premières EXISTAIENT DÉJÀ dans le produit : ce sont le
+  // bleu principal et le cyan d'accent. Seules les deux dernières
+  // sont nouvelles.
+  //
+  // L'ORDRE EST FIXE. La première série reçoit toujours --ac-chart-1.
+  // Si l'on colorait par rang, filtrer une série repeindrait les
+  // autres — et quelqu'un qui avait appris « les espèces sont en
+  // bleu » serait trompé.
+  --ac-chart-1: #1d4ed8;   // bleu    (= --ac-primary-600)
+  --ac-chart-2: #0891b2;   // cyan    (= --ac-accent-600)
+  --ac-chart-3: #7c3aed;   // violet
+  --ac-chart-4: #be185d;   // rose
+  // Au-delà de quatre, on ne fabrique PAS une cinquième teinte : elle
+  // serait indiscernable des autres pour un daltonien. Le reste est
+  // regroupé sous « Autre », en gris — un gris qui dit justement
+  // « pas d'identité propre ».
+  --ac-chart-other: var(--ac-gray-400);
+
+  // Fond des zones de graphique (piste d'une barre, quadrillage).
+  --ac-chart-track: var(--ac-gray-100);
+
   // --- Neutres ----------------------------------------------------
   // L'essentiel de l'interface est construit avec ces gris.
   --ac-white:       #ffffff;

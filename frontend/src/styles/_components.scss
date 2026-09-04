@@ -1151,3 +1151,191 @@
   color: var(--ac-text-muted);
   background-color: var(--ac-gray-50);
 }
+
+
+// ==================================================================
+// GRAPHIQUES
+// ==================================================================
+// Marques fines, quadrillage discret, beaucoup d'air.
+//
+// Un graphique dense et saturé se lit mal et fait « tableau de bord
+// d'usine » : ce produit vise une station de lavage, pas une salle
+// de contrôle. Les aplats de couleur restent petits, le reste est
+// gris clair.
+
+.ac-chart {
+  margin: 0;
+}
+
+.ac-chart__svg {
+  display: block;
+  width: 100%;
+  height: 164px;
+}
+
+// Les libellés d'axe sont en HTML et non dans le SVG : le texte
+// d'un SVG étiré horizontalement se déformerait avec lui.
+.ac-chart__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--ac-space-2);
+}
+
+.ac-chart__tick {
+  flex: 1;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-text-xs);
+  text-align: center;
+}
+
+// Le jour en cours se distingue par le POIDS du texte, pas par une
+// couleur : la couleur est déjà prise par les données.
+.ac-chart__tick--current {
+  color: var(--ac-text);
+  font-weight: var(--ac-weight-semibold);
+}
+
+
+// --- Barre de répartition -----------------------------------------
+
+.ac-split {
+  display: flex;
+  // Un écart de 2 px entre les segments, rempli par le fond de la
+  // carte. Une bordure ferait un trait de plus à lire ; le vide
+  // sépare aussi bien et se remarque moins.
+  gap: 2px;
+  height: 12px;
+  overflow: hidden;
+  border-radius: var(--ac-radius-full);
+}
+
+.ac-split__segment {
+  display: block;
+  height: 100%;
+  border-radius: var(--ac-radius-full);
+  // Un segment minuscule doit rester visible : sans largeur
+  // plancher, un moyen de paiement à 1 % disparaîtrait de la barre
+  // alors qu'il figure dans la légende.
+  min-width: 4px;
+}
+
+.ac-split__legend {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--ac-space-2) var(--ac-space-3);
+  margin: var(--ac-space-4) 0 0;
+}
+
+.ac-split__legend dt {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  font-weight: var(--ac-weight-regular);
+  color: var(--ac-text-secondary);
+}
+
+.ac-split__legend dd {
+  margin: 0;
+  text-align: right;
+  font-weight: var(--ac-weight-semibold);
+}
+
+.ac-split__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--ac-radius-full);
+}
+
+
+// ==================================================================
+// TABLEAU DE BORD
+// ==================================================================
+
+// Le chiffre d'une carte de statistique.
+//
+// PAS DE `tabular-nums` ICI, contrairement aux tableaux : à cette
+// taille, les chiffres de largeur égale font paraître « 121 » plus
+// espacé qu'il ne l'est. Les proportions naturelles se lisent mieux
+// dès qu'un nombre est seul et grand.
+.ac-stat {
+  font-size: var(--ac-text-2xl);
+  font-weight: var(--ac-weight-bold);
+  line-height: 1.2;
+  color: var(--ac-text);
+}
+
+// Un montant est plus long qu'un compteur : on descend d'un cran
+// pour que « 127 500 FCFA » ne passe pas à la ligne dans une carte
+// de quart de largeur.
+.ac-stat--money {
+  font-size: var(--ac-text-xl);
+}
+
+// Une ligne d'alerte : cliquable en entier, pas seulement sur un
+// lien de trois mots. Quelqu'un qui lit « 2 véhicules prêts ne sont
+// pas réglés » veut y aller, pas viser une cible.
+.ac-alert-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ac-space-3);
+
+  padding: var(--ac-space-3) 0;
+  border-bottom: 1px solid var(--ac-border);
+
+  color: inherit;
+  text-decoration: none;
+}
+
+.ac-alert-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ac-alert-row:hover {
+  color: var(--ac-primary-700);
+}
+
+
+// --- Classement en barres -----------------------------------------
+
+.ac-rank {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ac-space-1);
+  margin-bottom: var(--ac-space-3);
+}
+
+.ac-rank:last-child {
+  margin-bottom: 0;
+}
+
+.ac-rank__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ac-space-2);
+  font-size: var(--ac-text-sm);
+}
+
+.ac-rank__track {
+  height: 8px;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-chart-track);
+  overflow: hidden;
+}
+
+.ac-rank__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-chart-1);
+}
+
+// Le nom de la prestation peut être long : il se coupe plutôt que
+// de repousser les nombres hors de la carte.
+.ac-rank__label > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

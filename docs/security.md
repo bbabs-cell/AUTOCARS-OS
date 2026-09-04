@@ -107,7 +107,24 @@ maintenir un « l'employé ne voit pas les paiements » inapplicable :
 il encaisse et voit le solde **d'un dossier**, jamais le cumul de la
 journée ni la caisse.
 
-✅ Appliqué au Lot 4, affiné au Lot 9.
+**Trois niveaux, à ne pas confondre** (lot 10) :
+
+1. **Le serveur refuse** — 403 sur une route interdite. C'est la
+   protection.
+2. **Le serveur n'envoie pas** — le tableau de bord d'un employé ne
+   contient aucun montant : pas un bloc masqué, un bloc absent. C'est
+   la protection appliquée à la donnée, et c'est le niveau qu'on
+   oublie le plus souvent : une route correctement protégée peut
+   quand même laisser filtrer, dans un coin de sa réponse, une donnée
+   que l'appelant ne devrait pas voir.
+3. **L'interface cache** — le menu « Caisse » n'apparaît pas pour un
+   employé. C'est du confort : la liste des droits arrive dans le
+   navigateur, où n'importe qui peut la modifier.
+
+Un test relit le JSON **brut** du tableau de bord d'un employé et
+échoue si le moindre champ monétaire y apparaît.
+
+✅ Appliqué au Lot 4, affiné aux Lots 9 et 10.
 
 ---
 
@@ -278,6 +295,7 @@ la question centrale en cas de litige sur un véhicule.
 | Machine à états vérifiée côté serveur | ✅ Lot 7 |
 | Procédure de restitution contrôlée | ✅ Lot 7 |
 | Réorganisation de la file réservée et tracée | ✅ Lot 8 |
+| Données financières filtrées côté serveur | ✅ Lot 10 |
 | Aucune intégration de paiement (vérifié par un test) | ✅ Lot 9 |
 | Écritures comptables non modifiables | ✅ Lot 9 |
 | Écart de caisse enregistré, jamais corrigé | ✅ Lot 9 |

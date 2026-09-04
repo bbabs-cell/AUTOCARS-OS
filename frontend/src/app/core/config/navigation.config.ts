@@ -35,6 +35,20 @@ export interface NavigationItem {
 
   /** Numéro du lot où ce module sera développé. */
   readonly lot: number;
+
+  /**
+   * Droit nécessaire pour voir cette entrée.
+   *
+   * ATTENTION : CE N'EST PAS UNE PROTECTION. Cacher un lien évite
+   * seulement de proposer une porte fermée — l'API refuse de toute
+   * façon, et c'est elle qui protège. On le fait pour ne pas donner
+   * à un employé une entrée de menu qui lui répondrait « accès
+   * refusé » : un logiciel qui propose ce qu'il interdit donne
+   * l'impression d'être cassé.
+   *
+   * Absent = visible par tous.
+   */
+  readonly permission?: string;
 }
 
 export interface NavigationGroup {
@@ -44,12 +58,6 @@ export interface NavigationGroup {
 }
 
 export const NAVIGATION: readonly NavigationGroup[] = [
-  {
-    label: '',
-    items: [
-      { label: 'Tableau de bord', icon: 'grid-1x2', route: null, lot: 10 },
-    ],
-  },
   {
     label: 'Opérations',
     items: [
@@ -93,9 +101,12 @@ export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
  * ce qui ne l'est pas encore.
  */
 export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
+  { label: 'Tableau de bord', icon: 'grid-1x2',  route: '/dashboard',  lot: 10 },
   { label: "File d'attente", icon: 'kanban',      route: '/queue',      lot: 8 },
-  { label: 'Encaissements', icon: 'credit-card', route: '/payments',   lot: 9 },
-  { label: 'Caisse',        icon: 'cash-stack',  route: '/cash',       lot: 9 },
+  { label: 'Encaissements', icon: 'credit-card', route: '/payments',   lot: 9,
+    permission: 'payments.journal' },
+  { label: 'Caisse',        icon: 'cash-stack',  route: '/cash',       lot: 9,
+    permission: 'cash.view' },
   { label: 'Accueil',       icon: 'shield-check', route: '/operations', lot: 7 },
   { label: 'Véhicules',     icon: 'car-front', route: '/vehicles',  lot: 6 },
   { label: 'Clients',       icon: 'people',    route: '/customers', lot: 6 },

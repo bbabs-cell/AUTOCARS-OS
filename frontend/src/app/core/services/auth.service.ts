@@ -50,6 +50,29 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.user() !== null);
   readonly role = computed<UserRole | null>(() => this.user()?.role ?? null);
 
+  /**
+   * L'utilisateur a-t-il ce droit ?
+   *
+   * Applique la même règle d'étoile que le serveur : « vehicles.* »
+   * couvre « vehicles.create ». Cinq lignes ici plutôt que deux cents
+   * chaînes envoyées à chaque connexion.
+   *
+   * RAPPEL : cette méthode sert à cacher un bouton ou un lien, JAMAIS
+   * à autoriser une action. Le serveur revérifie tout, à chaque
+   * requête.
+   */
+  can(action: string): boolean {
+    const granted = this.user()?.permissions ?? [];
+
+    return granted.some((pattern) => {
+      if (pattern === '*' || pattern === action) {
+        return true;
+      }
+
+      return pattern.endsWith('.*') && action.startsWith(pattern.slice(0, -1));
+    });
+  }
+
   /** Lu par l'intercepteur pour ajouter l'en-tête Authorization. */
   token(): string | null {
     return this.accessToken();

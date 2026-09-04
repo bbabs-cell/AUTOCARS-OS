@@ -1,0 +1,262 @@
+<ac-page-header
+  [title]="greeting() + (firstName() ? ', ' + firstName() : '')"
+  subtitle="Voici où en est votre station."
+>
+  <a routerLink="/operations" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> Accueillir un véhicule
+  </a>
+</ac-page-header>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 70%"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 45%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && data(); as d) {
+
+  <!--
+    ==============================================================
+    1. CE QUI VA MAL — EN PREMIER, ET SEULEMENT S'IL Y A QUELQUE CHOSE
+    ==============================================================
+    Quand tout va bien, ce bloc n'existe pas. Une alerte affichée
+    tous les jours cesse d'être lue au bout d'une semaine.
+  -->
+  @if (alerts().length > 0) {
+    <div class="ac-card ac-card--alert mb-4">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">À regarder maintenant</h2>
+      </div>
+      <div class="ac-card__body">
+        @for (alert of alerts(); track alert.key) {
+          <a [routerLink]="alert.route" class="ac-alert-row">
+            <i class="bi bi-exclamation-circle-fill" style="color: var(--ac-warning-700)"></i>
+            <div>
+              <div class="fw-semibold">{{ alert.label }}</div>
+              <div class="ac-caption">
+                {{ alert.detail }}
+                @if (alert.amount) {
+                  · {{ alert.amount | acAmount }}
+                }
+              </div>
+            </div>
+            <i class="bi bi-arrow-right ms-auto" style="color: var(--ac-icon-muted)"></i>
+          </a>
+        }
+      </div>
+    </div>
+  }
+
+  <!--
+    ==============================================================
+    2. OÙ EN EST-ON AUJOURD'HUI
+    ==============================================================
+    Trois chiffres pour un employé, quatre pour un responsable.
+    La recette n'est pas masquée pour l'employé : elle n'a jamais
+    été envoyée par le serveur.
+  -->
+  <div class="row g-3 mb-4">
+    <div class="col-6" [class.col-lg-3]="canSeeMoney()" [class.col-lg-4]="!canSeeMoney()">
+      <div class="ac-card h-100">
+        <div class="ac-card__body">
+          <div class="ac-caption">Véhicules accueillis</div>
+          <div class="ac-stat">{{ d.today.vehicles_in }}</div>
+          @if (vehiclesDelta() !== null) {
+            <div class="ac-caption">{{ signed(vehiclesDelta()!) }}</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6" [class.col-lg-3]="canSeeMoney()" [class.col-lg-4]="!canSeeMoney()">
+      <div class="ac-card h-100">
+        <div class="ac-card__body">
+          <div class="ac-caption">En station</div>
+          <div class="ac-stat">{{ d.today.in_progress }}</div>
+          <div class="ac-caption">
+            dont {{ d.today.waiting }} en attente
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6" [class.col-lg-3]="canSeeMoney()" [class.col-lg-4]="!canSeeMoney()">
+      <div class="ac-card h-100">
+        <div class="ac-card__body">
+          <div class="ac-caption">Restitués aujourd'hui</div>
+          <div class="ac-stat">{{ d.today.released }}</div>
+          @if (d.average_turnaround_minutes !== null) {
+            <div class="ac-caption">
+              {{ d.average_turnaround_minutes | acDuration }} en moyenne, arrivée → prêt
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (canSeeMoney() && d.today.revenue !== undefined) {
+      <div class="col-6 col-lg-3">
+        <div class="ac-card h-100">
+          <div class="ac-card__body">
+            <div class="ac-caption">Encaissé aujourd'hui</div>
+            <div class="ac-stat ac-stat--money">{{ d.today.revenue | acAmount }}</div>
+            @if (revenueDelta() !== null) {
+              <div class="ac-caption">
+                @if (revenueDelta()! > 0) {
+                  +{{ revenueDelta()! | acAmount }} par rapport à hier
+                } @else if (revenueDelta()! < 0) {
+                  −{{ -revenueDelta()! | acAmount }} par rapport à hier
+                } @else {
+                  identique à hier
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="row g-4">
+    <!--
+      ==============================================================
+      3. COMMENT ÇA SE PASSE — LA TENDANCE
+      ==============================================================
+    -->
+    @if (canSeeMoney() && revenuePoints().length > 0) {
+      <div class="col-lg-7">
+        <div class="ac-card h-100">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Recette des 7 derniers jours</h2>
+          </div>
+          <div class="ac-card__body">
+            <ac-column-chart
+              [points]="revenuePoints()"
+              caption="Recette encaissée jour par jour sur les sept derniers jours"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="ac-card h-100">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Comment les clients ont payé</h2>
+            <span class="ac-caption">aujourd'hui</span>
+          </div>
+          <div class="ac-card__body">
+            <ac-split-bar [segments]="paymentSegments()" />
+          </div>
+        </div>
+      </div>
+    }
+
+    <!--
+      LES PRESTATIONS LES PLUS DEMANDÉES
+      Visible par tout le monde : savoir que le lavage standard fait
+      la moitié des passages aide un employé à s'organiser. Les
+      montants, eux, n'ont pas été envoyés à qui n'y a pas droit.
+    -->
+    <div class="col-lg-7">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Prestations les plus demandées</h2>
+          <span class="ac-caption">30 derniers jours</span>
+        </div>
+
+        @if (d.top_services.length === 0) {
+          <div class="ac-card__body ac-text-secondary">
+            Aucune prestation réalisée sur la période.
+          </div>
+        } @else {
+          <div class="ac-card__body">
+            @for (service of d.top_services; track service.name) {
+              <div class="ac-rank">
+                <!--
+                  LES DEUX NOMBRES SONT SUR LA MÊME LIGNE, AU-DESSUS
+                  DE LA BARRE.
+                  Placer le montant sous la barre laissait croire que
+                  la barre le mesurait — alors qu'elle mesure les
+                  passages. Deux grandeurs différentes dans une même
+                  ligne se distinguent par leur libellé, jamais par
+                  leur position autour d'un même trait.
+                -->
+                <div class="ac-rank__label">
+                  <span>{{ service.name }}</span>
+                  <span class="ac-caption ac-nowrap">
+                    {{ service.count }} passage(s)
+                    @if (service.total !== undefined) {
+                      · {{ service.total | acAmount }}
+                    }
+                  </span>
+                </div>
+
+                <!--
+                  Une seule couleur pour toutes les barres : il n'y a
+                  qu'une grandeur mesurée, le nombre de passages.
+                  Colorer chaque prestation différemment ferait croire
+                  à des catégories à comparer entre elles ; colorer
+                  plus foncé quand c'est plus haut répéterait ce que
+                  la longueur dit déjà.
+                -->
+                <div class="ac-rank__track">
+                  <span
+                    class="ac-rank__fill"
+                    [style.width.%]="(service.count / topServiceMax()) * 100"
+                  ></span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- L'ÉTAT DE LA CAISSE, pour qui y a droit -->
+    @if (d.cash; as cash) {
+      <div class="col-lg-5">
+        <div class="ac-card h-100">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Caisse</h2>
+          </div>
+          <div class="ac-card__body">
+            @if (cash.is_open) {
+              <div class="ac-caption">Attendu dans le tiroir</div>
+              <div class="ac-stat ac-stat--money">{{ cash.expected | acAmount }}</div>
+              <p class="ac-caption mt-2 mb-3">
+                Fond de caisse et espèces encaissées depuis l'ouverture.
+                Les paiements mobile money n'y sont pas.
+              </p>
+              <a routerLink="/cash" class="btn btn-sm btn-outline-secondary">
+                Ouvrir la caisse <i class="bi bi-arrow-right"></i>
+              </a>
+            } @else {
+              <p class="ac-text-secondary">
+                Aucune caisse ouverte sur cette station.
+                @if (cash.outside_session > 0) {
+                  <strong>{{ cash.outside_session | acAmount }}</strong> ont déjà été
+                  encaissés en espèces aujourd'hui : ils ne seront comptés dans aucune
+                  clôture.
+                }
+              </p>
+              <a routerLink="/cash" class="btn btn-sm btn-primary">
+                Ouvrir la caisse
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

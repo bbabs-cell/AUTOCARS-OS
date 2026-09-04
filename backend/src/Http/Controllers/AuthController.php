@@ -10,6 +10,7 @@ use Autocare\Core\Env;
 use Autocare\Core\Request;
 use Autocare\Core\Response;
 use Autocare\Core\Security\AuthContext;
+use Autocare\Core\Security\Permissions;
 use Autocare\Core\Security\TokenService;
 use Autocare\Core\Validator;
 use Autocare\Models\UserRepository;
@@ -306,6 +307,10 @@ final class AuthController
             'full_name'       => $user->fullName,
             'role'            => $user->role,
             'station_ids'     => $user->stationIds,
+            // Les droits du rôle, pour que l'interface n'affiche pas
+            // de menu menant à un « accès refusé ». Confort
+            // d'affichage : la protection reste côté serveur.
+            'permissions'     => Permissions::grantedTo($user->role),
             'onboarding_completed' => (new UserRepository())
                 ->onboardingCompleted($user->organizationId),
         ]);
@@ -459,6 +464,7 @@ final class AuthController
                 'full_name'       => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
                 'role'            => $membership['role'],
                 'station_ids'     => $membership['station_ids'],
+                'permissions'     => Permissions::grantedTo($membership['role']),
                 'onboarding_completed' => $users->onboardingCompleted($organizationId),
             ],
         ], $message, $status);

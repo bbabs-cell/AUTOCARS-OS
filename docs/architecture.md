@@ -288,7 +288,39 @@ la promesse est vérifiée par un test qui relit le code source.
 
 ---
 
-## 12. Ce qui n'est pas encore décidé
+## 12. Les droits, écrits une seule fois
+
+La matrice des permissions vit dans `config/permissions.php`, côté
+serveur, et nulle part ailleurs.
+
+Depuis le lot 10, `GET /api/auth/me` renvoie la liste des motifs du
+rôle (`vehicles.*`, `*`…) pour que la barre latérale n'affiche pas un
+lien menant à un « accès refusé ». Le frontend applique la même règle
+d'étoile, en cinq lignes.
+
+**Cette liste ne protège rien** : elle arrive dans le navigateur, où
+n'importe qui peut la modifier. Elle évite seulement de proposer une
+porte fermée — un logiciel qui propose ce qu'il interdit donne
+l'impression d'être cassé.
+
+La règle générale du produit s'applique à trois niveaux, et il faut
+les distinguer :
+
+| Niveau | Exemple | Ce que ça vaut |
+|---|---|---|
+| Le serveur REFUSE | `AuthMiddleware` répond 403 | La protection |
+| Le serveur N'ENVOIE PAS | Le tableau de bord d'un employé n'a aucun montant | La protection, sur la donnée |
+| L'interface CACHE | Le menu « Caisse » disparaît | Le confort, rien de plus |
+
+Le deuxième niveau est celui qu'on oublie le plus souvent : une route
+correctement protégée peut quand même renvoyer, dans un coin de sa
+réponse, une donnée que l'appelant ne devrait pas voir. C'est ce que
+vérifie le test qui relit le JSON **brut** du tableau de bord à la
+recherche du moindre champ monétaire.
+
+---
+
+## 13. Ce qui n'est pas encore décidé
 
 - L'hébergement de production (impacte le déploiement, Lot 22).
 - Le stockage des photos à grande échelle : disque local pour le

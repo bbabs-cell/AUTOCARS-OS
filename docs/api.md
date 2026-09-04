@@ -796,11 +796,90 @@ tiroir contiendra un argent que le logiciel n'attend pas.
 
 ---
 
+## Tableau de bord
+
+| Route | Permission |
+|---|---|
+| `GET /api/dashboard?station_id=` | `dashboard.view` |
+
+**Tous les rôles peuvent ouvrir cet écran. Le contenu, lui, dépend
+des droits — et les blocs interdits ne sont pas masqués, ils ne sont
+pas envoyés.**
+
+C'est la distinction qui fait toute la différence entre une
+protection et une décoration : masquer un bloc dans Angular ne
+protège rien, puisque l'onglet réseau du navigateur montre ce que le
+serveur a répondu.
+
+| Bloc | Condition |
+|---|---|
+| `today.vehicles_in`, `in_progress`, `released`, `waiting` | toujours |
+| `alerts`, `top_services`, `average_turnaround_minutes` | toujours |
+| `today.revenue`, `revenue_series`, `payment_split`, `ready_unpaid` | `reports.view` |
+| `top_services[].total` | `reports.view` |
+| `cash` | `cash.view` |
+
+`can_see_money` dit à l'interface s'il faut prévoir trois cartes ou
+quatre. Il ne protège rien : il évite un écran troué.
+
+### Les alertes d'abord
+
+`alerts` est le premier champ que l'interface affiche, avant tout
+chiffre. Un tableau de bord qui commence par « 47 véhicules ce
+mois-ci » laisse passer le véhicule prêt depuis deux heures que
+personne n'a rappelé.
+
+Chaque alerte porte un `route` : où aller pour la régler. **Une
+alerte disparaît dès que le problème est résolu** — c'est ce qui
+fait qu'on la regarde encore au bout d'un mois.
+
+Les seuils viennent de `config/operation_status.php`, **la même
+source que la file d'attente**. Les recalculer ici en ferait une
+seconde définition, qui divergerait au premier réglage.
+
+### Deux précisions sur les chiffres
+
+`in_progress` compte les véhicules **en station maintenant**, même
+arrivés hier — un véhicule laissé la veille occupe toujours la
+station. `vehicles_in` compte ceux **accueillis aujourd'hui**, quel
+que soit leur état actuel.
+
+`average_turnaround_minutes` mesure de l'arrivée jusqu'à **« prêt »**,
+pas jusqu'à la restitution : le temps que met un client à venir
+rechercher sa voiture ne dépend pas de la station. La valeur est
+`null` sous trois dossiers — une « moyenne » sur deux passages est
+une anecdote, et un chiffre faux qu'on croit est pire qu'un chiffre
+absent.
+
+### « Aujourd'hui » est en UTC
+
+Le serveur stocke tout en UTC, et `CURDATE()` désigne donc le jour
+UTC. Pour le Sénégal, la Gambie, la Guinée et le Mali — à UTC+0 toute
+l'année — c'est exact. Ce le sera moins le jour d'une station au
+Cameroun : entre 23 h et minuit, la recette basculerait au lendemain.
+La colonne `organizations.timezone` existe pour ce jour-là.
+
+### Les droits sont envoyés avec le profil
+
+`GET /api/auth/me` et les réponses de connexion portent désormais
+`permissions` : la liste des motifs du rôle (`vehicles.*`, `*`…).
+
+Le frontend s'en sert pour ne pas afficher un menu qui mènerait à un
+« accès refusé ». **Elle ne protège rien** — elle arrive dans le
+navigateur, où n'importe qui peut la modifier. Son intérêt est
+ailleurs : la matrice reste écrite **une seule fois**, dans
+`config/permissions.php`. La recopier en TypeScript aurait garanti
+qu'un jour les deux divergent.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 10 | `/api/dashboard` |
+| 12 | `/api/employees` |
+| 13 | `/api/bookings` |
+| 16 | `/api/analytics` |
 
 ---
 

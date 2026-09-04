@@ -49,6 +49,32 @@ final class Permissions
         return false;
     }
 
+    /**
+     * Tous les droits d'un rôle, sous leur forme déclarée.
+     *
+     * POURQUOI ENVOYER CETTE LISTE AU FRONTEND ?
+     * Pour qu'il n'ait pas à recopier la matrice en TypeScript. Deux
+     * copies d'une même règle divergent toujours : on ajouterait un
+     * droit ici en oubliant là-bas, et le menu proposerait une porte
+     * fermée pendant des mois sans que personne ne comprenne.
+     *
+     * ATTENTION À CE QUE CELA N'EST PAS. Cette liste sert à cacher un
+     * lien inutile, JAMAIS à protéger quoi que ce soit : elle arrive
+     * dans le navigateur, où n'importe qui peut la modifier. Toute
+     * action reste vérifiée par AuthMiddleware à chaque requête.
+     *
+     * Les motifs sont renvoyés tels quels — « vehicles.* » plutôt que
+     * la liste développée. Le frontend applique la même règle
+     * d'étoile, en cinq lignes, plutôt que de recevoir deux cents
+     * chaînes à chaque connexion.
+     *
+     * @return list<string>
+     */
+    public static function grantedTo(string $role): array
+    {
+        return self::matrix()[$role] ?? [];
+    }
+
     /** @return array<string, list<string>> */
     private static function matrix(): array
     {

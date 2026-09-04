@@ -152,6 +152,81 @@ INSERT INTO payments
 (1, 1, 1, 1, 10000, 'MOBILE_MONEY', 'Wave', 'TX-8842019', 'PAID', NOW() - INTERVAL 100 MINUTE, 2),
 (1, 1, 2, 4,  5000, 'CASH',          NULL,   NULL,         'PAID', NOW() - INTERVAL 38 MINUTE, 2);
 
+-- ------------------------------------------------------------------
+-- L'HISTORIQUE DE LA SEMAINE
+-- ------------------------------------------------------------------
+-- Treize dossiers déjà clos, répartis sur les six jours précédents.
+--
+-- POURQUOI S'EMBÊTER AVEC UN HISTORIQUE ?
+-- Parce que le tableau de bord du lot 10 montre une TENDANCE. Avec
+-- les seules opérations du jour, la courbe de recette n'aurait qu'une
+-- barre — et un graphique à une barre n'apprend rien à personne, il
+-- fait juste croire que l'écran est cassé.
+--
+-- DEUX PRÉCAUTIONS QUI ONT L'AIR DE DÉTAILS ET N'EN SONT PAS :
+--
+-- 1. Les montants varient d'un jour à l'autre. Un jeu de données où
+--    chaque journée vaut la même somme laisserait croire qu'une
+--    station tourne à plat, et masquerait l'intérêt même du
+--    graphique.
+--
+-- 2. L'arrivée et la fin de prestation sont ESPACÉES de 36 à
+--    120 minutes selon la prestation. Les mettre à la même seconde
+--    ferait afficher « durée moyenne : 0 minute » au tableau de
+--    bord — un chiffre faux qu'on croirait, ce qui est pire qu'un
+--    chiffre absent.
+-- ------------------------------------------------------------------
+INSERT INTO operations
+    (id, organization_id, station_id, vehicle_id, customer_id, service_id, assigned_user_id,
+     reference, status, status_changed_at, priority, price, started_at, completed_at, released_at,
+     released_by_user_id, created_by_user_id, created_at) VALUES
+(11, 1, 1, 1, 1, 1, 3, 'DKP-2608-0011', 'COMPLETED', NOW() - INTERVAL 1 DAY, 0,  5000,
+ NOW() - INTERVAL 1 DAY - INTERVAL 30 MINUTE, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY, 2, 2, NOW() - INTERVAL 1 DAY - INTERVAL 40 MINUTE),
+(12, 1, 1, 2, 2, 3, 4, 'DKP-2608-0012', 'COMPLETED', NOW() - INTERVAL 1 DAY, 0,  7500,
+ NOW() - INTERVAL 1 DAY - INTERVAL 45 MINUTE, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY, 2, 2, NOW() - INTERVAL 1 DAY - INTERVAL 55 MINUTE),
+(13, 1, 1, 4, 4, 2, 3, 'DKP-2608-0013', 'COMPLETED', NOW() - INTERVAL 2 DAY, 0, 10000,
+ NOW() - INTERVAL 2 DAY - INTERVAL 55 MINUTE, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY, 2, 2, NOW() - INTERVAL 2 DAY - INTERVAL 65 MINUTE),
+(14, 1, 1, 3, 3, 1, 4, 'DKP-2608-0014', 'COMPLETED', NOW() - INTERVAL 2 DAY, 0,  5000,
+ NOW() - INTERVAL 2 DAY - INTERVAL 28 MINUTE, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY, 2, 2, NOW() - INTERVAL 2 DAY - INTERVAL 38 MINUTE),
+(15, 1, 1, 5, 4, 3, 3, 'DKP-2608-0015', 'COMPLETED', NOW() - INTERVAL 2 DAY, 0,  7500,
+ NOW() - INTERVAL 2 DAY - INTERVAL 40 MINUTE, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY, 2, 2, NOW() - INTERVAL 2 DAY - INTERVAL 50 MINUTE),
+(16, 1, 1, 1, 1, 5, 3, 'DKP-2608-0016', 'COMPLETED', NOW() - INTERVAL 3 DAY, 0, 35000,
+ NOW() - INTERVAL 3 DAY - INTERVAL 110 MINUTE, NOW() - INTERVAL 3 DAY, NOW() - INTERVAL 3 DAY, 2, 2, NOW() - INTERVAL 3 DAY - INTERVAL 120 MINUTE),
+(17, 1, 1, 2, 2, 1, 4, 'DKP-2608-0017', 'COMPLETED', NOW() - INTERVAL 3 DAY, 0,  5000,
+ NOW() - INTERVAL 3 DAY - INTERVAL 32 MINUTE, NOW() - INTERVAL 3 DAY, NOW() - INTERVAL 3 DAY, 2, 2, NOW() - INTERVAL 3 DAY - INTERVAL 42 MINUTE),
+(18, 1, 1, 4, 4, 1, 3, 'DKP-2608-0018', 'COMPLETED', NOW() - INTERVAL 4 DAY, 0,  5000,
+ NOW() - INTERVAL 4 DAY - INTERVAL 26 MINUTE, NOW() - INTERVAL 4 DAY, NOW() - INTERVAL 4 DAY, 2, 2, NOW() - INTERVAL 4 DAY - INTERVAL 36 MINUTE),
+(19, 1, 1, 3, 3, 2, 4, 'DKP-2608-0019', 'COMPLETED', NOW() - INTERVAL 4 DAY, 0, 10000,
+ NOW() - INTERVAL 4 DAY - INTERVAL 48 MINUTE, NOW() - INTERVAL 4 DAY, NOW() - INTERVAL 4 DAY, 2, 2, NOW() - INTERVAL 4 DAY - INTERVAL 58 MINUTE),
+(20, 1, 1, 5, 4, 1, 3, 'DKP-2608-0020', 'COMPLETED', NOW() - INTERVAL 5 DAY, 0,  5000,
+ NOW() - INTERVAL 5 DAY - INTERVAL 34 MINUTE, NOW() - INTERVAL 5 DAY, NOW() - INTERVAL 5 DAY, 2, 2, NOW() - INTERVAL 5 DAY - INTERVAL 44 MINUTE),
+(21, 1, 1, 1, 1, 3, 4, 'DKP-2608-0021', 'COMPLETED', NOW() - INTERVAL 5 DAY, 0,  7500,
+ NOW() - INTERVAL 5 DAY - INTERVAL 42 MINUTE, NOW() - INTERVAL 5 DAY, NOW() - INTERVAL 5 DAY, 2, 2, NOW() - INTERVAL 5 DAY - INTERVAL 52 MINUTE),
+(22, 1, 1, 2, 2, 1, 3, 'DKP-2608-0022', 'COMPLETED', NOW() - INTERVAL 5 DAY, 0,  5000,
+ NOW() - INTERVAL 5 DAY - INTERVAL 29 MINUTE, NOW() - INTERVAL 5 DAY, NOW() - INTERVAL 5 DAY, 2, 2, NOW() - INTERVAL 5 DAY - INTERVAL 39 MINUTE),
+(23, 1, 1, 4, 4, 2, 4, 'DKP-2608-0023', 'COMPLETED', NOW() - INTERVAL 6 DAY, 0, 10000,
+ NOW() - INTERVAL 6 DAY - INTERVAL 51 MINUTE, NOW() - INTERVAL 6 DAY, NOW() - INTERVAL 6 DAY, 2, 2, NOW() - INTERVAL 6 DAY - INTERVAL 61 MINUTE);
+
+-- Les encaissements correspondants. Le mélange espèces / mobile money
+-- reflète l'usage sénégalais : Wave et Orange Money sont très
+-- répandus en ville, les espèces restent fréquentes.
+INSERT INTO payments
+    (organization_id, station_id, operation_id, customer_id, amount, method,
+     provider, external_reference, status, paid_at, recorded_by_user_id) VALUES
+(1, 1, 11, 1,  5000, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 1 DAY, 2),
+(1, 1, 12, 2,  7500, 'MOBILE_MONEY',          'Wave',  'TX-7712004', 'PAID', NOW() - INTERVAL 1 DAY, 2),
+(1, 1, 13, 4, 10000, 'MOBILE_MONEY',  'Orange Money',  'OM-4410233', 'PAID', NOW() - INTERVAL 2 DAY, 2),
+(1, 1, 14, 3,  5000, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 2 DAY, 2),
+(1, 1, 15, 4,  7500, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 2 DAY, 2),
+(1, 1, 16, 1, 35000, 'CARD',            NULL,   'CB-559120', 'PAID', NOW() - INTERVAL 3 DAY, 2),
+(1, 1, 17, 2,  5000, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 3 DAY, 2),
+(1, 1, 18, 4,  5000, 'MOBILE_MONEY',          'Wave',  'TX-7712889', 'PAID', NOW() - INTERVAL 4 DAY, 2),
+(1, 1, 19, 3, 10000, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 4 DAY, 2),
+(1, 1, 20, 4,  5000, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 5 DAY, 2),
+(1, 1, 21, 1,  7500, 'MOBILE_MONEY',          'Wave',  'TX-7713401', 'PAID', NOW() - INTERVAL 5 DAY, 2),
+(1, 1, 22, 2,  5000, 'CASH',            NULL,          NULL, 'PAID', NOW() - INTERVAL 5 DAY, 2),
+(1, 1, 23, 4, 10000, 'MOBILE_MONEY',  'Orange Money',  'OM-4411907', 'PAID', NOW() - INTERVAL 6 DAY, 2);
+
 -- --- Le journal d'audit -------------------------------------------
 -- Quelques lignes montrant le format attendu. Ce journal sera
 -- alimenté automatiquement par l'API à partir du lot 4.

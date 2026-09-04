@@ -19,6 +19,20 @@ export interface AuthUser {
   station_ids: number[];
 
   /**
+   * Les droits du rôle, envoyés par le serveur — motifs compris
+   * (« vehicles.* »).
+   *
+   * ILS NE PROTÈGENT RIEN. Ils arrivent dans le navigateur, où
+   * n'importe qui peut les modifier. Ils servent uniquement à ne pas
+   * afficher un menu qui mènerait à un « accès refusé » : un logiciel
+   * qui propose ce qu'il interdit donne l'impression d'être cassé.
+   *
+   * La matrice reste écrite UNE SEULE FOIS, côté serveur, dans
+   * config/permissions.php.
+   */
+  permissions: string[];
+
+  /**
    * L'installation guidée de l'entreprise est-elle terminée ?
    * Détermine si l'utilisateur est conduit vers l'installation ou
    * vers l'application.

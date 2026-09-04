@@ -273,3 +273,70 @@ en utilise environ 47. Réduire ce fichier à un sous-ensemble
 économiserait environ 90 kB bruts — **à traiter au Lot 22**
 (préparation à la production), pas maintenant : la complexité ajoutée
 au build ne se justifie pas tant que le produit n'est pas fini.
+
+
+---
+
+## Couleurs de graphique (ajoutées au lot 10)
+
+**Ce n'est pas une modification du design system, c'est un ajout.**
+Aucune couleur existante n'a changé. On complète une palette qui
+manquait : jusqu'au lot 10, rien ne servait à distinguer plusieurs
+séries dans un même graphique.
+
+| Jeton | Valeur | Origine |
+|---|---|---|
+| `--ac-chart-1` | `#1d4ed8` | bleu — déjà présent (`--ac-primary-600`) |
+| `--ac-chart-2` | `#0891b2` | cyan — déjà présent (`--ac-accent-600`) |
+| `--ac-chart-3` | `#7c3aed` | violet — **nouveau** |
+| `--ac-chart-4` | `#be185d` | rose — **nouveau** |
+| `--ac-chart-other` | `--ac-gray-400` | le « reste », sans identité propre |
+| `--ac-chart-track` | `--ac-gray-100` | fond de piste d'une barre |
+
+### Pourquoi pas les couleurs de sens ?
+
+Vert, orange et rouge veulent déjà dire quelque chose dans ce
+produit : réussi, à surveiller, en échec. Les employer pour
+« Espèces » et « Carte bancaire » ferait lire une alerte là où il n'y
+a qu'une catégorie.
+
+### Comment elles ont été choisies
+
+Par un calcul, pas à l'œil. Les quatre teintes sont :
+
+- dans la **même bande de clarté** — aucune ne domine les autres ;
+- assez **saturées** pour ne pas virer au gris ;
+- **séparables par un daltonien** : écart perceptuel ≥ 12 sur les
+  trois formes de daltonisme (protanopie, deutéranopie, tritanopie),
+  pour un seuil recommandé de 8 ;
+- de **contraste ≥ 3:1** sur fond blanc.
+
+Une cinquième teinte n'est pas fabriquée : elle serait indiscernable
+des quatre autres pour un daltonien. Au-delà, tout est regroupé sous
+« Autre », en gris — un gris qui dit justement « pas d'identité
+propre ».
+
+### La règle qui compte : la couleur suit l'entité
+
+**L'ordre est fixe.** Les espèces reçoivent toujours
+`--ac-chart-1`, le mobile money toujours `--ac-chart-2`, que l'un
+dépasse l'autre ou non.
+
+Colorer par rang — la plus grosse part en bleu, la deuxième en cyan —
+ferait changer les couleurs d'un matin à l'autre sans qu'aucune
+donnée n'ait changé de nature. Quelqu'un qui a appris « le bleu,
+c'est les espèces » lirait alors le graphique à l'envers sans s'en
+apercevoir.
+
+C'est le rôle du champ `slot` sur chaque segment, et c'est ce que
+vérifie `split-bar.component.spec.ts`.
+
+### Ce qu'on ne fait pas dans un graphique
+
+| À éviter | Pourquoi |
+|---|---|
+| Deux axes verticaux | L'alignement des deux échelles est arbitraire : le graphique invente une corrélation qui n'est pas dans les données |
+| Un dégradé sur des catégories sans ordre | La longueur dit déjà la valeur ; la couleur répéterait la même information |
+| Un camembert pour comparer des parts proches | L'œil compare mal des angles, bien des longueurs |
+| Un nombre au-dessus de chaque point | Sept nombres alignés deviennent du bruit qu'on ne lit plus — on étiquette la valeur extrême, l'axe et le survol font le reste |
+| Une bibliothèque de graphiques pour sept rectangles | 200 ko sur une connexion mobile, et ses couleurs à combattre |

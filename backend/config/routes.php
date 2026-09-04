@@ -34,6 +34,7 @@ use Autocare\Http\Controllers\HealthController;
 use Autocare\Http\Controllers\InspectionController;
 use Autocare\Http\Controllers\OnboardingController;
 use Autocare\Http\Controllers\CashController;
+use Autocare\Http\Controllers\DashboardController;
 use Autocare\Http\Controllers\OperationController;
 use Autocare\Http\Controllers\PaymentController;
 use Autocare\Http\Controllers\QueueController;
@@ -213,6 +214,15 @@ return static function (Router $router): void {
     $router->post('/api/cash/close',    [CashController::class, 'close'],
         ['auth' => true, 'permission' => 'cash.close']);
 
+    // --- Tableau de bord ----------------------------------------------
+    // Tous les rôles peuvent l'ouvrir (dashboard.view). Le CONTENU
+    // dépend en revanche des droits : les blocs financiers ne sont pas
+    // masqués par l'interface, ils ne sont pas envoyés. Masquer un
+    // bloc dans Angular ne protégerait rien — l'onglet réseau du
+    // navigateur montre ce que le serveur a répondu.
+    $router->get('/api/dashboard', [DashboardController::class, 'index'],
+        ['auth' => true, 'permission' => 'dashboard.view']);
+
     // --- Les routes suivantes arriveront aux prochains lots --------
-    // Lot 10 : /api/dashboard
+    // Lot 12 : /api/employees   ·   Lot 13 : /api/bookings
 };

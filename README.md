@@ -114,7 +114,26 @@ suivant.
 - [x] **Lot 7** — Opérations, inspection, photos, restitution : machine à états vérifiée côté serveur, upload sécurisé, 93 tests
 - [x] **Lot 8** — File d'attente : tableau à colonnes, alertes de dépassement, priorité et affectation, 59 tests de plus
 - [x] **Lot 9** — Encaissements et caisse : aucune intégration de paiement, écritures non modifiables, écart de caisse tracé, 69 tests de plus
-- [ ] Lot 10 — Tableau de bord → **MVP utilisable**
+- [x] **Lot 10** — Tableau de bord : alertes d'abord, données financières filtrées côté serveur, 40 tests de plus → **MVP UTILISABLE**
 
 **Phase C — Extension** · Lots 11 à 18
 **Phase D — Industrialisation** · Lots 19 à 22
+
+---
+
+### 🎯 Le MVP est complet
+
+Le parcours entier d'un véhicule fonctionne, de son arrivée à sa
+restitution :
+
+**accueil** → **inspection d'entrée avec photos** → **file d'attente**
+→ **lavage** → **contrôle qualité** → **encaissement** →
+**restitution vérifiée** → **clôture de caisse** — et le tableau de
+bord qui dit, le lendemain matin, ce qui demande une action.
+
+**425 tests** (398 backend, 27 frontend) tiennent l'ensemble.
+
+C'est le moment prévu au plan pour un **test terrain** dans une vraie
+station avant d'attaquer la phase C : les six modules suivants
+gagneront à être conçus sur ce qu'un gérant aura reproché à celui-ci,
+plutôt que sur ce qu'on imagine aujourd'hui.

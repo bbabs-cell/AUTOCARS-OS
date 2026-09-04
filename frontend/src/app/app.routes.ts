@@ -53,12 +53,15 @@ export const routes: Routes = [
     children: [
       {
         // L'enfant vide indispensable, voir l'explication ci-dessus.
-        // Deviendra le tableau de bord au lot 10. En attendant, la
-        // file d'attente : c'est l'écran qu'on laisse ouvert toute la
-        // journée, donc celui qu'on veut trouver en arrivant.
         path: '',
         pathMatch: 'full',
-        redirectTo: 'queue',
+        redirectTo: 'dashboard',
+      },
+      {
+        path: 'dashboard',
+        title: 'Tableau de bord — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage),
       },
       {
         path: 'queue',
