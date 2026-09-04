@@ -1,0 +1,304 @@
+<ac-page-header
+  title="Caisse"
+  [subtitle]="isOpen() ? 'Caisse ouverte' : 'Caisse fermée'"
+/>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<!--
+  Des espèces encaissées sans caisse ouverte ne seront comptées dans
+  aucune clôture. Le tiroir contiendra un argent que le logiciel
+  n'attend pas, et l'écart du soir sera inexplicable — à moins qu'on
+  ne dise pourquoi.
+-->
+@if (cashOutside() > 0) {
+  <div class="ac-alert ac-alert--warning mb-4">
+    <i class="bi bi-safe"></i>
+    <div>
+      <strong>{{ cashOutside() | acAmount }}</strong> encaissés en espèces aujourd'hui
+      <strong>hors de toute caisse ouverte</strong>. Ces montants ne seront comptés dans
+      aucune clôture : tenez-en compte en recomptant le tiroir.
+    </div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 60%"></div>
+    </div>
+  </div>
+}
+
+<!-- Le résultat de la clôture qui vient d'avoir lieu -->
+@if (!isLoading() && lastClosed(); as closed) {
+  <div class="ac-card mb-4">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Clôture enregistrée</h2>
+    </div>
+    <div class="ac-card__body">
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <div class="ac-caption">Attendu</div>
+          <div class="ac-numeric fw-semibold" style="font-size: var(--ac-text-lg)">
+            {{ closed.expected_amount | acAmount }}
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="ac-caption">Compté</div>
+          <div class="ac-numeric fw-semibold" style="font-size: var(--ac-text-lg)">
+            {{ closed.counted_amount | acAmount }}
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="ac-caption">{{ differenceLabel(closed.difference) }}</div>
+          <div
+            class="ac-numeric fw-bold"
+            style="font-size: var(--ac-text-lg)"
+            [style.color]="closed.difference ? 'var(--ac-warning-700)' : 'var(--ac-success-700)'"
+          >
+            @if (closed.difference) {
+              {{ closed.difference | acAmount }}
+            } @else {
+              0 FCFA
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (closed.closing_notes) {
+        <p class="ac-text-secondary mt-3 mb-0">{{ closed.closing_notes }}</p>
+      }
+    </div>
+  </div>
+}
+
+@if (!isLoading()) {
+  <div class="row g-4">
+    <div class="col-lg-7">
+
+      <!-- ========================================================
+           CAISSE FERMÉE : L'OUVERTURE
+           ======================================================== -->
+      @if (!isOpen()) {
+        <div class="ac-card">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Ouvrir la caisse</h2>
+          </div>
+
+          <form [formGroup]="openForm" (ngSubmit)="openCash()" novalidate>
+            <div class="ac-card__body">
+              <p class="ac-text-secondary mb-4">
+                Comptez la monnaie présente dans le tiroir avant de commencer la
+                journée. Ce fond de caisse n'est pas une recette : il sert à rendre
+                la monnaie, et il ressortira tel quel ce soir.
+              </p>
+
+              <div class="mb-4">
+                <label for="c-float" class="form-label">Fond de caisse</label>
+                <input id="c-float" type="number" inputmode="numeric" min="0" step="1"
+                       class="form-control ac-numeric" formControlName="opening_float"
+                       [class.is-invalid]="fieldErrors()['opening_float']" />
+                <span class="ac-caption">En francs entiers. Zéro est une valeur valide.</span>
+                @if (fieldErrors()['opening_float']; as error) {
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                }
+              </div>
+
+              <div>
+                <label for="c-open-notes" class="form-label">
+                  Notes <span class="ac-text-muted fw-normal">(facultatif)</span>
+                </label>
+                <input id="c-open-notes" type="text" class="form-control"
+                       formControlName="opening_notes"
+                       placeholder="Billets de 10 000 pris à la banque hier." />
+              </div>
+            </div>
+
+            <div class="ac-card__footer d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+                @if (isSaving()) {
+                  <span class="spinner-border spinner-border-sm"></span> Ouverture…
+                } @else {
+                  Ouvrir la caisse
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+
+      <!-- ========================================================
+           CAISSE OUVERTE : LA CLÔTURE
+           ======================================================== -->
+      @if (isOpen() && session(); as s) {
+        <div class="ac-card">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Fermer la caisse</h2>
+            <span class="ac-caption">ouverte {{ s.opened_at | acRelativeDate }}</span>
+          </div>
+
+          <form [formGroup]="closeForm" (ngSubmit)="closeCash()" novalidate>
+            <div class="ac-card__body">
+              <!--
+                LE MONTANT ATTENDU N'EST PAS AFFICHÉ ICI, ET C'EST
+                DÉLIBÉRÉ.
+                L'écrire au-dessus du champ, c'est obtenir ce chiffre
+                exact tous les soirs : personne ne recompte contre un
+                nombre déjà donné. L'écart — seule raison d'être de cet
+                écran — disparaîtrait à jamais.
+              -->
+              <p class="ac-text-secondary mb-4">
+                Comptez tout ce qu'il y a dans le tiroir, fond de caisse compris,
+                puis saisissez le total. Le logiciel vous dira ensuite s'il tombe
+                juste.
+              </p>
+
+              <div class="mb-4">
+                <label for="c-counted" class="form-label">Montant compté dans le tiroir</label>
+                <input id="c-counted" type="number" inputmode="numeric" min="0" step="1"
+                       class="form-control ac-numeric" formControlName="counted_amount"
+                       placeholder="0" autocomplete="off"
+                       [class.is-invalid]="fieldErrors()['counted_amount']" />
+                @if (fieldErrors()['counted_amount']; as error) {
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                }
+              </div>
+
+              <div>
+                <label for="c-close-notes" class="form-label">
+                  Explication d'un écart
+                  <span class="ac-text-muted fw-normal">(obligatoire au-delà de 500 FCFA)</span>
+                </label>
+                <textarea id="c-close-notes" class="form-control" rows="2"
+                          formControlName="closing_notes"
+                          placeholder="Erreur de rendu de monnaie ce matin, le client était déjà parti."
+                          [class.is-invalid]="fieldErrors()['closing_notes']"></textarea>
+                <span class="ac-caption">
+                  Écrivez-la maintenant : dans trois jours, personne ne s'en souviendra.
+                </span>
+                @if (fieldErrors()['closing_notes']; as error) {
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                }
+              </div>
+            </div>
+
+            <div class="ac-card__footer d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+                @if (isSaving()) {
+                  <span class="spinner-border spinner-border-sm"></span> Clôture…
+                } @else {
+                  Fermer la caisse
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+    </div>
+
+    <!-- ============================================================
+         LES MOUVEMENTS DE LA SESSION
+         ============================================================ -->
+    <div class="col-lg-5">
+      @if (isOpen() && session(); as s) {
+        <div class="ac-card mb-4">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Depuis l'ouverture</h2>
+          </div>
+          <div class="ac-card__body">
+            <dl class="row mb-0">
+              <dt class="col-7 ac-text-secondary fw-normal">Fond de caisse</dt>
+              <dd class="col-5 text-end ac-numeric">{{ s.opening_float | acAmount }}</dd>
+
+              @for (row of movementRows(); track row.method) {
+                <dt class="col-7 ac-text-secondary fw-normal">
+                  {{ methodLabels[row.method] }}
+                  <span class="ac-caption">· {{ row.count }}</span>
+                  <!--
+                    Ce qui n'entre pas dans le tiroir est marqué comme
+                    tel. Sans cette mention, un caissier chercherait
+                    toute la soirée un argent Wave qui n'y a jamais été.
+                  -->
+                  @if (row.method !== 'CASH') {
+                    <span class="ac-caption d-block">hors tiroir</span>
+                  }
+                </dt>
+                <dd class="col-5 text-end ac-numeric"
+                    [class.ac-text-muted]="row.method !== 'CASH'">
+                  {{ row.total | acAmount }}
+                </dd>
+              }
+
+              @if (movementRows().length === 0) {
+                <dd class="col-12 ac-text-secondary mb-0">Aucun encaissement pour l'instant.</dd>
+              }
+            </dl>
+          </div>
+
+          @if (totalCollected() > 0) {
+            <div class="ac-card__footer d-flex justify-content-between">
+              <span class="fw-semibold">Encaissé, tous moyens</span>
+              <span class="ac-numeric fw-semibold">{{ totalCollected() | acAmount }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- L'historique : c'est lui qui révèle un écart RÉPÉTÉ -->
+      <div class="ac-card">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Clôtures précédentes</h2>
+        </div>
+
+        @if (history().length === 0) {
+          <ac-empty-state
+            icon="bi-safe"
+            title="Aucune clôture"
+            text="L'historique se remplira à la première fermeture. C'est lui qui montre si un écart se répète."
+          />
+        } @else {
+          <div class="ac-table-wrapper">
+            <table class="ac-table">
+              <thead>
+                <tr>
+                  <th>Journée</th>
+                  <th>Par</th>
+                  <th class="ac-table__amount">Écart</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (past of history(); track past.id) {
+                  <tr>
+                    <td class="ac-nowrap">
+                      {{ past.opened_at | acRelativeDate }}
+                      @if (past.status === 'OPEN') {
+                        <span class="ac-badge ac-badge--info">en cours</span>
+                      }
+                    </td>
+                    <td class="ac-text-secondary">{{ past.closed_by_name ?? past.opened_by_name }}</td>
+                    <td class="ac-table__amount ac-numeric">
+                      @if (past.difference === null) {
+                        —
+                      } @else if (past.difference === 0) {
+                        <span style="color: var(--ac-success-700)">juste</span>
+                      } @else {
+                        <span style="color: var(--ac-warning-700)">{{ past.difference | acAmount }}</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

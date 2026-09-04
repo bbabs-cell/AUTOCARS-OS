@@ -261,7 +261,34 @@ droits.
 
 ---
 
-## 11. Ce qui n'est pas encore décidé
+## 11. L'argent
+
+Trois principes, empruntés à la comptabilité plutôt qu'au logiciel.
+
+**On ne gomme pas, on contre-passe.** `PaymentRepository` n'expose ni
+modification ni suppression, et aucune route ne le permet. Une erreur
+se corrige par un remboursement : deux écritures visibles au lieu
+d'une ligne réécrite.
+
+**Une clôture est une photo, pas une vue.** Les montants attendu,
+compté et l'écart sont figés dans `cash_sessions` à la fermeture. Les
+recalculer à l'affichage semblerait plus propre, mais une correction
+ultérieure sur un paiement changerait rétroactivement un écart déjà
+constaté.
+
+**Une session de caisse est une vacation, le tiroir ne contient que
+les espèces.** Tous les encaissements de la session y sont rattachés,
+quel que soit leur moyen ; le tri se fait au calcul du montant
+attendu. C'est ce qui permet de dire « nous avons fait 45 000 F ce
+matin, dont 18 000 en espèces » sans fausser la clôture.
+
+Et la contrainte qui structure tout le module : **aucun fournisseur de
+paiement n'est intégré**, ni simulé. Voir `docs/security.md` §7 bis —
+la promesse est vérifiée par un test qui relit le code source.
+
+---
+
+## 12. Ce qui n'est pas encore décidé
 
 - L'hébergement de production (impacte le déploiement, Lot 22).
 - Le stockage des photos à grande échelle : disque local pour le
@@ -270,6 +297,7 @@ droits.
   que cette classe. La décision se prendra sur des volumes réels, pas
   par anticipation.
 - Les fournisseurs de paiement : **aucune intégration ne sera codée
-  tant qu'un compte marchand réel n'existe pas.** Les paiements sont
-  saisis manuellement au MVP, l'architecture reste prête à accueillir
-  un fournisseur.
+  tant qu'un compte marchand réel n'existe pas.** Les encaissements
+  sont saisis manuellement (lot 9), et les colonnes `provider` et
+  `external_reference` attendent, vides de toute simulation, le jour
+  où une vraie intégration les remplira.

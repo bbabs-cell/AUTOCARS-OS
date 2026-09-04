@@ -652,11 +652,154 @@ voiture est passée après celle-là ? » se discute après coup.
 
 ---
 
+## Encaissements
+
+> ### ⚠️ Aucun fournisseur de paiement n'est intégré
+>
+> Ces routes n'appellent ni Wave, ni Orange Money, ni aucune
+> passerelle. Il n'existe **pas** de mode bac à sable, pas de faux
+> webhook, pas de paiement simulé qui réussit toujours.
+>
+> Elles enregistrent ce que le caissier **déclare** avoir reçu —
+> exactement ce que fait un cahier, en additionnant tout seul.
+>
+> `provider` et `external_reference` sont du texte saisi à la main :
+> le nom du service, et le numéro recopié depuis le téléphone du
+> client. Le jour où un compte marchand existera, l'intégration
+> remplira ces mêmes colonnes.
+>
+> Cette promesse est **vérifiée par un test** (`api_payment_test.php`,
+> section 0) qui relit le code source à la recherche d'un appel HTTP
+> sortant ou d'une URL de fournisseur.
+
+| Route | Permission |
+|---|---|
+| `POST /api/operations/{id}/payments` | `payments.create` |
+| `GET /api/operations/{id}/payments` | `payments.view` |
+| `GET /api/payments?from=&to=&method=` | `payments.journal` |
+| `POST /api/payments/{id}/refund` | `payments.refund` |
+
+### Quatre permissions, pas une
+
+C'est la distinction la plus importante du module :
+
+| Permission | Qui | Pourquoi |
+|---|---|---|
+| `payments.create` | Employé | Il est au comptoir quand le client règle |
+| `payments.view` | Employé | Il doit savoir ce qui reste dû sur le dossier qu'il rend |
+| `payments.journal` | Responsable | La recette de la journée est un cumul |
+| `payments.refund` | Responsable | Rendre de l'argent n'est pas une décision de comptoir |
+
+C'est une **précision** par rapport au lot 4, qui posait « l'employé
+ne voit pas les paiements » sans distinguer l'encaissement du chiffre
+d'affaires. Un logiciel qu'on doit contourner pour travailler finit
+par ne plus être utilisé du tout.
+
+### Enregistrer un encaissement
+
+```json
+POST /api/operations/12/payments
+{ "amount": 5000, "method": "CASH" }
+```
+
+- `amount` est un **entier de francs**. Le franc CFA n'a pas de
+  centimes, et accepter « 5000,50 » créerait des arrondis dans une
+  caisse qui doit tomber juste.
+- Un **trop-perçu est refusé** (`422`). C'est presque toujours une
+  faute de frappe — 50 000 au lieu de 5 000 — et une fois enregistrée
+  elle fausse la caisse du soir sans que personne ne comprenne.
+- Les **règlements partiels** sont acceptés : acompte puis solde,
+  éventuellement par des moyens différents.
+
+La réponse porte `outside_cash_session: true` si l'encaissement en
+espèces n'a été rattaché à aucune caisse ouverte. Le signaler **au
+moment de la saisie** est le seul moment où l'on peut encore ouvrir le
+tiroir ; le découvrir le soir ne sert plus à rien.
+
+### On n'efface pas, on contre-passe
+
+Il n'existe **ni `PUT` ni `DELETE`** sur un encaissement. Une erreur
+se corrige par un remboursement :
+
+```json
+POST /api/payments/42/refund
+{ "reason": "Prestation annulée, client remboursé en espèces." }
+```
+
+Deux écritures, une seule transaction : l'originale passe à
+`REFUNDED`, une contre-écriture est ajoutée. Les deux restent
+visibles. C'est la règle de base de toute comptabilité, et c'est
+surtout la seule qui résiste au soir où la caisse ne tombe pas juste.
+
+Le dossier redevient non réglé, ce qui **rebloque sa restitution** :
+la boucle avec le lot 7 est cohérente.
+
+---
+
+## Caisse
+
+| Route | Permission |
+|---|---|
+| `GET /api/cash/current?station_id=` | `cash.view` |
+| `GET /api/cash/sessions?station_id=` | `cash.view` |
+| `POST /api/cash/open` | `cash.open` |
+| `POST /api/cash/close` | `cash.close` |
+
+**Tout ce module existe pour un seul nombre : l'écart.** Le matin on
+compte le fond de caisse, le soir on recompte, le logiciel dit ce
+qu'il devrait y avoir. Un logiciel de caisse qui affiche toujours zéro
+d'écart ne prouve rien : il dit seulement que personne ne compte.
+
+### Une session est une vacation, le tiroir ne contient que les espèces
+
+`cash_session_id` est posé sur **tous** les encaissements de la
+session, quel que soit leur moyen — « ce matin nous avons fait
+45 000 F, dont 18 000 en espèces » est la phrase que le caissier doit
+pouvoir lire. Ne rattacher que les espèces le priverait de tout le
+reste.
+
+Le tri se fait au calcul : `expected_amount` ne retient que
+`method = 'CASH'`. Un paiement Wave n'est pas dans le tiroir, et l'y
+ajouter rendrait la clôture fausse tous les soirs.
+
+### Une seule caisse ouverte par station, garantie par la base
+
+Une colonne calculée (`open_station_id`, qui vaut `station_id` tant
+que la session est ouverte et `NULL` ensuite) porte une contrainte
+`UNIQUE`. L'API vérifie déjà avant d'ouvrir, mais deux caissiers qui
+cliquent à la même seconde passeraient tous les deux la vérification
+avant que l'un des deux n'écrive. Seule la base peut trancher — elle
+répond alors `409`.
+
+### La clôture
+
+```json
+POST /api/cash/close
+{ "counted_amount": 47300, "closing_notes": "Erreur de rendu ce matin." }
+```
+
+- Un **écart supérieur à 500 FCFA exige une explication** (`422`
+  sinon). Le seuil est bas volontairement : au-dessous, on est dans
+  l'erreur de monnaie ordinaire et exiger une phrase ferait écrire
+  « RAS » tous les soirs.
+- `difference` est **signé** : négatif s'il manque, positif s'il y a
+  trop. Un excédent est aussi une anomalie qu'un manque — il signale
+  souvent un encaissement non saisi.
+- Les montants sont **figés** dans la ligne, jamais recalculés. Une
+  correction ultérieure sur un paiement changerait sinon
+  rétroactivement un écart déjà constaté. *Une clôture est une photo,
+  pas une vue.*
+
+`cash_outside_session` compte les espèces encaissées aujourd'hui hors
+de toute session : ces montants ne sont dans aucune clôture, et le
+tiroir contiendra un argent que le logiciel n'attend pas.
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 9 | `/api/payments`, `/api/cash-registers` |
 | 10 | `/api/dashboard` |
 
 ---

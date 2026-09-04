@@ -80,6 +80,17 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'payments',
+        title: 'Encaissements — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/payments/payments.page').then((m) => m.PaymentsPage),
+      },
+      {
+        path: 'cash',
+        title: 'Caisse — AUTOCARE OS',
+        loadComponent: () => import('./features/cash/cash.page').then((m) => m.CashPage),
+      },
+      {
         path: 'customers',
         title: 'Clients — AUTOCARE OS',
         loadComponent: () =>

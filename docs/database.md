@@ -48,7 +48,7 @@ transactions.
 
 ---
 
-## Les 12 tables
+## Les 14 tables
 
 ```
 organizations                    l'entreprise cliente du SaaS
@@ -58,6 +58,7 @@ organizations                    l'entreprise cliente du SaaS
    ├── customers                 clients de la station
    │      └── vehicles           véhicules, rattachés à un client
    ├── services                  catalogue des prestations
+   ├── cash_sessions             journées de caisse (une par station)
    └── operations         ◄──────  LA TABLE CENTRALE
           ├── inspections           état constaté du véhicule
           │      └── inspection_photos   les preuves
@@ -66,10 +67,14 @@ organizations                    l'entreprise cliente du SaaS
 audit_logs                       qui a fait quoi, et quand
 ```
 
+Deux tables techniques s'y ajoutent — `refresh_tokens` et
+`password_resets` — plus `migrations`, tenue par l'outil.
+
 ### Trois tables volontairement absentes
 
 | Écartée | Pourquoi |
 |---|---|
+| `cash_registers` | Un tiroir-caisse n'a pas d'existence propre : ce qui compte, c'est la **journée** de caisse. Une table de « caisses » n'aurait porté qu'un nom et un identifiant de station, déjà présents ailleurs. → `cash_sessions` suffit. |
 | `queue` | La file d'attente n'est pas une entité mais une **vue** des opérations en cours, triées par priorité. Une table séparée dupliquerait l'état et finirait par diverger : on aurait un véhicule « en lavage » dans la file et « restitué » dans son dossier, sans savoir lequel a raison. → `priority` et `status_changed_at` sur `operations` suffisent. *(Confirmé au lot 8 : `GET /api/queue` est bien une lecture.)* |
 | `employees` | Un employé **est** un `user` rattaché à une station via `station_users`. On créera cette table le jour où il y aura de vraies données RH. |
 | `roles` / `permissions` | Le rôle est un `ENUM` de trois valeurs, la matrice des droits vit dans un fichier PHP : lisible, testable, sans jointure. On passera en base quand un client voudra des rôles sur mesure. |
@@ -179,6 +184,52 @@ et son horodatage.
 
 ## Détails de conception à connaître
 
+### La caisse : une colonne calculée pour garantir l'unicité
+
+`cash_sessions` (lot 9, migration 017) porte une contrainte qui mérite
+d'être connue : **une seule caisse ouverte par station**, garantie par
+la base et non par le code.
+
+Deux sessions ouvertes sur le même tiroir, et les encaissements se
+répartissent au hasard entre elles : les deux clôtures sont fausses et
+l'on ne sait pas laquelle croire. L'API vérifie avant d'ouvrir, mais
+deux caissiers qui cliquent à la même seconde passeraient tous les
+deux la vérification avant que l'un n'écrive.
+
+```sql
+open_station_id BIGINT UNSIGNED
+    AS (IF(status = 'OPEN', station_id, NULL)) STORED,
+UNIQUE KEY uq_cash_sessions_one_open (open_station_id)
+```
+
+La colonne vaut `station_id` tant que la session est ouverte, `NULL`
+une fois fermée. Comme une contrainte `UNIQUE` autorise autant de
+`NULL` qu'on veut, on peut fermer mille sessions sur une station et
+n'en ouvrir qu'une.
+
+⚠️ **Piège rencontré** : la clé étrangère sur `station_id` est en
+`ON UPDATE RESTRICT`, et non `CASCADE` comme partout ailleurs. MySQL
+comme MariaDB refusent qu'une colonne calculée s'appuie sur une
+colonne qui se met à jour en cascade. Le message d'erreur —
+*« Function or expression 'station_id' cannot be used in the GENERATED
+ALWAYS AS clause »* — ne le dit pas du tout. La perte est nulle :
+l'identifiant d'une station est auto-incrémenté, il ne change jamais.
+
+### `payments.cash_session_id` : quelle vacation ?
+
+On aurait pu rattacher les encaissements à leur session **par la
+date**. C'est fragile : un paiement enregistré à la seconde de la
+clôture tombe d'un côté ou de l'autre selon l'ordre des écritures, et
+l'écart change sans que personne ne comprenne pourquoi.
+
+Le lien explicite supprime la question, et rend visible le cas où le
+tiroir n'était pas ouvert : la colonne reste `NULL`.
+
+**Elle est posée sur TOUS les encaissements**, pas seulement les
+espèces : une session est une *vacation* au comptoir. Le tri « qu'y
+a-t-il dans le tiroir ? » se fait au calcul, en ne retenant que
+`method = 'CASH'`.
+
 ### `status_changed_at` : depuis quand ce véhicule est-il à cette étape ?
 
 Ajoutée au lot 8 (migration 016), c'est la colonne qui rend la file
@@ -232,6 +283,18 @@ désignent bien le même véhicule. L'affichage remet les tirets.
 C'est l'identifiant de connexion : il ne peut pas y en avoir deux.
 Conséquence assumée : une personne travaillant pour deux entreprises
 clientes aura besoin de deux adresses.
+
+### Les encaissements ne se modifient pas
+
+Même principe que les photos et le journal d'audit. Il n'existe ni
+route ni méthode de dépôt pour modifier ou supprimer une ligne de
+`payments`. Une erreur se corrige par une **contre-écriture** — un
+remboursement — qui laisse les deux lignes visibles.
+
+C'est la règle de base de toute comptabilité : on ne gomme pas, on
+contre-passe. Un montant qu'on peut réécrire après coup ne prouve
+rien, et c'est précisément le soir où la caisse ne tombe pas juste que
+quelqu'un voudrait le réécrire.
 
 ### Les photos ne se suppriment pas
 

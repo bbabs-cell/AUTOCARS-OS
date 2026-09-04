@@ -300,9 +300,33 @@ check("EMPLOYE peut consulter un véhicule",    Permissions::allows('EMPLOYEE', 
 check("EMPLOYE peut faire une inspection",     Permissions::allows('EMPLOYEE', 'inspections.create'));
 check("EMPLOYE peut changer un statut",        Permissions::allows('EMPLOYEE', 'operations.update_status'));
 
-// Le principe du moindre privilège : un compte employé volé ne doit
-// pas donner accès au chiffre d'affaires de la station.
-check("EMPLOYE ne voit PAS les paiements",     !Permissions::allows('EMPLOYEE', 'payments.view'));
+// ------------------------------------------------------------------
+// ENCAISSER N'EST PAS VOIR LA RECETTE (précisé au lot 9)
+// ------------------------------------------------------------------
+// Le lot 4 posait « l'employé ne voit pas les paiements ». À l'usage,
+// c'était trop large : c'est lui qui est au comptoir quand le client
+// règle, et lui refuser la saisie obligerait à déranger un
+// responsable à chaque véhicule rendu. Un logiciel qu'on doit
+// contourner pour travailler finit par ne plus être utilisé.
+//
+// La règle exacte est : il manipule l'argent D'UN DOSSIER, il ne voit
+// jamais le CUMUL. Le principe du moindre privilège est respecté —
+// un compte employé volé ne donne toujours pas accès au chiffre
+// d'affaires de la station.
+check("EMPLOYE peut encaisser au comptoir",
+    Permissions::allows('EMPLOYEE', 'payments.create'));
+check("EMPLOYE voit ce qui est réglé sur UN dossier",
+    Permissions::allows('EMPLOYEE', 'payments.view'));
+
+check("EMPLOYE ne voit PAS le journal des encaissements",
+    !Permissions::allows('EMPLOYEE', 'payments.journal'));
+check("EMPLOYE ne rembourse PAS",
+    !Permissions::allows('EMPLOYEE', 'payments.refund'));
+check("EMPLOYE ne voit PAS la caisse",
+    !Permissions::allows('EMPLOYEE', 'cash.view'));
+check("EMPLOYE ne clôture PAS la caisse",
+    !Permissions::allows('EMPLOYEE', 'cash.close'));
+
 check("EMPLOYE ne voit PAS les statistiques",  !Permissions::allows('EMPLOYEE', 'reports.view'));
 check("EMPLOYE ne supprime PAS un véhicule",   !Permissions::allows('EMPLOYEE', 'vehicles.delete'));
 

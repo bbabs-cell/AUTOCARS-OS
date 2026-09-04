@@ -98,7 +98,16 @@ requête :
 
 Ce troisième point est le plus souvent oublié, et le plus grave.
 
-✅ Appliqué au Lot 4.
+**Une permission trop large est un risque ; une permission trop
+étroite en est un autre.** Si l'employé doit déranger un responsable à
+chaque véhicule rendu, il finira par travailler à côté du logiciel —
+et l'on aura des données fausses plutôt qu'un accès restreint. Le lot 9
+a donc découpé les droits sur l'argent en quatre, plutôt que de
+maintenir un « l'employé ne voit pas les paiements » inapplicable :
+il encaisse et voit le solde **d'un dossier**, jamais le cumul de la
+journée ni la caisse.
+
+✅ Appliqué au Lot 4, affiné au Lot 9.
 
 ---
 
@@ -172,6 +181,39 @@ contourne trivialement. Tout ce qui compte est revérifié côté serveur.
 
 ---
 
+## 7 bis. Argent et écritures comptables
+
+**Aucun fournisseur de paiement n'est intégré**, et il n'en sera
+intégré aucun tant qu'un compte marchand réel n'existera pas. Pas de
+mode bac à sable, pas de faux webhook, pas de paiement simulé qui
+réussit toujours : un tel code donnerait l'illusion d'un produit
+branché, et il faudrait tout défaire le jour de la vraie intégration —
+après avoir peut-être laissé croire à un client que ça marchait.
+
+Cette promesse n'est pas seulement un commentaire : **un test la
+vérifie**. `tests/api_payment_test.php` relit tout `src/` et `config/`
+à la recherche d'un appel HTTP sortant (`curl_init`, `fsockopen`…),
+d'une URL de fournisseur, ou d'une clé d'API de paiement dans
+`.env.example`. Une promesse commerciale se garde mieux par un test
+que par la bonne volonté de celui qui relira le code dans six mois.
+
+**Une écriture comptable ne se modifie pas.** Aucune route ne permet
+de modifier ou de supprimer un encaissement : une erreur se corrige
+par une contre-écriture qui laisse les deux lignes visibles.
+
+**Un écart de caisse est enregistré, jamais corrigé en silence.** Un
+écart corrigé n'existe plus, et l'on ne peut donc plus le chercher.
+Mille francs manquants un mardi, c'est une erreur de monnaie ; mille
+francs manquants tous les mardis, c'est autre chose — et on ne le voit
+qu'en gardant la trace de chacun. Au-delà de 500 FCFA, une explication
+est exigée à la clôture.
+
+**Le montant attendu n'est pas affiché avant la saisie.** L'écrire
+au-dessus du champ, c'est obtenir ce chiffre exact tous les soirs :
+personne ne recompte contre un nombre déjà donné.
+
+---
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -236,4 +278,7 @@ la question centrale en cas de litige sur un véhicule.
 | Machine à états vérifiée côté serveur | ✅ Lot 7 |
 | Procédure de restitution contrôlée | ✅ Lot 7 |
 | Réorganisation de la file réservée et tracée | ✅ Lot 8 |
+| Aucune intégration de paiement (vérifié par un test) | ✅ Lot 9 |
+| Écritures comptables non modifiables | ✅ Lot 9 |
+| Écart de caisse enregistré, jamais corrigé | ✅ Lot 9 |
 | Audit de sécurité complet | 🔜 Lot 21 |

@@ -65,8 +65,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
   {
     label: 'Finances',
     items: [
-      { label: 'Paiements',   icon: 'credit-card', route: null, lot: 9 },
-      { label: 'Caisse',      icon: 'cash-stack',  route: null, lot: 9 },
       { label: 'Fidélité',    icon: 'award',       route: null, lot: 14 },
       { label: 'Abonnements', icon: 'arrow-repeat', route: null, lot: 15 },
     ],
@@ -96,6 +94,8 @@ export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
  */
 export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   { label: "File d'attente", icon: 'kanban',      route: '/queue',      lot: 8 },
+  { label: 'Encaissements', icon: 'credit-card', route: '/payments',   lot: 9 },
+  { label: 'Caisse',        icon: 'cash-stack',  route: '/cash',       lot: 9 },
   { label: 'Accueil',       icon: 'shield-check', route: '/operations', lot: 7 },
   { label: 'Véhicules',     icon: 'car-front', route: '/vehicles',  lot: 6 },
   { label: 'Clients',       icon: 'people',    route: '/customers', lot: 6 },

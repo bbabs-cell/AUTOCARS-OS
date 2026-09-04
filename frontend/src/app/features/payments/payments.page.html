@@ -1,0 +1,160 @@
+<ac-page-header
+  title="Encaissements"
+  [subtitle]="totals() ? totals()!.count + ' encaissement(s) sur la période' : 'Chargement…'"
+/>
+
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <form [formGroup]="form" (ngSubmit)="load()" class="row g-3 align-items-end">
+      <div class="col-6 col-md-3">
+        <label for="j-from" class="form-label">Du</label>
+        <input id="j-from" type="date" class="form-control" formControlName="from" />
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="j-to" class="form-label">Au</label>
+        <input id="j-to" type="date" class="form-control" formControlName="to" />
+      </div>
+      <div class="col-8 col-md-3">
+        <label for="j-method" class="form-label">Moyen</label>
+        <select id="j-method" class="form-select" formControlName="method">
+          <option value="">Tous</option>
+          @for (method of methods; track method) {
+            <option [value]="method">{{ methodLabels[method] }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-4 col-md-3">
+        <button type="submit" class="btn btn-primary w-100">Afficher</button>
+      </div>
+    </form>
+
+    <div class="d-flex gap-2 mt-3">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setToday()">
+        Aujourd'hui
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="lastSevenDays()">
+        7 derniers jours
+      </button>
+    </div>
+  </div>
+</div>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<!--
+  Le total d'abord, le détail ensuite.
+  La question est « combien », pas « quelles lignes ». Le tableau sert
+  à retrouver une écriture précise, pas à faire l'addition.
+-->
+@if (totals(); as t) {
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-lg-4">
+      <div class="ac-card h-100">
+        <div class="ac-card__body">
+          <div class="ac-caption">Total encaissé</div>
+          <div class="ac-numeric fw-bold" style="font-size: var(--ac-text-2xl)">
+            {{ t.total | acAmount }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @for (row of breakdown(); track row.method) {
+      <div class="col-6 col-lg-2">
+        <div class="ac-card h-100">
+          <div class="ac-card__body">
+            <div class="ac-caption">{{ methodLabels[row.method] }}</div>
+            <div class="ac-numeric fw-semibold" style="font-size: var(--ac-text-lg)">
+              {{ row.total | acAmount }}
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 70%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && payments().length === 0) {
+  <div class="ac-card">
+    <ac-empty-state
+      icon="bi-cash-coin"
+      title="Aucun encaissement sur cette période"
+      text="Les encaissements se saisissent depuis le dossier d'un véhicule, au moment où le client règle."
+    />
+  </div>
+}
+
+@if (!isLoading() && payments().length > 0) {
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Heure</th>
+            <th>Dossier</th>
+            <th>Client</th>
+            <th>Moyen</th>
+            <th>Encaissé par</th>
+            <th class="ac-table__amount">Montant</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (payment of payments(); track payment.id) {
+            <tr [class.ac-row--muted]="payment.status !== 'PAID'">
+              <td class="ac-numeric ac-nowrap">{{ payment.paid_at?.substring(11, 16) }}</td>
+              <td>
+                @if (payment.operation_id) {
+                  <a [routerLink]="['/operations', payment.operation_id]" class="ac-numeric">
+                    {{ payment.operation_reference }}
+                  </a>
+                  <div class="ac-caption">{{ payment.plate_number }}</div>
+                } @else {
+                  <span class="ac-text-muted">Hors dossier</span>
+                }
+              </td>
+              <td class="ac-text-secondary">{{ payment.customer_name ?? '—' }}</td>
+              <td>
+                {{ methodLabels[payment.method] }}
+                @if (payment.provider) {
+                  <div class="ac-caption">{{ payment.provider }}</div>
+                }
+                @if (payment.external_reference) {
+                  <div class="ac-caption ac-numeric">{{ payment.external_reference }}</div>
+                }
+              </td>
+              <td class="ac-text-secondary">{{ payment.recorded_by_name }}</td>
+              <td class="ac-table__amount ac-numeric">
+                @if (payment.status === 'REFUNDED') {
+                  <span class="ac-text-muted">− {{ payment.amount | acAmount }}</span>
+                  <div class="ac-caption">remboursé</div>
+                } @else {
+                  {{ payment.amount | acAmount }}
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="ac-caption mt-3">
+    Les encaissements sont saisis à la main : aucun fournisseur de paiement
+    n'est connecté. Le service et le numéro de transaction sont ceux recopiés
+    depuis le téléphone du client.
+  </p>
+}

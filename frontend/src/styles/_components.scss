@@ -1136,3 +1136,18 @@
 .ac-card--alert {
   border-color: #fde68a;
 }
+
+
+// ==================================================================
+// LIGNE DE TABLEAU ATTÉNUÉE
+// ==================================================================
+// Une écriture annulée ou remboursée : elle reste visible — on ne
+// gomme pas une écriture comptable — mais elle ne doit pas se lire
+// comme une recette. L'atténuation suffit : la barrer entièrement
+// rendrait le montant difficile à relire, et c'est justement celui
+// qu'on vient vérifier.
+
+.ac-row--muted td {
+  color: var(--ac-text-muted);
+  background-color: var(--ac-gray-50);
+}

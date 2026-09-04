@@ -33,7 +33,9 @@ use Autocare\Http\Controllers\CustomerController;
 use Autocare\Http\Controllers\HealthController;
 use Autocare\Http\Controllers\InspectionController;
 use Autocare\Http\Controllers\OnboardingController;
+use Autocare\Http\Controllers\CashController;
 use Autocare\Http\Controllers\OperationController;
+use Autocare\Http\Controllers\PaymentController;
 use Autocare\Http\Controllers\QueueController;
 use Autocare\Http\Controllers\ServiceController;
 use Autocare\Http\Controllers\StationController;
@@ -179,6 +181,38 @@ return static function (Router $router): void {
     $router->put('/api/operations/{id}/assign',   [QueueController::class, 'assign'],
         ['auth' => true, 'permission' => 'operations.assign']);
 
+    // --- Encaissements ----------------------------------------------
+    // AUCUN FOURNISSEUR DE PAIEMENT N'EST INTÉGRÉ. Ces routes
+    // enregistrent ce que le caissier déclare avoir reçu ; elles
+    // n'appellent ni Wave, ni Orange Money, ni aucune passerelle.
+    //
+    // Un employé au comptoir ENCAISSE (payments.create) et voit ce qui
+    // a déjà été réglé sur le dossier qu'il rend (payments.view). Il
+    // ne consulte PAS la recette de la journée (payments.journal) et
+    // ne rembourse pas (payments.refund) : rendre de l'argent n'est
+    // pas une décision de comptoir.
+    $router->post('/api/operations/{id}/payments', [PaymentController::class, 'store'],
+        ['auth' => true, 'permission' => 'payments.create']);
+    $router->get('/api/operations/{id}/payments',  [PaymentController::class, 'forOperation'],
+        ['auth' => true, 'permission' => 'payments.view']);
+
+    $router->get('/api/payments', [PaymentController::class, 'index'],
+        ['auth' => true, 'permission' => 'payments.journal']);
+    $router->post('/api/payments/{id}/refund', [PaymentController::class, 'refund'],
+        ['auth' => true, 'permission' => 'payments.refund']);
+
+    // --- Caisse -------------------------------------------------------
+    // Le tiroir-caisse appartient à la station, pas à une personne :
+    // deux employés qui se relaient travaillent sur la même session.
+    $router->get('/api/cash/current',   [CashController::class, 'current'],
+        ['auth' => true, 'permission' => 'cash.view']);
+    $router->get('/api/cash/sessions',  [CashController::class, 'history'],
+        ['auth' => true, 'permission' => 'cash.view']);
+    $router->post('/api/cash/open',     [CashController::class, 'open'],
+        ['auth' => true, 'permission' => 'cash.open']);
+    $router->post('/api/cash/close',    [CashController::class, 'close'],
+        ['auth' => true, 'permission' => 'cash.close']);
+
     // --- Les routes suivantes arriveront aux prochains lots --------
-    // Lot 9 : /api/payments
+    // Lot 10 : /api/dashboard
 };

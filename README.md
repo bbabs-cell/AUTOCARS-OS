@@ -113,7 +113,7 @@ suivant.
 - [x] **Lot 6** — Clients et véhicules : recherche au comptoir, plaques normalisées
 - [x] **Lot 7** — Opérations, inspection, photos, restitution : machine à états vérifiée côté serveur, upload sécurisé, 93 tests
 - [x] **Lot 8** — File d'attente : tableau à colonnes, alertes de dépassement, priorité et affectation, 59 tests de plus
-- [ ] Lot 9 — Paiements et caisse
+- [x] **Lot 9** — Encaissements et caisse : aucune intégration de paiement, écritures non modifiables, écart de caisse tracé, 69 tests de plus
 - [ ] Lot 10 — Tableau de bord → **MVP utilisable**
 
 **Phase C — Extension** · Lots 11 à 18

@@ -65,7 +65,9 @@ return [
      * EMPLOYÉ — celui qui travaille sur les véhicules.
      *
      * Il voit ce dont il a besoin et fait avancer les opérations,
-     * mais ne voit NI les prix, NI les paiements, NI les statistiques.
+     * mais ne voit NI le chiffre d'affaires, NI la caisse, NI les
+     * statistiques. Il encaisse au comptoir sans consulter la recette
+     * de la journée : voir la note sur payments.create plus bas.
      *
      * Ce n'est pas de la méfiance : c'est le principe du moindre
      * privilège. Un compte employé volé ne doit pas donner accès au
@@ -81,6 +83,28 @@ return [
         'customers.view',
         'customers.create',
         'customers.update',
+
+        // ENCAISSER, OUI. CONSULTER LA RECETTE, NON.
+        //
+        // C'est l'employé qui est au comptoir quand le client sort son
+        // téléphone ou son argent. Lui refuser la saisie obligerait à
+        // déranger un responsable à chaque véhicule rendu — et un
+        // logiciel qu'on doit contourner pour travailler finit par ne
+        // plus être utilisé du tout.
+        //
+        // Il voit donc ce qui est dû et ce qui a été réglé SUR LE
+        // DOSSIER QU'IL REND (payments.view), mais pas le journal de
+        // la journée (payments.journal), pas la caisse (cash.*), et il
+        // ne rembourse pas (payments.refund) : rendre de l'argent
+        // n'est pas une décision de comptoir.
+        //
+        // C'est une PRÉCISION par rapport au lot 4, qui disait « ne
+        // voit pas les paiements » sans distinguer l'encaissement du
+        // chiffre d'affaires. Pour revenir en arrière, il suffit de
+        // retirer ces deux lignes.
+        'payments.create',
+        'payments.view',
+
         // L'accueil d'un véhicule au comptoir est le travail de
         // l'employé : lui refuser la création de dossier obligerait à
         // déranger un responsable à chaque arrivée.
@@ -106,8 +130,10 @@ return [
         'inspections.view',
         'inspections.create',
         // Un employé consulte le catalogue : il doit savoir ce qu'il
-        // fait sur un véhicule. Les prix restent masqués par
-        // l'interface, mais lire un nom de prestation est légitime.
+        // fait sur un véhicule — et depuis le lot 9, annoncer le prix
+        // au client puis l'encaisser. Ce qui lui reste inaccessible,
+        // c'est le cumul : la recette du jour, la caisse, les
+        // statistiques.
         'services.view',
     ],
 ];

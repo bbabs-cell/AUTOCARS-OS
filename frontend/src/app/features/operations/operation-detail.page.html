@@ -27,6 +27,22 @@
   </div>
 }
 
+<!--
+  Signalé MAINTENANT, pas à la clôture du soir : c'est au moment de la
+  saisie qu'on peut encore ouvrir le tiroir. Découvrir l'anomalie huit
+  heures plus tard ne sert plus à rien.
+-->
+@if (cashOutsideSession()) {
+  <div class="ac-alert ac-alert--warning mb-4">
+    <i class="bi bi-safe"></i>
+    <div>
+      Ces espèces ont été encaissées <strong>sans caisse ouverte</strong> : elles ne
+      seront comptées dans aucune clôture. Ouvrez la caisse pour que le compte
+      du soir tombe juste.
+    </div>
+  </div>
+}
+
 @if (!isLoading() && operation(); as op) {
   <div class="ac-page-header">
     <div>
@@ -388,6 +404,12 @@
                   <span class="ac-badge__dot" aria-hidden="true"></span>
                   {{ op.paid_amount | acAmount }} sur {{ op.price | acAmount }}
                 </span>
+                @if (op.status !== 'CANCELLED') {
+                  <button type="button" class="btn btn-sm btn-primary mt-2 d-block"
+                          (click)="openPaymentPanel()">
+                    <i class="bi bi-cash-coin"></i> Encaisser
+                  </button>
+                }
               }
             </dd>
 
@@ -410,6 +432,45 @@
           </dl>
         </div>
       </div>
+
+      <!-- Les encaissements -->
+      @if (payments().length > 0) {
+        <div class="ac-card mb-4">
+          <div class="ac-card__header">
+            <h2 class="ac-card__title">Encaissements</h2>
+          </div>
+          <div class="ac-card__body">
+            <!--
+              Une SUITE d'écritures, du plus ancien au plus récent : un
+              acompte, un solde, éventuellement un remboursement.
+              Rien n'est jamais effacé — une écriture comptable se
+              contre-passe, elle ne se gomme pas.
+            -->
+            @for (payment of payments(); track payment.id) {
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                  <div class="fw-semibold ac-numeric"
+                       [class.text-decoration-line-through]="payment.status === 'REFUNDED'">
+                    {{ payment.amount | acAmount }}
+                  </div>
+                  <div class="ac-caption">
+                    {{ methodLabels[payment.method] }}
+                    @if (payment.provider) { · {{ payment.provider }} }
+                    @if (payment.status === 'REFUNDED') { · remboursé }
+                  </div>
+                  @if (payment.external_reference) {
+                    <div class="ac-caption ac-numeric">{{ payment.external_reference }}</div>
+                  }
+                </div>
+                <div class="text-end">
+                  <div class="ac-caption ac-nowrap">{{ payment.paid_at | acRelativeDate }}</div>
+                  <div class="ac-caption">{{ payment.recorded_by_name }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
 
       <!-- Les jalons du parcours -->
       <div class="ac-card mb-4">
@@ -443,6 +504,112 @@
       }
     </div>
   </div>
+
+  <!-- ============================================================
+       L'ENCAISSEMENT
+       ============================================================
+       AUCUNE PASSERELLE DE PAIEMENT N'EST APPELÉE ICI.
+       Ce formulaire enregistre ce que le caissier déclare avoir reçu,
+       exactement comme un cahier — en additionnant tout seul.
+       ============================================================ -->
+  @if (isPaymentPanelOpen()) {
+    <div class="ac-modal-backdrop" (click)="closePaymentPanel()"></div>
+
+    <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="payment-title">
+      <div class="ac-modal__header">
+        <h2 class="mb-0 h5" id="payment-title">Encaisser</h2>
+        <button type="button" class="ac-btn-icon" (click)="closePaymentPanel()" aria-label="Fermer">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form [formGroup]="paymentForm" (ngSubmit)="submitPayment()" novalidate>
+        <div class="ac-modal__body">
+          <div class="ac-alert ac-alert--info mb-4">
+            <i class="bi bi-receipt"></i>
+            <div>
+              <strong class="ac-numeric">{{ op.price | acAmount }}</strong> pour
+              {{ op.service_name }}.
+              @if (op.paid_amount > 0) {
+                <div class="ac-caption">
+                  Déjà réglé : {{ op.paid_amount | acAmount }}.
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="p-amount" class="form-label">Montant reçu</label>
+            <input id="p-amount" type="number" inputmode="numeric" class="form-control ac-numeric"
+                   formControlName="amount" min="1" step="1"
+                   [class.is-invalid]="paymentErrors()['amount']" />
+            <span class="ac-caption">
+              En francs entiers. Le reste dû est pré-rempli ; corrigez si le client
+              ne règle qu'une partie.
+            </span>
+            @if (paymentErrors()['amount']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+
+          <div class="mb-4">
+            <label for="p-method" class="form-label">Moyen de paiement</label>
+            <select id="p-method" class="form-select" formControlName="method">
+              @for (method of methods; track method) {
+                <option [value]="method">{{ methodLabels[method] }}</option>
+              }
+            </select>
+          </div>
+
+          <!--
+            Fournisseur et numéro ne sont demandés que lorsqu'il y a
+            quelque chose à recopier. Pour des espèces, ces champs
+            seraient deux cases vides à ignorer à chaque client.
+          -->
+          @if (needsReference()) {
+            <div class="row g-3 mb-4">
+              <div class="col-sm-5">
+                <label for="p-provider" class="form-label">Service</label>
+                <input id="p-provider" type="text" class="form-control"
+                       formControlName="provider" placeholder="Wave" autocomplete="off" />
+              </div>
+              <div class="col-sm-7">
+                <label for="p-reference" class="form-label">Numéro de transaction</label>
+                <input id="p-reference" type="text" class="form-control ac-numeric"
+                       formControlName="external_reference" placeholder="TX-8842019"
+                       autocomplete="off" />
+                <span class="ac-caption">
+                  Recopié depuis le téléphone du client. C'est la seule trace
+                  exploitable en cas de contestation.
+                </span>
+              </div>
+            </div>
+          }
+
+          <div>
+            <label for="p-notes" class="form-label">
+              Notes <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <input id="p-notes" type="text" class="form-control" formControlName="notes"
+                   placeholder="Le solde sera réglé samedi." />
+          </div>
+        </div>
+
+        <div class="ac-modal__footer">
+          <button type="button" class="btn btn-outline-secondary" (click)="closePaymentPanel()">
+            Annuler
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isRecordingPayment()">
+            @if (isRecordingPayment()) {
+              <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+            } @else {
+              Enregistrer l'encaissement
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
 
   <!-- ============================================================
        LA RESTITUTION

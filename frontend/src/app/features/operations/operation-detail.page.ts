@@ -8,8 +8,16 @@ import { RelativeDatePipe } from '../../shared/pipes/relative-date.pipe';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge.component';
 import { AuthService } from '../../core/services/auth.service';
 import { OperationService } from '../../core/services/operation.service';
+import { PaymentService } from '../../core/services/payment.service';
 import { compressPhoto, formatBytes } from '../../core/services/image-compressor';
 import { OperationStatus } from '../../core/models/operation-status.model';
+import {
+  METHODS_WITH_REFERENCE,
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
+  Payment,
+  PaymentMethod,
+} from '../../core/models/payment.model';
 import {
   FUEL_LEVEL_LABELS,
   FuelLevel,
@@ -105,6 +113,25 @@ export class OperationDetailPage {
 
   private operationId = 0;
 
+  // --- Encaissement ---------------------------------------------------
+  private readonly paymentService = inject(PaymentService);
+
+  protected readonly methodLabels = PAYMENT_METHOD_LABELS;
+  protected readonly methods = PAYMENT_METHODS;
+
+  protected readonly payments = signal<Payment[]>([]);
+  protected readonly isPaymentPanelOpen = signal(false);
+  protected readonly isRecordingPayment = signal(false);
+  protected readonly paymentErrors = signal<Record<string, string>>({});
+
+  /**
+   * L'encaissement en espèces n'a été rattaché à aucune caisse.
+   * On le signale TOUT DE SUITE : c'est au moment de la saisie qu'on
+   * peut encore ouvrir le tiroir. Le découvrir le soir, à la
+   * clôture, ne sert plus à rien.
+   */
+  protected readonly cashOutsideSession = signal(false);
+
   /**
    * L'étape suivante du parcours.
    *
@@ -183,6 +210,22 @@ export class OperationDetailPage {
     override_reason: [''],
   });
 
+  protected readonly paymentForm = this.formBuilder.nonNullable.group({
+    amount: [0, [Validators.required, Validators.min(1)]],
+    method: ['CASH' as PaymentMethod, [Validators.required]],
+    provider: [''],
+    external_reference: [''],
+    notes: [''],
+  });
+
+  /**
+   * Faut-il demander le fournisseur et le numéro de transaction ?
+   * Pour un règlement en espèces, non : il n'y a rien à recopier.
+   */
+  protected readonly needsReference = computed(() =>
+    METHODS_WITH_REFERENCE.includes(this.paymentForm.controls.method.value),
+  );
+
   constructor() {
     this.operationId = Number(this.route.snapshot.paramMap.get('id'));
     this.load();
@@ -211,6 +254,8 @@ export class OperationDetailPage {
         if (result.operation.status === 'READY') {
           this.loadChecklist();
         }
+
+        this.loadPayments();
       },
       error: (error: HttpErrorResponse) => {
         this.isLoading.set(false);
@@ -414,6 +459,93 @@ export class OperationDetailPage {
         URL.revokeObjectURL(tile.objectUrl);
       }
     }
+  }
+
+  // --- L'encaissement -------------------------------------------------
+
+  private loadPayments(): void {
+    this.paymentService.operationPayments(this.operationId).subscribe({
+      next: (result) => this.payments.set(result.payments),
+      // Un employé sans droit de lecture des paiements ne doit pas
+      // voir une erreur rouge : il n'a simplement pas cette section.
+      error: () => this.payments.set([]),
+    });
+  }
+
+  protected openPaymentPanel(): void {
+    const operation = this.operation();
+    const remaining = operation ? Math.max(0, operation.price - operation.paid_amount) : 0;
+
+    // Le montant restant est PRÉ-REMPLI : neuf fois sur dix, le client
+    // règle tout. Le laisser vide ferait ressaisir un nombre déjà
+    // affiché à l'écran, avec le risque de faute de frappe que ça
+    // suppose sur une somme d'argent.
+    this.paymentForm.reset({
+      amount: remaining,
+      method: 'CASH',
+      provider: '',
+      external_reference: '',
+      notes: '',
+    });
+
+    this.paymentErrors.set({});
+    this.cashOutsideSession.set(false);
+    this.isPaymentPanelOpen.set(true);
+  }
+
+  protected closePaymentPanel(): void {
+    this.isPaymentPanelOpen.set(false);
+  }
+
+  protected submitPayment(): void {
+    if (this.paymentForm.invalid) {
+      this.paymentForm.markAllAsTouched();
+
+      return;
+    }
+
+    this.isRecordingPayment.set(true);
+    this.paymentErrors.set({});
+
+    const value = this.paymentForm.getRawValue();
+
+    this.paymentService
+      .record(this.operationId, {
+        amount: Number(value.amount),
+        method: value.method,
+        provider: value.provider || null,
+        external_reference: value.external_reference || null,
+        notes: value.notes || null,
+      })
+      .subscribe({
+        next: (result) => {
+          this.isRecordingPayment.set(false);
+          this.isPaymentPanelOpen.set(false);
+          this.cashOutsideSession.set(result.outside_cash_session);
+          this.noticeMessage.set(
+            result.is_settled
+              ? 'Paiement enregistré. Le dossier est réglé.'
+              : `Paiement enregistré. Reste ${result.remaining.toLocaleString('fr-FR')} FCFA.`,
+          );
+
+          // On recharge le dossier : le montant réglé conditionne la
+          // restitution, et la liste de vérification doit suivre.
+          this.load();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.isRecordingPayment.set(false);
+
+          if (error.status === 422 && error.error?.errors) {
+            this.paymentErrors.set(error.error.errors);
+
+            return;
+          }
+
+          this.paymentErrors.set({
+            amount: error.error?.message ?? "L'enregistrement du paiement a échoué.",
+          });
+        },
+      });
   }
 
   // --- La restitution ------------------------------------------------
