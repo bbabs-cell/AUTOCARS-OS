@@ -320,9 +320,48 @@ recherche du moindre champ monétaire.
 
 ---
 
-## 13. Ce qui n'est pas encore décidé
+## 13. Les trois zones de routage
+
+Depuis le lot 11, l'application a **trois** zones, et leur ordre dans
+`app.routes.ts` est porteur de sens :
+
+| # | Zone | Chemin | Garde |
+|---|---|---|---|
+| 0 | Vitrine publique | `''` avec `pathMatch: 'full'` | `landingGuard` |
+| 1 | Application | `''` avec enfants | `authGuard`, `onboardingGuard` |
+| 2 | Installation | `onboarding` | `authGuard`, `onboardingPendingGuard` |
+| 3 | Connexion | `''` avec enfants | `guestGuard` |
+
+**`pathMatch: 'full'` sur la zone 0 est indispensable.** Sans lui,
+elle avalerait toutes les URL : le chemin vide est le préfixe de tout,
+donc `/dashboard` correspondrait aussi. Avec lui, elle ne répond qu'à
+la racine exacte, et le reste continue vers la zone 1.
+
+### Le risque de ce lot : la boucle de redirection
+
+Trois gardes qui se renvoient la balle finissent vite en boucle : la
+racine renvoie vers le tableau de bord, qui renvoie vers la racine, et
+le navigateur tourne en rond. C'est un bogue qu'on ne voit pas en
+développant, parce qu'on teste toujours dans le même état de
+connexion.
+
+`guestGuard` renvoyait vers `/` : il renvoie désormais vers
+`/dashboard`, sinon un utilisateur connecté subissait deux
+redirections. `auth.guard.spec.ts` parcourt les deux états — connecté
+et déconnecté — et vérifie que chaque chaîne s'arrête.
+
+---
+
+## 14. Ce qui n'est pas encore décidé
 
 - L'hébergement de production (impacte le déploiement, Lot 22).
+- **Le rendu côté serveur (Angular SSR).** La page d'accueil est
+  construite dans le navigateur : un robot d'indexation qui n'exécute
+  pas le JavaScript ne verra qu'une page vide. Le titre et la
+  description sont posés, ce qui suffit au partage d'un lien sur
+  WhatsApp — le canal principal dans la zone visée — mais pas à un
+  référencement naturel. Décision à prendre au lot 22, avec
+  l'hébergement.
 - Le stockage des photos à grande échelle : disque local pour le
   moment. `PhotoStorage` est l'unique point de contact avec le
   système de fichiers, donc le passage à un stockage objet ne touchera

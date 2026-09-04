@@ -116,7 +116,16 @@ suivant.
 - [x] **Lot 9** — Encaissements et caisse : aucune intégration de paiement, écritures non modifiables, écart de caisse tracé, 69 tests de plus
 - [x] **Lot 10** — Tableau de bord : alertes d'abord, données financières filtrées côté serveur, 40 tests de plus → **MVP UTILISABLE**
 
-**Phase C — Extension** · Lots 11 à 18
+**Phase C — Extension**
+- [x] **Lot 11** — Page d'accueil publique : l'argumentaire, aucun chiffre ni tarif inventé, 7 tests de routage
+- [ ] Lot 12 — Employés et pointage
+- [ ] Lot 13 — Réservations
+- [ ] Lot 14 — Fidélité
+- [ ] Lot 15 — Abonnements
+- [ ] Lot 16 — Analytics
+- [ ] Lot 17 — Multi-stations et paramètres
+- [ ] Lot 18 — Aide et pages d'erreur
+
 **Phase D — Industrialisation** · Lots 19 à 22
 
 ---
@@ -131,9 +140,9 @@ restitution :
 **restitution vérifiée** → **clôture de caisse** — et le tableau de
 bord qui dit, le lendemain matin, ce qui demande une action.
 
-**425 tests** (398 backend, 27 frontend) tiennent l'ensemble.
+**432 tests** (398 backend, 34 frontend) tiennent l'ensemble.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie
-station avant d'attaquer la phase C : les six modules suivants
-gagneront à être conçus sur ce qu'un gérant aura reproché à celui-ci,
-plutôt que sur ce qu'on imagine aujourd'hui.
+station : les modules restants gagneront à être conçus sur ce qu'un
+gérant aura reproché à celui-ci, plutôt que sur ce qu'on imagine
+aujourd'hui.

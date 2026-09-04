@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 
 import { AppShellComponent } from './shared/layout/app-shell.component';
 import { AuthLayoutComponent } from './shared/layout/auth-layout.component';
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, landingGuard } from './core/guards/auth.guard';
 import { onboardingGuard, onboardingPendingGuard } from './core/guards/onboarding.guard';
 
 /**
@@ -44,6 +44,28 @@ import { onboardingGuard, onboardingPendingGuard } from './core/guards/onboardin
  */
 export const routes: Routes = [
   // ================================================================
+  // 0. La page d'accueil publique (lot 11)
+  // ================================================================
+  // `pathMatch: 'full'` est INDISPENSABLE ici. Sans lui, cette route
+  // avalerait toutes les URL de l'application : « / » correspondrait,
+  // mais « /dashboard » aussi, puisque le chemin vide est le préfixe
+  // de tout.
+  //
+  // Avec lui, elle ne répond QU'À l'URL racine exacte, et tout le
+  // reste continue vers la zone interne déclarée juste après.
+  //
+  // Elle est placée en premier parce que la zone interne utilise elle
+  // aussi `path: ''` : c'est la première route qui correspond qui
+  // gagne (voir la longue note ci-dessus).
+  {
+    path: '',
+    pathMatch: 'full',
+    canActivate: [landingGuard],
+    loadComponent: () =>
+      import('./features/landing/landing.page').then((m) => m.LandingPage),
+  },
+
+  // ================================================================
   // 1. Zone interne — connexion requise
   // ================================================================
   {
@@ -52,7 +74,11 @@ export const routes: Routes = [
     canActivate: [authGuard, onboardingGuard],
     children: [
       {
-        // L'enfant vide indispensable, voir l'explication ci-dessus.
+        // L'enfant vide reste nécessaire : la route publique
+        // ci-dessus intercepte « / » pour un visiteur, mais un
+        // utilisateur CONNECTÉ y est renvoyé par landingGuard vers
+        // /dashboard. Cet enfant couvre les cas où l'on atterrit ici
+        // par une autre route interne.
         path: '',
         pathMatch: 'full',
         redirectTo: 'dashboard',

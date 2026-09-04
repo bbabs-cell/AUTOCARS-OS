@@ -1,0 +1,458 @@
+// ==================================================================
+// PAGE D'ACCUEIL PUBLIQUE
+// ==================================================================
+// Les styles sont LOCAUX à ce composant (préfixe `ac-lp-`), et non
+// dans _components.scss.
+//
+// POURQUOI CETTE EXCEPTION ?
+// Parce que _components.scss contient les briques RÉUTILISÉES par les
+// vingt écrans de l'application. Une accroche de page d'accueil ne
+// sert qu'ici : l'y mettre alourdirait la feuille chargée par chaque
+// employé, à chaque connexion, pour un écran qu'il ne verra jamais.
+//
+// Toutes les valeurs viennent malgré tout des jetons du design
+// system : mêmes couleurs, mêmes espacements, même typographie que
+// l'application. Une vitrine qui ne ressemble pas au produit qu'elle
+// vend crée une déception à la première connexion.
+
+// Repère commun : le contenu ne s'étale jamais au-delà de 1120 px.
+// Une ligne de texte trop longue se relit mal — l'œil perd le début
+// de la ligne suivante.
+.ac-lp-container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--ac-space-5);
+}
+
+// --- Bandeau ------------------------------------------------------
+
+.ac-lp-nav {
+  position: sticky;
+  top: 0;
+  z-index: var(--ac-z-topbar);
+
+  background-color: rgb(255 255 255 / 92%);
+  // Un léger flou derrière le bandeau : le contenu qui défile dessous
+  // reste deviné sans gêner la lecture. Discret, pas décoratif.
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--ac-border);
+}
+
+.ac-lp-nav__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-5);
+  height: 64px;
+}
+
+.ac-lp-nav__links {
+  display: flex;
+  gap: var(--ac-space-5);
+  margin-left: auto;
+}
+
+.ac-lp-nav__links a {
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-sm);
+  text-decoration: none;
+}
+
+.ac-lp-nav__links a:hover {
+  color: var(--ac-text);
+}
+
+.ac-lp-nav__actions {
+  display: flex;
+  gap: var(--ac-space-2);
+}
+
+// Sur téléphone, le bouton menu prend la place des actions.
+.ac-lp-nav__inner > .ac-btn-icon {
+  margin-left: auto;
+}
+
+.ac-lp-nav__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-4) var(--ac-space-5) var(--ac-space-5);
+  border-top: 1px solid var(--ac-border);
+  background-color: var(--ac-surface);
+}
+
+.ac-lp-nav__mobile a {
+  color: var(--ac-text);
+  text-decoration: none;
+}
+
+.ac-lp-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  color: var(--ac-text);
+  font-size: var(--ac-text-md);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ac-lp-brand strong {
+  font-weight: var(--ac-weight-bold);
+}
+
+.ac-lp-brand__logo {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ac-radius-md);
+  background-color: var(--ac-primary);
+  color: #fff;
+  font-size: var(--ac-text-sm);
+}
+
+// --- L'accroche ---------------------------------------------------
+
+.ac-lp-hero {
+  padding: var(--ac-space-16) 0 var(--ac-space-12);
+  text-align: center;
+
+  // Un dégradé TRÈS léger, du blanc vers le fond de page. Le cahier
+  // des charges interdit les dégradés agressifs : celui-ci ne se
+  // remarque pas, il empêche seulement le bandeau de flotter sur un
+  // aplat parfaitement uniforme.
+  background: linear-gradient(180deg, var(--ac-surface) 0%, var(--ac-background) 100%);
+}
+
+.ac-lp-eyebrow {
+  margin-bottom: var(--ac-space-3);
+  color: var(--ac-primary);
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ac-lp-hero__title {
+  max-width: 18ch;
+  margin: 0 auto var(--ac-space-5);
+
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: var(--ac-weight-bold);
+  line-height: 1.15;
+  // Sur un titre de cette taille, les lettres paraissent trop
+  // espacées avec l'interlettrage par défaut.
+  letter-spacing: -0.02em;
+}
+
+// La couleur ne porte QUE la deuxième moitié du titre. Colorer la
+// phrase entière ferait un bloc bleu ; en colorer la fin met en
+// valeur là où le regard s'arrête.
+.ac-lp-hero__accent {
+  color: var(--ac-primary);
+}
+
+.ac-lp-hero__text {
+  max-width: 62ch;
+  margin: 0 auto var(--ac-space-6);
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-md);
+  line-height: 1.7;
+}
+
+.ac-lp-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ac-space-3);
+}
+
+.ac-lp-hero__note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ac-space-2);
+  margin: var(--ac-space-5) 0 0;
+  color: var(--ac-text-muted);
+  font-size: var(--ac-text-sm);
+}
+
+// --- Sections -----------------------------------------------------
+
+.ac-lp-section {
+  padding: var(--ac-space-16) 0;
+}
+
+// Une section sur deux prend le fond de page : l'alternance découpe
+// la lecture sans avoir à tracer de lignes de séparation.
+.ac-lp-section--sunken {
+  background-color: var(--ac-background);
+}
+
+.ac-lp-section__title {
+  margin-bottom: var(--ac-space-3);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: var(--ac-weight-bold);
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.ac-lp-section__lead {
+  max-width: 58ch;
+  margin: 0 auto var(--ac-space-8);
+  color: var(--ac-text-secondary);
+  line-height: 1.7;
+  text-align: center;
+}
+
+.ac-lp-section__title--left,
+.ac-lp-section__lead--left {
+  margin-left: 0;
+  text-align: left;
+}
+
+// --- Grille de cartes ---------------------------------------------
+
+.ac-lp-grid {
+  display: grid;
+  gap: var(--ac-space-4);
+}
+
+// `auto-fit` avec un minimum : trois colonnes sur ordinateur, deux
+// sur tablette, une sur téléphone — sans écrire trois points de
+// rupture à la main.
+.ac-lp-grid--3 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.ac-lp-card {
+  padding: var(--ac-space-5);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-lg);
+  background-color: var(--ac-surface);
+}
+
+.ac-lp-card__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--ac-space-4);
+  border-radius: var(--ac-radius-md);
+  background-color: var(--ac-primary-50);
+  color: var(--ac-primary);
+  font-size: var(--ac-text-lg);
+}
+
+// Les trois problèmes portent la couleur d'avertissement : ce sont
+// des situations qui coûtent, pas des fonctionnalités.
+.ac-lp-card__icon--warning {
+  background-color: var(--ac-warning-50);
+  color: var(--ac-warning-700);
+}
+
+.ac-lp-card__title {
+  margin-bottom: var(--ac-space-2);
+  font-size: var(--ac-text-md);
+  font-weight: var(--ac-weight-semibold);
+}
+
+.ac-lp-card__text {
+  margin: 0;
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-sm);
+  line-height: 1.7;
+}
+
+// --- Les trois temps ----------------------------------------------
+
+.ac-lp-steps {
+  display: grid;
+  gap: var(--ac-space-5);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ac-lp-step {
+  display: flex;
+  gap: var(--ac-space-4);
+}
+
+.ac-lp-step__number {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-primary);
+  color: #fff;
+  font-weight: var(--ac-weight-bold);
+}
+
+// --- Conçu pour ici -----------------------------------------------
+
+.ac-lp-split {
+  display: grid;
+  gap: var(--ac-space-8);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: center;
+}
+
+.ac-lp-checklist {
+  display: grid;
+  gap: var(--ac-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ac-lp-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ac-space-3);
+  line-height: 1.6;
+}
+
+.ac-lp-checklist i {
+  margin-top: 0.15em;
+  color: var(--ac-success-700);
+}
+
+.ac-lp-checklist--compact {
+  margin: var(--ac-space-4) 0 var(--ac-space-5);
+  font-size: var(--ac-text-sm);
+}
+
+// --- Tarifs -------------------------------------------------------
+
+.ac-lp-plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--ac-space-5);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-lg);
+  background-color: var(--ac-surface);
+}
+
+// L'offre mise en avant se distingue par sa BORDURE, pas par un fond
+// coloré : un aplat bleu rendrait son texte moins lisible que celui
+// des deux autres, ce qui la desservirait.
+.ac-lp-plan--highlighted {
+  border-color: var(--ac-primary);
+  box-shadow: var(--ac-shadow-md);
+}
+
+.ac-lp-plan__badge {
+  position: absolute;
+  top: calc(-1 * var(--ac-space-3));
+  left: var(--ac-space-5);
+  padding: 0.125rem var(--ac-space-3);
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-primary);
+  color: #fff;
+  font-size: var(--ac-text-xs);
+  font-weight: var(--ac-weight-semibold);
+}
+
+.ac-lp-plan__name {
+  font-size: var(--ac-text-md);
+  font-weight: var(--ac-weight-semibold);
+}
+
+.ac-lp-plan__price {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ac-space-2);
+  margin: var(--ac-space-2) 0 var(--ac-space-3);
+  font-size: var(--ac-text-2xl);
+  font-weight: var(--ac-weight-bold);
+}
+
+.ac-lp-plan__period {
+  color: var(--ac-text-muted);
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-regular);
+}
+
+.ac-lp-plan .btn {
+  margin-top: auto;
+}
+
+.ac-lp-contact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ac-space-3);
+}
+
+.ac-lp-contact__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  padding: var(--ac-space-3) var(--ac-space-5);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-lg);
+  background-color: var(--ac-surface);
+  color: var(--ac-text);
+  text-decoration: none;
+}
+
+.ac-lp-contact__item:hover {
+  border-color: var(--ac-primary);
+  color: var(--ac-primary-700);
+}
+
+// --- L'appel final ------------------------------------------------
+
+.ac-lp-cta {
+  padding: var(--ac-space-16) 0;
+  text-align: center;
+}
+
+.ac-lp-cta__title {
+  margin-bottom: var(--ac-space-3);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: var(--ac-weight-bold);
+}
+
+.ac-lp-cta__text {
+  max-width: 54ch;
+  margin: 0 auto var(--ac-space-6);
+  color: var(--ac-text-secondary);
+  line-height: 1.7;
+}
+
+// --- Pied de page -------------------------------------------------
+
+.ac-lp-footer {
+  padding: var(--ac-space-6) 0;
+  border-top: 1px solid var(--ac-border);
+  background-color: var(--ac-background);
+}
+
+.ac-lp-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ac-space-4);
+}
+
+.ac-lp-footer__links {
+  display: flex;
+  gap: var(--ac-space-4);
+}
+
+.ac-lp-footer__links a {
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-sm);
+  text-decoration: none;
+}
+
+.ac-lp-footer__links a:hover {
+  color: var(--ac-primary-700);
+}

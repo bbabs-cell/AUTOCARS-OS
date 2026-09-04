@@ -1,0 +1,291 @@
+<!--
+  BANDEAU
+  Il reste en haut au défilement : sur une page longue, le bouton
+  d'inscription doit rester à portée sans remonter.
+-->
+<header class="ac-lp-nav">
+  <div class="ac-lp-container ac-lp-nav__inner">
+    <a routerLink="/" class="ac-lp-brand" (click)="closeMenu()">
+      <span class="ac-lp-brand__logo"><i class="bi bi-droplet-fill"></i></span>
+      <span><strong>AUTOCARE</strong> OS</span>
+    </a>
+
+    <nav class="ac-lp-nav__links d-none d-md-flex">
+      <a href="#fonctionnalites">Fonctionnalités</a>
+      <a href="#parcours">Comment ça marche</a>
+      <a href="#tarifs">Tarifs</a>
+    </nav>
+
+    <div class="ac-lp-nav__actions d-none d-md-flex">
+      <a routerLink="/login" class="btn btn-outline-secondary btn-sm">Se connecter</a>
+      <a routerLink="/register" class="btn btn-primary btn-sm">Créer ma station</a>
+    </div>
+
+    <button
+      type="button"
+      class="ac-btn-icon d-md-none"
+      [attr.aria-expanded]="isMenuOpen()"
+      aria-label="Menu"
+      (click)="toggleMenu()"
+    >
+      <i class="bi" [class.bi-list]="!isMenuOpen()" [class.bi-x-lg]="isMenuOpen()"></i>
+    </button>
+  </div>
+
+  @if (isMenuOpen()) {
+    <div class="ac-lp-nav__mobile d-md-none">
+      <a href="#fonctionnalites" (click)="closeMenu()">Fonctionnalités</a>
+      <a href="#parcours" (click)="closeMenu()">Comment ça marche</a>
+      <a href="#tarifs" (click)="closeMenu()">Tarifs</a>
+      <a routerLink="/login" (click)="closeMenu()">Se connecter</a>
+      <a routerLink="/register" class="btn btn-primary" (click)="closeMenu()">
+        Créer ma station
+      </a>
+    </div>
+  }
+</header>
+
+<main>
+  <!-- ============================================================
+       L'ACCROCHE
+       ============================================================ -->
+  <section class="ac-lp-hero">
+    <div class="ac-lp-container">
+      <p class="ac-lp-eyebrow">Logiciel de gestion pour stations de lavage</p>
+
+      <h1 class="ac-lp-hero__title">
+        Chaque véhicule, tracé de son arrivée
+        <span class="ac-lp-hero__accent">à sa restitution.</span>
+      </h1>
+
+      <p class="ac-lp-hero__text">
+        AUTOCARE OS remplace le cahier et les groupes WhatsApp. Photos à
+        l'arrivée, file d'attente en temps réel, encaissements et caisse —
+        au même endroit, sur n'importe quel téléphone.
+      </p>
+
+      <div class="ac-lp-hero__actions">
+        <a routerLink="/register" class="btn btn-primary btn-lg">
+          Créer ma station
+        </a>
+        <a routerLink="/login" class="btn btn-outline-secondary btn-lg">
+          J'ai déjà un compte
+        </a>
+      </div>
+
+      <!--
+        Pas de « rejoignez les 200 stations qui nous font confiance ».
+        Le produit n'a pas encore de clients : un chiffre inventé se
+        repère, et il coûte plus cher en crédibilité qu'il ne rapporte.
+        On promet ce qu'on tient : la mise en route.
+      -->
+      <p class="ac-lp-hero__note">
+        <i class="bi bi-clock"></i>
+        Votre station est configurée en cinq minutes. Aucune carte bancaire
+        demandée.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       LE PROBLÈME — AVANT DE PARLER DE LA SOLUTION
+       ============================================================ -->
+  <section class="ac-lp-section ac-lp-section--sunken">
+    <div class="ac-lp-container">
+      <h2 class="ac-lp-section__title">Ce qui vous coûte cher aujourd'hui</h2>
+      <p class="ac-lp-section__lead">
+        Trois situations que vous avez déjà vécues cette semaine.
+      </p>
+
+      <div class="ac-lp-grid ac-lp-grid--3">
+        @for (problem of problems; track problem.title) {
+          <article class="ac-lp-card">
+            <span class="ac-lp-card__icon ac-lp-card__icon--warning">
+              <i class="bi bi-{{ problem.icon }}"></i>
+            </span>
+            <h3 class="ac-lp-card__title">{{ problem.title }}</h3>
+            <p class="ac-lp-card__text">{{ problem.text }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CE QUE FAIT LE PRODUIT
+       ============================================================ -->
+  <section id="fonctionnalites" class="ac-lp-section">
+    <div class="ac-lp-container">
+      <h2 class="ac-lp-section__title">Ce que fait AUTOCARE OS</h2>
+      <p class="ac-lp-section__lead">
+        Six modules, tous en service. Rien d'annoncé qui n'existe pas.
+      </p>
+
+      <div class="ac-lp-grid ac-lp-grid--3">
+        @for (feature of features; track feature.title) {
+          <article class="ac-lp-card">
+            <span class="ac-lp-card__icon">
+              <i class="bi bi-{{ feature.icon }}"></i>
+            </span>
+            <h3 class="ac-lp-card__title">{{ feature.title }}</h3>
+            <p class="ac-lp-card__text">{{ feature.text }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       LE PARCOURS, EN TROIS TEMPS
+       ============================================================ -->
+  <section id="parcours" class="ac-lp-section ac-lp-section--sunken">
+    <div class="ac-lp-container">
+      <h2 class="ac-lp-section__title">Comment ça se passe</h2>
+      <p class="ac-lp-section__lead">
+        De l'arrivée du véhicule à la remise des clés.
+      </p>
+
+      <ol class="ac-lp-steps">
+        @for (step of steps; track step.number) {
+          <li class="ac-lp-step">
+            <span class="ac-lp-step__number">{{ step.number }}</span>
+            <div>
+              <h3 class="ac-lp-card__title">{{ step.title }}</h3>
+              <p class="ac-lp-card__text">{{ step.text }}</p>
+            </div>
+          </li>
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CONÇU POUR ICI
+       ============================================================ -->
+  <section class="ac-lp-section">
+    <div class="ac-lp-container ac-lp-split">
+      <div>
+        <h2 class="ac-lp-section__title ac-lp-section__title--left">
+          Conçu pour des stations d'ici
+        </h2>
+        <p class="ac-lp-section__lead ac-lp-section__lead--left">
+          Pas un logiciel étranger traduit après coup. Les décisions de
+          conception partent de la façon dont une station sénégalaise
+          travaille réellement.
+        </p>
+      </div>
+
+      <ul class="ac-lp-checklist">
+        @for (item of localFit; track item) {
+          <li>
+            <i class="bi bi-check-circle-fill"></i>
+            <span>{{ item }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       LES TARIFS
+       ============================================================
+       Tant qu'aucun prix n'est publié, on invite à en parler plutôt
+       que d'afficher un tarif inventé « pour l'exemple » — qui
+       finirait par être vu par un vrai client.
+  -->
+  <section id="tarifs" class="ac-lp-section ac-lp-section--sunken">
+    <div class="ac-lp-container">
+      <h2 class="ac-lp-section__title">Combien ça coûte</h2>
+
+      @if (hasPricing()) {
+        <p class="ac-lp-section__lead">
+          Sans engagement. Vous arrêtez quand vous voulez.
+        </p>
+
+        <div class="ac-lp-grid ac-lp-grid--3">
+          @for (plan of plans; track plan.name) {
+            <article class="ac-lp-plan" [class.ac-lp-plan--highlighted]="plan.highlighted">
+              @if (plan.highlighted) {
+                <span class="ac-lp-plan__badge">Le plus choisi</span>
+              }
+              <h3 class="ac-lp-plan__name">{{ plan.name }}</h3>
+              <p class="ac-lp-plan__price">
+                <span class="ac-numeric">{{ plan.price | acAmount }}</span>
+                <span class="ac-lp-plan__period">{{ plan.period }}</span>
+              </p>
+              <p class="ac-lp-card__text">{{ plan.description }}</p>
+
+              <ul class="ac-lp-checklist ac-lp-checklist--compact">
+                @for (item of plan.features; track item) {
+                  <li><i class="bi bi-check-circle-fill"></i><span>{{ item }}</span></li>
+                }
+              </ul>
+
+              <a
+                routerLink="/register"
+                class="btn w-100"
+                [class.btn-primary]="plan.highlighted"
+                [class.btn-outline-secondary]="!plan.highlighted"
+              >
+                Commencer
+              </a>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="ac-lp-section__lead">
+          Le tarif dépend du nombre de stations et de véhicules traités.
+          Parlons-en&nbsp;: la mise en route est gratuite, et vous pouvez déjà
+          créer votre station et l'essayer.
+        </p>
+
+        <div class="ac-lp-contact">
+          <a href="mailto:{{ contact.email }}" class="ac-lp-contact__item">
+            <i class="bi bi-envelope"></i>
+            <span>{{ contact.email }}</span>
+          </a>
+          <a href="tel:{{ contact.phone }}" class="ac-lp-contact__item">
+            <i class="bi bi-telephone"></i>
+            <span class="ac-numeric">{{ contact.phone }}</span>
+          </a>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ============================================================
+       L'APPEL FINAL
+       ============================================================ -->
+  <section class="ac-lp-cta">
+    <div class="ac-lp-container">
+      <h2 class="ac-lp-cta__title">Le prochain véhicule qui arrive</h2>
+      <p class="ac-lp-cta__text">
+        Créez votre station, ajoutez vos prestations, et accueillez-le
+        dans le logiciel. Vous verrez la différence dès le premier litige
+        que vous n'aurez pas.
+      </p>
+      <a routerLink="/register" class="btn btn-primary btn-lg">
+        Créer ma station
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer class="ac-lp-footer">
+  <div class="ac-lp-container ac-lp-footer__inner">
+    <div class="ac-lp-brand">
+      <span class="ac-lp-brand__logo"><i class="bi bi-droplet-fill"></i></span>
+      <span><strong>AUTOCARE</strong> OS</span>
+    </div>
+
+    <p class="ac-caption mb-0">
+      Le logiciel des stations de lavage et de detailing. Dakar, Sénégal.
+    </p>
+
+    <nav class="ac-lp-footer__links">
+      <a routerLink="/login">Se connecter</a>
+      <a routerLink="/register">Créer ma station</a>
+      <a href="mailto:{{ contact.email }}">Nous écrire</a>
+    </nav>
+  </div>
+</footer>

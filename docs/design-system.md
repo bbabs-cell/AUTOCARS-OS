@@ -340,3 +340,71 @@ vérifie `split-bar.component.spec.ts`.
 | Un camembert pour comparer des parts proches | L'œil compare mal des angles, bien des longueurs |
 | Un nombre au-dessus de chaque point | Sept nombres alignés deviennent du bruit qu'on ne lit plus — on étiquette la valeur extrême, l'axe et le survol font le reste |
 | Une bibliothèque de graphiques pour sept rectangles | 200 ko sur une connexion mobile, et ses couleurs à combattre |
+
+
+---
+
+## La page d'accueil publique (lot 11)
+
+C'est le seul écran du produit qui ne s'adresse pas à un utilisateur
+connecté. Elle reprend malgré tout **les jetons du design system** —
+mêmes couleurs, mêmes espacements, même typographie. Une vitrine qui
+ne ressemble pas au produit qu'elle vend crée une déception à la
+première connexion.
+
+### Ses styles sont locaux, et c'est une exception assumée
+
+Ils vivent dans `features/landing/landing.page.scss` (préfixe
+`ac-lp-`), pas dans `_components.scss`.
+
+`_components.scss` contient les briques **réutilisées** par les vingt
+écrans de l'application : elle est téléchargée par chaque employé, à
+chaque connexion. Y mettre une accroche de page d'accueil
+l'alourdirait pour un écran qu'il ne verra jamais.
+
+Conséquence : le budget `anyComponentStyle` d'Angular est passé de
+4 kB à 8 kB (erreur à 16 kB). Le garde-fou continue de détecter une
+croissance anormale ; il n'est plus déclenché par une page dont les
+styles sont légitimement uniques.
+
+### L'ordre des sections est l'argumentaire
+
+1. **Le problème**, avant tout le reste — trois phrases qu'un gérant
+   a déjà prononcées. Une page qui commence par « notre plateforme
+   innovante » ne convainc personne.
+2. **Ce que fait le produit**, et uniquement ce qui est livré.
+3. **Comment ça se passe**, en trois temps.
+4. **Pourquoi ici** — ce qui distingue le produit d'un logiciel
+   importé.
+5. **Combien ça coûte.**
+
+### Ce qui n'y figure pas, volontairement
+
+- **Aucun chiffre inventé.** Pas de « 200 stations nous font
+  confiance » quand il y en a zéro, pas de témoignage fabriqué. Un
+  chiffre faux se repère, et il coûte plus en crédibilité qu'il ne
+  rapporte en conversion.
+- **Aucun tarif inventé.** Fixer un prix est une décision
+  commerciale. Tant que `PLANS` est vide dans
+  `core/config/marketing.config.ts`, la section affiche une invitation
+  à prendre contact ; remplissez le tableau et elle affiche les offres,
+  sans autre modification.
+
+---
+
+## Typographie française : l'espace avant `? ! : ;`
+
+En français, ces signes sont précédés d'une espace — contrairement à
+l'anglais. Mais une espace **ordinaire** autorise le navigateur à
+couper la ligne juste avant le signe : on se retrouve avec un « ? »
+seul en début de ligne suivante.
+
+C'est arrivé sur la première version de la page d'accueil.
+
+**Règle :** écrire une espace **insécable** devant ces signes, et à
+l'intérieur des guillemets `« … »`.
+
+| Contexte | Comment |
+|---|---|
+| Dans un fichier `.ts` | `'Depuis quand\u00a0?'` |
+| Dans un gabarit HTML | `Parlons-en&nbsp;: la suite` |
