@@ -314,6 +314,87 @@ schéma.
 
 ---
 
+## 7 quater. Rendez-vous
+
+### Aucune messagerie, aucun envoi sortant
+
+Même promesse qu'au lot 9 sur les paiements, et pour la même raison :
+un rappel par SMS suppose un compte opérateur, un budget et un numéro
+d'expéditeur déclaré. Un envoi « simulé » en attendant donnerait
+l'illusion d'un produit branché — et il faudrait tout défaire le jour
+venu, après avoir peut-être laissé croire à un gérant que ses clients
+étaient prévenus.
+
+`tests/api_booking_test.php` relit tout `src/` et `config/` à la
+recherche d'un appel HTTP sortant ou d'un nom de fournisseur de SMS
+(Twilio, Infobip, Africa's Talking…), et `.env.example` à la recherche
+d'une clé de messagerie. Une promesse se garde mieux par un test que
+par la bonne volonté de celui qui relira le code dans six mois.
+
+### Un statut à effet de bord n'est jamais atteignable directement
+
+`ARRIVED` ouvre une opération. Le poser par la route générique de
+changement de statut créerait une réservation « arrivée » sans dossier
+derrière : un véhicule officiellement pris en charge que personne ne
+verrait dans la file, donc jamais inspecté et jamais facturé.
+
+Il a sa propre route, `POST /api/bookings/{id}/arrive`, qui exige le
+droit `operations.create` — celui d'ouvrir un dossier — et fait les
+deux écritures **dans une seule transaction**.
+
+**Règle générale : un statut qui a un effet de bord n'est jamais
+atteignable par la route générique.**
+
+### Les trois fins sont définitives
+
+`ARRIVED`, `NO_SHOW` et `CANCELLED` sont des états finaux, vérifiés
+côté serveur (`409`). Un rendez-vous manqué qu'on rouvrirait ferait
+disparaître le fait qu'il a été manqué — et cet historique servira un
+jour à décider si on garde un créneau à quelqu'un.
+
+Un rendez-vous terminé ne se **modifie** pas non plus : déplacer
+l'heure d'un client déjà venu réécrirait ce qui s'est passé.
+
+### On ne déclare pas une absence avant l'heure
+
+Marquer « absent » à 9 h un rendez-vous prévu à 10 h n'est pas une
+information : c'est une erreur de saisie, ou quelqu'un qui solde sa
+journée d'avance. Refusé en `422` jusqu'à 15 minutes après l'heure —
+un client à 10 h 05 n'est pas absent.
+
+Et comme au lot 12, **le logiciel ne solde rien tout seul** : les
+rendez-vous dépassés sont signalés en tête d'écran, quelqu'un au
+comptoir tranche.
+
+### Le prix promis ne se réécrit pas
+
+Le prix est figé à la réservation et repris tel quel par l'opération à
+l'arrivée. Ce n'est pas seulement commercial : c'est ce qui empêche
+qu'un changement de tarif réécrive rétroactivement ce qu'on a annoncé à
+des clients. Le prix honoré est inscrit dans le journal d'audit
+(`price_honoured`).
+
+### Pourquoi ce module n'a PAS de séparation de rôles
+
+C'est le seul du produit où ADMIN, MANAGER et EMPLOYEE ont les mêmes
+droits (`bookings.view`, `bookings.create`, `bookings.update`).
+
+Ce n'est pas un oubli. Ailleurs, la séparation protège quelque chose de
+précis : l'argent, les personnes, la structure. Un rendez-vous n'est
+rien de tout cela, et c'est l'employé qui décroche le téléphone. Une
+hiérarchie inventée ici obligerait à déranger un responsable à chaque
+appel — c'est-à-dire à reprendre le cahier.
+
+**Le principe du moindre privilège protège ce qui a de la valeur ; il
+ne consiste pas à restreindre par réflexe.** Toutes les actions restent
+tracées nominativement.
+
+L'isolation entre entreprises, elle, s'applique comme partout : un
+carnet n'est jamais lisible, modifiable ni annulable depuis une autre
+organisation, et cinq tests le vérifient.
+
+---
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -386,4 +467,8 @@ la question centrale en cas de litige sur un véhicule.
 | Dernier administrateur protégé | ✅ Lot 12 |
 | Heures de travail : ni suppression, ni fermeture automatique | ✅ Lot 12 |
 | Corrections nominatives et motivées | ✅ Lot 12 |
+| Aucune intégration de messagerie (vérifié par un test) | ✅ Lot 13 |
+| Statut à effet de bord hors de la route générique | ✅ Lot 13 |
+| Rendez-vous terminé : ni rouvert, ni modifié | ✅ Lot 13 |
+| Prix promis non réécrit par un changement de tarif | ✅ Lot 13 |
 | Audit de sécurité complet | 🔜 Lot 21 |

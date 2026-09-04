@@ -119,7 +119,7 @@ suivant.
 **Phase C — Extension**
 - [x] **Lot 11** — Page d'accueil publique : l'argumentaire, aucun chiffre ni tarif inventé, 7 tests de routage
 - [x] **Lot 12** — Équipe et pointage : un registre et non une caméra, aucune fermeture automatique, corrections nominatives, 53 tests de plus
-- [ ] Lot 13 — Réservations
+- [x] **Lot 13** — Rendez-vous : le prix promis est le prix facturé, aucun refus pour créneau plein, aucun SMS, 62 tests de plus
 - [ ] Lot 14 — Fidélité
 - [ ] Lot 15 — Abonnements
 - [ ] Lot 16 — Analytics
@@ -135,12 +135,13 @@ suivant.
 Le parcours entier d'un véhicule fonctionne, de son arrivée à sa
 restitution :
 
-**accueil** → **inspection d'entrée avec photos** → **file d'attente**
-→ **lavage** → **contrôle qualité** → **encaissement** →
-**restitution vérifiée** → **clôture de caisse** — et le tableau de
-bord qui dit, le lendemain matin, ce qui demande une action.
+**rendez-vous** → **accueil** → **inspection d'entrée avec photos** →
+**file d'attente** → **lavage** → **contrôle qualité** →
+**encaissement** → **restitution vérifiée** → **clôture de caisse** —
+et le tableau de bord qui dit, le lendemain matin, ce qui demande une
+action.
 
-**485 tests** (451 backend, 34 frontend) tiennent l'ensemble.
+**557 tests** (519 backend, 38 frontend) tiennent l'ensemble.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie
 station : les modules restants gagneront à être conçus sur ce qu'un

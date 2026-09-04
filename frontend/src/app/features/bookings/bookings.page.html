@@ -1,0 +1,623 @@
+<ac-page-header title="Rendez-vous" [subtitle]="dayLabel()">
+  <button type="button" class="btn btn-primary" (click)="openCreate()">
+    <i class="bi bi-plus-lg"></i> Noter un rendez-vous
+  </button>
+</ac-page-header>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+    <button type="button" class="ac-btn-icon ms-auto" (click)="dismissError()" aria-label="Fermer">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--success mb-4">
+    <i class="bi bi-check-circle-fill"></i>
+    <div>
+      {{ message }}
+
+      <!--
+        LE SERVEUR PRÉVIENT, IL NE REFUSE PAS.
+        Il ne connaît pas la capacité réelle d'une station : trois
+        laveurs sur un lavage simple, c'est six voitures à l'heure ;
+        sur un detailing, c'est une. Un refus qu'on juge injuste ne
+        fait pas renoncer, il fait revenir au cahier.
+      -->
+      @for (warning of warnings(); track warning) {
+        <div class="ac-caption mt-1">
+          <i class="bi bi-info-circle"></i> {{ warning }}
+        </div>
+      }
+    </div>
+    <button type="button" class="ac-btn-icon ms-auto" (click)="dismissNotice()" aria-label="Fermer">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+}
+
+<!--
+  ============================================================
+  1. LES RENDEZ-VOUS DÉPASSÉS — AVANT TOUT LE RESTE
+  ============================================================
+  L'heure est passée et personne n'a rien noté. Soit le client est
+  arrivé sans être enregistré, soit il n'est pas venu. Le logiciel
+  ne tranche PAS : l'absence qu'il inscrirait resterait dans
+  l'historique du client.
+
+  Cette liste ignore la journée affichée : un rendez-vous
+  d'avant-hier jamais soldé reste à traiter.
+-->
+@if (overdue().length > 0) {
+  <div class="ac-card ac-card--alert mb-4">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">À traiter</h2>
+      <span class="ac-badge ac-badge--warning">{{ overdue().length }}</span>
+    </div>
+    <div class="ac-card__body">
+      <p class="ac-text-secondary">
+        L'heure de ces rendez-vous est passée et personne n'a rien noté. Le logiciel
+        ne les classe pas tout seul&nbsp;: il ne sait pas si le client est venu.
+      </p>
+
+      @for (booking of overdue(); track booking.id) {
+        <div class="ac-alert-row">
+          <i class="bi bi-clock-history" style="color: var(--ac-warning-700)"></i>
+          <div>
+            <div class="fw-semibold">{{ booking.customer_name }}</div>
+            <div class="ac-caption">
+              {{ booking.scheduled_date }} à {{ booking.scheduled_time }} —
+              {{ lateBy(booking) }} · {{ booking.service_name }}
+              @if (booking.plate_number) {
+                · {{ booking.plate_number }}
+              }
+            </div>
+          </div>
+
+          <div class="ac-row-actions ms-auto">
+            <button type="button" class="btn btn-sm btn-primary"
+                    (click)="arrive(booking)" [disabled]="isSaving()">
+              Le client est là
+            </button>
+            @if (can(booking, 'NO_SHOW')) {
+              <button type="button" class="btn btn-sm btn-outline-secondary"
+                      (click)="openClosing(booking, 'NO_SHOW')">
+                Absent
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- La journée choisie -->
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <form [formGroup]="filterForm" (ngSubmit)="load_()" class="row g-3 align-items-end">
+      <div class="col-12 col-md-4">
+        <label for="b-day" class="form-label">Journée</label>
+        <input id="b-day" type="date" class="form-control" formControlName="day" />
+      </div>
+
+      @if (stations().length > 1) {
+        <div class="col-12 col-md-4">
+          <label for="b-station" class="form-label">Station</label>
+          <select id="b-station" class="form-select" formControlName="station_id">
+            @for (station of stations(); track station.id) {
+              <option [value]="station.id">{{ station.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <div class="col-12 col-md-3">
+        <button type="submit" class="btn btn-primary w-100">Afficher</button>
+      </div>
+    </form>
+
+    <div class="d-flex gap-2 mt-3">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="showToday()">
+        Aujourd'hui
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="showTomorrow()">
+        Demain
+      </button>
+    </div>
+  </div>
+</div>
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body text-center py-5">
+      <span class="spinner-border text-primary"></span>
+    </div>
+  </div>
+} @else {
+
+  <div class="row g-4 mb-4">
+    <!-- Le compte par statut -->
+    <div class="col-12 col-lg-5">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">La journée</h2>
+        </div>
+        <div class="ac-card__body">
+          @for (entry of counts(); track entry.key) {
+            <div class="ac-count-row">
+              <span class="ac-badge {{ badgeFor(entry.key) }}">{{ entry.label }}</span>
+              <span class="ac-numeric fw-semibold">{{ entry.value }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!--
+      LA CHARGE, PAS UNE CAPACITÉ.
+      On ne connaît pas le nombre de véhicules qu'une station peut
+      traiter à 10 h : cela dépend des prestations, des employés
+      présents ce jour-là et de la météo. On montre ce qui est déjà
+      pris, celui qui connaît sa station décide du reste.
+    -->
+    <div class="col-12 col-lg-7">
+      <div class="ac-card h-100">
+        <div class="ac-card__header">
+          <h2 class="ac-card__title">Charge de la journée</h2>
+        </div>
+        <div class="ac-card__body">
+          @if (load().length === 0) {
+            <p class="ac-text-secondary mb-0">Aucun rendez-vous en attente ce jour-là.</p>
+          } @else {
+            @for (slot of load(); track slot.hour) {
+              <div class="ac-load-row">
+                <span class="ac-load-row__hour ac-numeric">{{ hourLabel(slot.hour) }}</span>
+                <span class="ac-load-row__track">
+                  <span class="ac-load-row__bar" [style.width]="barWidth(slot.bookings)"></span>
+                </span>
+                <span class="ac-load-row__value ac-numeric">{{ slot.bookings }}</span>
+              </div>
+            }
+            <p class="ac-caption mt-3 mb-0">
+              Ce que la station a déjà promis, heure par heure. Le logiciel ne fixe
+              aucun maximum&nbsp;: c'est vous qui savez combien de véhicules vous
+              pouvez prendre.
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Le détail de la journée -->
+  <div class="ac-card mb-4">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">Rendez-vous</h2>
+      <span class="ac-caption">{{ list().length }} ligne(s)</span>
+    </div>
+
+    @if (list().length === 0) {
+      <div class="ac-card__body">
+        <ac-empty-state
+          icon="bi-calendar-check"
+          title="Aucun rendez-vous ce jour-là"
+          text="Notez-en un quand un client appelle : il apparaîtra ici, et son dossier
+                s'ouvrira en un clic quand il arrivera."
+        />
+      </div>
+    } @else {
+      <div class="ac-table-wrapper">
+        <table class="ac-table">
+          <thead>
+            <tr>
+              <th>Heure</th>
+              <th>Client</th>
+              <th>Véhicule</th>
+              <th>Prestation</th>
+              <th class="ac-table__amount">Prix</th>
+              <th>État</th>
+              <th class="ac-table__actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (booking of list(); track booking.id) {
+              <tr [class.ac-table__row--muted]="!booking.is_open">
+                <td class="ac-numeric ac-nowrap">
+                  <div class="fw-semibold">{{ booking.scheduled_time }}</div>
+                  <div class="ac-caption">{{ slotOf(booking) }}</div>
+                </td>
+
+                <td>
+                  <div class="fw-semibold">{{ booking.customer_name }}</div>
+                  <div class="ac-caption">{{ booking.customer_phone }}</div>
+                </td>
+
+                <td>
+                  @if (booking.plate_number) {
+                    <div class="ac-numeric">{{ booking.plate_number }}</div>
+                  } @else {
+                    <span class="ac-text-muted">—</span>
+                  }
+                  @if (booking.vehicle_label) {
+                    <div class="ac-caption">{{ booking.vehicle_label }}</div>
+                  }
+                </td>
+
+                <td>{{ booking.service_name }}</td>
+
+                <!--
+                  LE PRIX EST CELUI DE LA RÉSERVATION, pas celui du
+                  catalogue d'aujourd'hui. C'est ce qui a été annoncé
+                  au client au téléphone.
+                -->
+                <td class="ac-table__amount ac-numeric">{{ booking.price | acAmount }}</td>
+
+                <td>
+                  <span class="ac-badge {{ badgeFor(booking.status) }}">
+                    {{ booking.status_label }}
+                  </span>
+                  @if (booking.operation_reference) {
+                    <div class="ac-caption">{{ booking.operation_reference }}</div>
+                  }
+                  @if (booking.outcome_reason) {
+                    <div class="ac-caption">{{ booking.outcome_reason }}</div>
+                  }
+                </td>
+
+                <td class="ac-table__actions">
+                  @if (booking.is_open) {
+                    <div class="ac-row-actions">
+                      <button type="button" class="btn btn-sm btn-primary"
+                              (click)="arrive(booking)" [disabled]="isSaving()">
+                        Le client est là
+                      </button>
+
+                      <!--
+                        UN SEUL BOUTON PORTE UN LIBELLÉ.
+                        « Le client est là » est le geste qu'on fait
+                        avec quelqu'un debout devant le comptoir : il
+                        doit se lire sans réfléchir. Les trois autres
+                        sont des icônes — quatre libellés côte à côte
+                        passaient sur trois lignes et faisaient perdre
+                        de vue le seul qui compte.
+                      -->
+                      @if (can(booking, 'CONFIRMED')) {
+                        <button type="button" class="ac-btn-icon"
+                                (click)="confirm(booking)" [disabled]="isSaving()"
+                                title="Marquer confirmé" aria-label="Marquer confirmé">
+                          <i class="bi bi-check-lg"></i>
+                        </button>
+                      }
+
+                      <button type="button" class="ac-btn-icon" (click)="openEdit(booking)"
+                              title="Modifier" aria-label="Modifier">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+
+                      @if (can(booking, 'CANCELLED')) {
+                        <button type="button" class="ac-btn-icon"
+                                (click)="openClosing(booking, 'CANCELLED')"
+                                title="Annuler" aria-label="Annuler">
+                          <i class="bi bi-x-circle"></i>
+                        </button>
+                      }
+                    </div>
+                  } @else {
+                    <span class="ac-caption">
+                      @if (booking.outcome_by_name) {
+                        par {{ booking.outcome_by_name }}
+                      }
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!--
+    ============================================================
+    3. LA LISTE D'APPELS
+    ============================================================
+    Rappeler la veille est la seule mesure qui réduit vraiment les
+    absences. Encore faut-il savoir QUI appeler : sans cette liste,
+    on la refait de tête tous les soirs, et on finit par ne plus la
+    faire du tout.
+  -->
+  @if (toCallBack().length > 0) {
+    <div class="ac-card">
+      <div class="ac-card__header">
+        <h2 class="ac-card__title">À rappeler</h2>
+        <span class="ac-caption">{{ toCallBack().length }} client(s)</span>
+      </div>
+      <div class="ac-card__body">
+        <p class="ac-text-secondary">
+          Ces rendez-vous n'ont pas encore été confirmés. Un appel la veille est
+          ce qui réduit le plus les absences.
+        </p>
+
+        @for (booking of toCallBack(); track booking.id) {
+          <div class="ac-alert-row">
+            <i class="bi bi-telephone"></i>
+            <div>
+              <div class="fw-semibold">{{ booking.customer_name }}</div>
+              <div class="ac-caption">
+                {{ booking.customer_phone }} · {{ booking.scheduled_time }} ·
+                {{ booking.service_name }}
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto"
+                    (click)="confirm(booking)" [disabled]="isSaving()">
+              Confirmé
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+}
+
+<!-- ============================================================ -->
+<!-- Noter ou modifier un rendez-vous                             -->
+<!-- ============================================================ -->
+@if (isCreating()) {
+  <div class="ac-modal-backdrop" (click)="closeForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="booking-title">
+        {{ editing() ? 'Modifier le rendez-vous' : 'Noter un rendez-vous' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closeForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="bookingForm" (ngSubmit)="submitBooking()" novalidate>
+      <div class="ac-modal__body">
+        <!--
+          LE NOM ET LE NUMÉRO SUFFISENT.
+          Exiger une fiche client complète pendant que quelqu'un
+          attend au bout du fil, c'est obtenir une fiche à moitié
+          fausse — ou un rendez-vous noté sur un papier.
+        -->
+        <div class="mb-4">
+          <label for="b-name" class="form-label">Nom du client</label>
+          <input id="b-name" type="text" class="form-control" formControlName="customer_name"
+                 placeholder="Cheikh Fall"
+                 [class.is-invalid]="fieldErrors()['customer_name']" />
+          @if (fieldErrors()['customer_name']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="b-phone" class="form-label">Téléphone</label>
+          <input id="b-phone" type="tel" class="form-control" formControlName="customer_phone"
+                 placeholder="+221 77 611 22 33"
+                 [class.is-invalid]="fieldErrors()['customer_phone']" />
+          <span class="ac-caption">
+            C'est par ce numéro qu'on retrouve le rendez-vous quand le client rappelle.
+          </span>
+          @if (fieldErrors()['customer_phone']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div class="mb-4">
+          <label for="b-plate" class="form-label">
+            Plaque <span class="ac-text-muted fw-normal">(facultative)</span>
+          </label>
+          <input id="b-plate" type="text" class="form-control" formControlName="plate_number"
+                 placeholder="DK-1234-AA" />
+          <span class="ac-caption">
+            Beaucoup de clients ne la connaissent pas par cœur. On la demandera à l'arrivée.
+          </span>
+        </div>
+
+        <div class="mb-4">
+          <label for="b-service" class="form-label">Prestation</label>
+          <select id="b-service" class="form-select" formControlName="service_id"
+                  [class.is-invalid]="fieldErrors()['service_id']">
+            @for (service of services(); track service.id) {
+              <option [value]="service.id">
+                {{ service.name }} — {{ service.price | acAmount }} ({{ service.duration_minutes }} min)
+              </option>
+            }
+          </select>
+          <span class="ac-caption">
+            Le prix affiché ici est <strong>figé</strong>&nbsp;: si le tarif change avant
+            la venue du client, c'est celui-ci qui sera facturé.
+          </span>
+          @if (fieldErrors()['service_id']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        @if (stations().length > 1) {
+          <div class="mb-4">
+            <label for="b-form-station" class="form-label">Station</label>
+            <select id="b-form-station" class="form-select" formControlName="station_id">
+              @for (station of stations(); track station.id) {
+                <option [value]="station.id">{{ station.name }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="mb-4">
+          <label for="b-when" class="form-label">Date et heure</label>
+          <input id="b-when" type="datetime-local" class="form-control"
+                 formControlName="scheduled_at"
+                 [class.is-invalid]="fieldErrors()['scheduled_at']" />
+          @if (fieldErrors()['scheduled_at']; as error) {
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          }
+        </div>
+
+        <div>
+          <label for="b-notes" class="form-label">
+            Note <span class="ac-text-muted fw-normal">(facultative)</span>
+          </label>
+          <textarea id="b-notes" class="form-control" rows="2" formControlName="notes"
+                    placeholder="A demandé qu'on insiste sur les moquettes."></textarea>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">
+          Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            {{ editing() ? 'Enregistrer' : 'Noter le rendez-vous' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ============================================================ -->
+<!-- Annuler ou déclarer une absence                              -->
+<!-- ============================================================ -->
+@if (closing(); as pending) {
+  <div class="ac-modal-backdrop" (click)="closeClosing()"></div>
+
+  <div class="ac-modal ac-modal--sm" role="dialog" aria-modal="true"
+       aria-labelledby="closing-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="closing-title">
+        {{ pending.target === 'NO_SHOW' ? 'Déclarer une absence' : 'Annuler le rendez-vous' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closeClosing()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="closingForm" (ngSubmit)="submitClosing()" novalidate>
+      <div class="ac-modal__body">
+        <div class="ac-alert ac-alert--info mb-4">
+          <i class="bi bi-person"></i>
+          <div>
+            <strong>{{ pending.booking.customer_name }}</strong>
+            <div class="ac-caption">
+              {{ pending.booking.scheduled_date }} à {{ pending.booking.scheduled_time }} ·
+              {{ pending.booking.service_name }}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label for="cl-reason" class="form-label">
+            Motif <span class="ac-text-muted fw-normal">(facultatif)</span>
+          </label>
+          <input id="cl-reason" type="text" class="form-control" formControlName="reason"
+                 placeholder="Le client a eu un imprévu, rappellera." />
+          <span class="ac-caption">
+            Ce rendez-vous ne se rouvrira pas. Si le client reprend un créneau,
+            notez-en un nouveau&nbsp;: les deux lignes racontent ce qui s'est passé.
+          </span>
+        </div>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeClosing()">
+          Retour
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            {{ pending.target === 'NO_SHOW' ? 'Déclarer absent' : 'Annuler le rendez-vous' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- ============================================================ -->
+<!-- Le client est là : de quelle voiture s'agit-il ?             -->
+<!-- ============================================================ -->
+@if (arriving(); as booking) {
+  <div class="ac-modal-backdrop" (click)="closeArrival()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="arrival-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="arrival-title">Quel véhicule&nbsp;?</h2>
+      <button type="button" class="ac-btn-icon" (click)="closeArrival()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="ac-modal__body">
+      <div class="ac-alert ac-alert--info mb-4">
+        <i class="bi bi-person"></i>
+        <div>
+          <strong>{{ booking.customer_name }}</strong>
+          <div class="ac-caption">
+            {{ booking.scheduled_time }} · {{ booking.service_name }} ·
+            {{ booking.price | acAmount }}
+          </div>
+        </div>
+      </div>
+
+      <p class="ac-text-secondary">
+        Ce rendez-vous a été pris au téléphone, sans fiche véhicule. C'est le
+        véhicule qui portera le dossier&nbsp;: cherchez-le par sa plaque.
+      </p>
+
+      <form [formGroup]="vehicleSearchForm" (ngSubmit)="searchVehicle()" class="mb-4">
+        <div class="input-group">
+          <input type="text" class="form-control" formControlName="search"
+                 placeholder="DK-1234-AA" aria-label="Chercher un véhicule" />
+          <button type="submit" class="btn btn-outline-secondary">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </form>
+
+      @if (isSearchingVehicle()) {
+        <div class="text-center py-3">
+          <span class="spinner-border spinner-border-sm text-primary"></span>
+        </div>
+      } @else if (vehicleMatches().length === 0) {
+        <ac-empty-state
+          icon="bi-car-front"
+          title="Aucun véhicule trouvé"
+          text="Créez d'abord la fiche du véhicule depuis l'écran Véhicules,
+                puis revenez ouvrir le dossier."
+        />
+      } @else {
+        @for (vehicle of vehicleMatches(); track vehicle.id) {
+          <button type="button" class="ac-choice-row" (click)="chooseVehicle(vehicle)"
+                  [disabled]="isSaving()">
+            <div>
+              <div class="fw-semibold ac-numeric">{{ vehicle.plate_display }}</div>
+              <div class="ac-caption">
+                {{ vehicle.brand }} {{ vehicle.model }} · {{ vehicle.customer_name }}
+              </div>
+            </div>
+            <i class="bi bi-chevron-right ms-auto"></i>
+          </button>
+        }
+      }
+    </div>
+
+    <div class="ac-modal__footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeArrival()">
+        Fermer
+      </button>
+    </div>
+  </div>
+}

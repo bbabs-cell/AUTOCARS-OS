@@ -262,6 +262,80 @@ seconde nuisance est bien plus grande que la première. Le jour où le
 besoin sera réel, il faudra le décider explicitement, pas le découvrir
 dans un schéma.
 
+### `bookings` : une table à part, et pourquoi
+
+Au lot 8, on a écrit qu'il n'y aurait **pas** de table `queue` : la
+file d'attente n'est qu'une vue des opérations en cours, et une table
+séparée aurait dupliqué un état qui finirait par diverger.
+
+Le lot 13 crée pourtant `bookings`. Ce n'est pas une contradiction, et
+la différence est exactement la question à se poser avant de créer
+n'importe quelle table :
+
+| | File d'attente | Rendez-vous |
+|---|---|---|
+| Existe sans opération ? | Non | **Oui** — un client qui ne vient pas laisse une réservation, pas une opération |
+| États propres ? | Non, ceux des opérations | **Oui** — `NO_SHOW` n'a aucun sens pour un véhicule présent |
+| Client obligatoire en base ? | Oui | **Non** — au téléphone, on note un nom et un numéro |
+
+Une réservation n'est donc pas une opération à un autre statut : c'est
+autre chose. Le lien entre les deux est explicite et posé une seule
+fois, à l'arrivée : `operation_id`.
+
+### `scheduled_at` est un DATETIME, pas un TIMESTAMP
+
+C'est la seule colonne de date du projet qui ne soit pas un
+`TIMESTAMP`, et ce n'est pas une inattention.
+
+Un `created_at` est un **instant** : le moment précis où la ligne a été
+écrite. Un rendez-vous est une **lecture d'horloge murale** : « mardi
+10 h à la station ». MySQL convertit un `TIMESTAMP` selon le fuseau de
+la session ; le jour où le serveur change de fuseau, tous les
+rendez-vous passés se décaleraient d'une heure. Un `DATETIME` est
+stocké tel qu'écrit.
+
+### Le prix et la durée sont recopiés
+
+Comme sur `operations`, et pour une raison plus forte encore : un
+rendez-vous est un **engagement**. Le client a réservé à 5 000 F trois
+semaines plus tôt ; le tarif est passé à 6 000 F. Il paie 5 000 F.
+
+C'est ce prix, et non le tarif du jour, que l'opération reprend à
+l'arrivée. Voir `docs/api.md`.
+
+### Une seule issue pour les trois fins
+
+Arrivée, absence et annulation sont trois façons de terminer un
+rendez-vous. Trois jeux de colonnes (`arrived_at`, `no_show_at`,
+`cancelled_at`…) auraient garanti qu'un jour l'une soit renseignée et
+l'autre oubliée, et qu'il faille lire les trois pour savoir ce qui
+s'est passé.
+
+Un seul triplet : `outcome_at`, `outcome_by_user_id`,
+`outcome_reason`. **`status` dit CE QUI s'est passé ; le triplet dit
+QUAND, PAR QUI et POURQUOI.**
+
+### La contrainte d'unicité qu'on n'a PAS posée
+
+Les lots 9 et 12 ont chacun ajouté une colonne calculée sous contrainte
+`UNIQUE` pour interdire un doublon — une seule caisse ouverte, un seul
+pointage ouvert. Le réflexe était de recommencer ici, sur (station,
+heure, téléphone), pour qu'un double appui sur « Enregistrer » ne crée
+pas deux rendez-vous.
+
+**Ce serait une erreur.** Un gestionnaire de flotte qui envoie trois
+véhicules de son entreprise à 10 h donne trois fois le même numéro : la
+contrainte refuserait un vrai client, avec un message que personne ne
+comprendrait. Le cas est fréquent dans la zone visée.
+
+> **Une contrainte ne se pose que sur une règle vraie TOUJOURS.**
+> Contre le double appui, il reste le bouton désactivé pendant
+> l'appel — et un doublon visible s'annule en un clic, alors qu'un
+> client refusé s'en va.
+
+Un test le vérifie explicitement : deux rendez-vous, même numéro, même
+créneau, même station, tous deux acceptés.
+
 ### `payments.cash_session_id` : quelle vacation ?
 
 On aurait pu rattacher les encaissements à leur session **par la

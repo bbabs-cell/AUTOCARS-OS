@@ -1092,11 +1092,285 @@ La correction laisse trois traces, et elles sont indépendantes :
 
 ---
 
+## Rendez-vous
+
+Le carnet qui remplace le cahier posé à côté du téléphone. Le client
+appelle, quelqu'un note.
+
+**Aucun SMS, aucun rappel automatique, aucune réservation par le
+client lui-même.** Un envoi de SMS suppose un compte opérateur et un
+budget ; le coder « en simulation » donnerait l'illusion d'un produit
+branché. Même règle qu'au lot 9 sur les paiements, et le même genre de
+test la vérifie : `tests/api_booking_test.php` relit tout `src/` à la
+recherche d'un appel HTTP sortant ou d'un nom de fournisseur de SMS.
+
+Ce que le produit fait à la place : la liste de ceux qu'il reste à
+rappeler. Le téléphone, c'est l'employé qui le compose.
+
+---
+
+### Les cinq états
+
+| État | Sens |
+|---|---|
+| `SCHEDULED` | Noté, rien de plus. |
+| `CONFIRMED` | Quelqu'un a rappelé, le client a dit oui. |
+| `ARRIVED` | Le véhicule est là, un dossier est ouvert. |
+| `NO_SHOW` | L'heure est passée, personne n'est venu. |
+| `CANCELLED` | Annulé, par le client ou par la station. |
+
+Les trois derniers sont **définitifs**. Un rendez-vous manqué qu'on
+rouvrirait ferait disparaître le fait qu'il a été manqué ; si le client
+reprend un créneau, c'est un **nouveau** rendez-vous, et les deux
+lignes racontent alors ce qui s'est réellement passé.
+
+`CONFIRMED` n'est pas un luxe : rappeler la veille est la seule mesure
+qui réduit vraiment les absences, et encore faut-il savoir qui reste à
+rappeler.
+
+Le parcours est déclaré une seule fois, dans
+`config/booking_status.php`, et lu par le contrôleur, le frontend et
+les tests.
+
+---
+
+### `GET /api/bookings/statuses` — le parcours
+
+Droit requis : `bookings.view`.
+
+Renvoie les cinq états avec leurs libellés et leurs suites possibles,
+plus `no_show_grace_minutes` et `max_days_ahead`.
+
+`allowed_next` **ne contient jamais `ARRIVED`** : voir plus bas.
+
+---
+
+### `GET /api/bookings?from=&to=&station_id=&status=&open=1&search=`
+
+Droit requis : `bookings.view`. **Toute la journée en une seule
+requête** — quatre appels séparés donneraient quatre états qui ne se
+rafraîchissent pas ensemble, et un compteur qui dit « 3 » au-dessus de
+quatre lignes.
+
+```json
+{
+  "bookings": [ … ],
+  "counts":   { "SCHEDULED": 2, "CONFIRMED": 1, "ARRIVED": 1, "NO_SHOW": 0, "CANCELLED": 0 },
+  "overdue":  [ … ],
+  "load":     [ { "hour": 8, "bookings": 1, "minutes": 30 } ],
+  "period":   { "from": "2026-09-04", "to": "2026-09-04" }
+}
+```
+
+`counts` porte **tous** les statuts, à zéro s'il le faut : un écran
+dont les compteurs apparaissent et disparaissent selon les données
+saute sous les yeux à chaque rechargement.
+
+**`overdue` ignore volontairement les bornes de dates.** Un rendez-vous
+d'avant-hier jamais soldé reste à traiter, même quand on regarde la
+journée de demain.
+
+**`load` n'est renvoyée que pour une station et une seule journée.**
+Additionner les créneaux de deux stations donnerait un chiffre qui ne
+correspond à aucune réalité.
+
+---
+
+### `POST /api/bookings` — noter un rendez-vous
+
+Droit requis : `bookings.create`.
+
+```json
+{
+  "customer_name": "Moussa Diop",
+  "customer_phone": "+221775998877",
+  "service_id": 1,
+  "station_id": 1,
+  "scheduled_at": "2026-09-10 10:00",
+  "plate_number": "DK-1234-AA",
+  "vehicle_id": null,
+  "notes": "Premier passage."
+}
+```
+
+**Un nom et un numéro suffisent.** Ni fiche client, ni véhicule :
+au téléphone, on note ce qu'on entend. Exiger une fiche complète
+pendant que quelqu'un attend au bout du fil, c'est obtenir une fiche à
+moitié fausse — ou un rendez-vous noté sur un papier, ce qu'on cherche
+justement à remplacer.
+
+Le rattachement à une fiche existante est facultatif ; quand
+`vehicle_id` est fourni, le **client est déduit du véhicule** et jamais
+lu dans la requête — un formulaire modifié ne peut donc pas rattacher
+un rendez-vous au client de quelqu'un d'autre.
+
+Refusé en `422` :
+
+| Cas | Pourquoi |
+|---|---|
+| Dans le passé | Une faute de frappe, pas un projet. |
+| Au-delà d'un an | Tarifs et horaires auront changé : le prix figé ne tiendrait plus. |
+| Sans téléphone | On ne pourrait ni rappeler, ni retrouver le rendez-vous quand le client appelle. |
+| Prestation retirée du catalogue | Promettre ce qu'on ne fait plus organise une déception. |
+
+---
+
+### Le serveur prévient, il ne refuse pas
+
+La réponse porte un tableau `warnings` :
+
+```json
+{
+  "booking": { … },
+  "warnings": ["3 véhicules déjà attendus sur ce créneau."]
+}
+```
+
+> **AUCUN REFUS POUR CAUSE DE CRÉNEAU PLEIN.**
+> Le réflexe serait de donner une capacité à la station (« 3 postes »)
+> et de refuser la quatrième réservation à 10 h. Trois raisons de ne
+> pas le faire :
+>
+> - Un « poste » n'est pas une unité stable. Trois laveurs sur un
+>   lavage simple, c'est six voitures à l'heure ; sur un detailing,
+>   c'est une.
+> - Un gérant sait des choses que la base ignore : un renfort le
+>   samedi, un client fidèle qu'on fera passer, une voiture qu'on garde
+>   sur le parking.
+> - Un refus jugé injuste ne fait pas renoncer, il fait **contourner** :
+>   on note « 10 h 05 », ou on reprend le cahier — et les données du
+>   logiciel deviennent fausses.
+>
+> On montre la charge, celui qui connaît sa station décide. Même
+> principe qu'au lot 12 pour les pointages oubliés : le logiciel
+> signale, l'humain tranche.
+
+Le second avertissement porte sur les horaires : un rendez-vous en
+dehors des heures d'ouverture est le plus souvent une faute de frappe
+(14 h saisi 04 h), parfois un choix assumé pour un habitué.
+
+**Le comptage compare des intervalles, pas des heures de début.** Deux
+rendez-vous à 10 h et 10 h 30 se chevauchent si le premier dure une
+heure ; compter « combien à 10 h 30 » répondrait « un » alors que deux
+voitures seront là.
+
+---
+
+### `PUT /api/bookings/{id}` — déplacer, corriger
+
+Droit requis : `bookings.update`. Refusé en `409` sur un rendez-vous
+terminé : déplacer l'heure d'un client déjà venu réécrirait ce qui
+s'est passé.
+
+Changer la prestation **refixe le prix**. Ce n'est pas contradictoire
+avec la règle ci-dessous : ce qui est figé, c'est le prix de **ce qui a
+été promis**. Un client qui passe du lavage simple au complet accepte
+le tarif du complet — celui d'aujourd'hui, puisque c'est aujourd'hui
+qu'on le lui annonce.
+
+La trace garde l'**avant et l'après**, comme pour la correction d'un
+pointage : un déplacement d'heure se conteste.
+
+---
+
+### `PUT /api/bookings/{id}/status` — confirmer, annuler, absenter
+
+Droit requis : `bookings.update`.
+
+```json
+{ "status": "CANCELLED", "reason": "Le client a eu un imprévu." }
+```
+
+> **LE MOTIF EST FACULTATIF, ET C'EST VOLONTAIRE.**
+> Au lot 12, corriger un pointage l'exige : la modification change ce
+> qu'on doit à quelqu'un. Ici, rien de tel — un client annule, cela
+> arrive. Exiger une justification partout apprend à taper « x » pour
+> passer l'écran, et le champ ne vaut alors plus rien là où il compte
+> vraiment.
+
+**On ne déclare pas une absence avant l'heure** (`422`). Marquer
+« absent » à 9 h un rendez-vous prévu à 10 h n'est pas une
+information : c'est une erreur de saisie, ou un employé qui solde sa
+journée d'avance. Un délai de grâce de 15 minutes évite l'autre
+extrême — un client à 10 h 05 n'est pas absent.
+
+`ARRIVED` est refusé sur cette route (`422`) : voir ci-dessous.
+
+---
+
+### `POST /api/bookings/{id}/arrive` — le client est là
+
+Droit requis : `operations.create` — la route **ouvre un dossier**,
+elle exige donc le droit d'en créer un.
+
+```json
+{ "vehicle_id": 12 }
+```
+
+`vehicle_id` est facultatif quand le rendez-vous en porte déjà un.
+
+> **POURQUOI UNE ROUTE À PART.**
+> `ARRIVED` n'est pas qu'un changement de statut : il ouvre une
+> opération. Le laisser passer par la route générique autoriserait une
+> réservation marquée « arrivée » sans dossier derrière — un véhicule
+> officiellement pris en charge que personne ne verrait dans la file.
+>
+> **Règle générale : un statut qui a un effet de bord n'est jamais
+> atteignable par la route générique.**
+
+Les deux écritures sont dans **une seule transaction**. Ouvrir le
+dossier sans solder le rendez-vous laisserait le client dans la liste
+des gens à rappeler alors que sa voiture est en train d'être lavée ;
+solder le rendez-vous sans ouvrir le dossier ferait disparaître un
+véhicule présent sur le parking.
+
+---
+
+### Le prix promis est le prix facturé
+
+> **LA RÈGLE MÉTIER LA PLUS IMPORTANTE DE CE LOT.**
+>
+> Un client réserve trois semaines à l'avance à 5 000 F. Le tarif passe
+> à 6 000 F entre-temps. Il paie **5 000 F** : c'est ce qu'on lui a dit
+> au téléphone. Facturer plus cher que ce qui a été annoncé est la
+> meilleure façon de perdre le client et sa recommandation.
+>
+> Le prix est donc recopié sur la réservation à sa création, et c'est
+> **lui** — pas le tarif du jour — que l'opération reprend à l'arrivée.
+> Un test le vérifie en augmentant le tarif entre les deux.
+
+Pour la même raison, l'arrivée ne vérifie **pas** que la prestation est
+toujours au catalogue : retirer une prestation n'annule pas les
+rendez-vous déjà pris. On refuse d'en **prendre** de nouveaux, on
+**honore** ceux qui existent.
+
+Le prix honoré figure dans le journal d'audit (`price_honoured`) :
+c'est ce qui permet, des mois plus tard, d'expliquer pourquoi ce
+dossier a été facturé moins cher que le tarif affiché ce jour-là.
+
+---
+
+### Le carnet est ouvert à tout le comptoir
+
+C'est le **seul module du produit** où les trois rôles ont exactement
+les mêmes droits. Il faut le dire, parce que ça ressemble à un oubli.
+
+Ailleurs, la séparation protège quelque chose de précis : l'argent (la
+caisse, les remboursements), les personnes (les rôles, les heures de
+paie), la structure (les stations, le catalogue). Un rendez-vous n'est
+rien de tout cela : c'est une ligne dans un cahier — et c'est l'employé
+qui décroche le téléphone. Si noter, déplacer ou annuler exigeait un
+responsable, il faudrait le déranger à chaque appel.
+
+**Inventer une hiérarchie là où le métier n'en a pas produit un
+logiciel qu'on contourne.**
+
+---
+
 ## À venir
 
 | Lot | Endpoints |
 |---|---|
-| 13 | `/api/bookings` |
 | 16 | `/api/analytics` |
 
 ---

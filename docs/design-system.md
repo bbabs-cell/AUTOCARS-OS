@@ -462,6 +462,94 @@ toutes lettres.
 
 ---
 
+## Le carnet de rendez-vous (lot 13)
+
+### Une journée à la fois, pas un calendrier
+
+La tentation était de dessiner une grille hebdomadaire avec des blocs
+colorés. C'est joli sur une capture d'écran, et inutilisable sur le
+téléphone de quelqu'un qui a une clé de voiture dans l'autre main.
+
+Une station de lavage travaille à la journée : « qui vient
+aujourd'hui », « qui vient demain ». Une liste répond à cette question
+en une lecture et tient sur un écran de 390 pixels. Deux boutons —
+*Aujourd'hui*, *Demain* — couvrent neuf usages sur dix. La semaine
+viendra si un gérant la réclame, pas avant.
+
+### L'ordre de l'écran, encore une fois
+
+Le troisième écran construit sur le même principe, après le tableau de
+bord (lot 10) et le registre de pointage (lot 12) : **ce qui demande
+une action passe devant ce qui informe.**
+
+1. **À traiter** — l'heure est passée, personne n'a rien noté.
+2. **La journée** et **la charge**.
+3. **Le détail**, heure par heure.
+4. **À rappeler** — la liste d'appels du soir.
+
+### La charge : des barres, et pas de maximum
+
+Des barres et non un camembert : l'œil compare mal des angles, bien des
+longueurs.
+
+Une seule couleur (`--ac-chart-1`) : toutes ces barres mesurent **la
+même chose** à des heures différentes. Les colorer différemment
+inventerait une distinction qui n'existe pas — c'est la règle du lot 10,
+la couleur suit l'entité, jamais son rang.
+
+**L'échelle part d'un plancher de quatre.** Rapporter chaque barre à
+l'heure la plus chargée donne un résultat absurde les jours calmes :
+trois heures à un rendez-vous chacune produisent trois barres
+*pleines*, et l'écran annonce une saturation là où il n'y a presque
+personne. Le premier essai faisait exactement cela.
+
+Et aucune barre n'a de maximum, parce que le logiciel ne connaît pas la
+capacité réelle d'une station. Il montre ce qui est déjà promis ; c'est
+le gérant qui sait combien de véhicules il peut prendre.
+
+### Un seul bouton porte un libellé
+
+Dans la ligne d'un rendez-vous : **« Le client est là »** en toutes
+lettres, et trois icônes pour confirmer, modifier, annuler.
+
+C'est le geste qu'on fait avec quelqu'un debout devant le comptoir : il
+doit se lire sans réfléchir. Quatre libellés côte à côte passaient sur
+trois lignes, déformaient la hauteur des lignes voisines, et faisaient
+perdre de vue le seul qui compte.
+
+Les boutons d'une cellule ne passent jamais à la ligne : c'est le
+tableau qui défile horizontalement dans sa carte, comme partout
+ailleurs dans le produit.
+
+### Le serveur prévient, l'écran le montre après coup
+
+Les avertissements (`warnings`) s'affichent dans le bandeau vert de
+confirmation, **après** l'enregistrement — pas comme une alerte
+bloquante avant.
+
+Le rendez-vous est pris ; la personne au comptoir apprend simplement ce
+qu'elle vient de faire (« 3 véhicules déjà attendus sur ce créneau »).
+Un avertissement qui bloque devient un obstacle qu'on apprend à
+cliquer sans lire.
+
+### Les couleurs de statut
+
+Reprises des variantes de badge existantes, sans en créer aucune
+(règle §37) :
+
+| Statut | Badge |
+|---|---|
+| Prévu | `ac-badge--info` |
+| Confirmé | `ac-badge--success` |
+| Arrivé | `ac-badge--completed` |
+| Absent | `ac-badge--danger` |
+| Annulé | `ac-badge--cancelled` |
+
+Une ligne soldée recule d'un plan (`ac-table__row--muted`) sans jamais
+disparaître : c'est l'historique de la journée.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

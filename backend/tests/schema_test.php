@@ -99,6 +99,11 @@ $expectedTables = [
     'organizations', 'users', 'stations', 'station_users',
     'customers', 'vehicles', 'services', 'operations',
     'inspections', 'inspection_photos', 'payments', 'audit_logs',
+    // Les tables ajoutées après le lot 3. Elles doivent passer les
+    // MÊMES vérifications que les autres — en particulier celle de
+    // l'isolation : c'est la liste ci-dessous qui décide ce qui est
+    // contrôlé, et une table oubliée ici n'est contrôlée nulle part.
+    'cash_sessions', 'time_entries', 'bookings',
 ];
 
 $actualTables = $connection->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);

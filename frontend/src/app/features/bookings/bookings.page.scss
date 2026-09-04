@@ -1,0 +1,140 @@
+// =====================================================================
+// Le carnet de rendez-vous
+// =====================================================================
+// Ces styles sont LOCAUX à l'écran, comme ceux de la page d'accueil
+// publique (lot 11) et pour la même raison : `_components.scss` est
+// téléchargée par chaque employé à chaque connexion. On n'y met que
+// les briques réellement partagées par plusieurs écrans.
+//
+// Le jour où une de ces classes servira ailleurs, elle remontera —
+// pas avant. Descendre une classe qui n'a qu'un usage est facile ;
+// retrouver pourquoi `_components.scss` pèse 40 ko ne l'est pas.
+//
+// Aucune couleur, aucun rayon et aucune espacement n'est écrit en dur :
+// tout vient des jetons validés au lot 2 (règle §37 du cahier des
+// charges — la charte ne change plus).
+
+// --- Une action, ou trois, dans une cellule de tableau ---------------
+// LES BOUTONS RESTENT SUR UNE LIGNE, même si la colonne est étroite.
+//
+// Le premier essai les laissait passer à la ligne : sur un écran
+// large, une ligne du tableau devenait deux fois plus haute que sa
+// voisine, et le regard qui descend la colonne des heures butait sur
+// ces marches. Le tableau défile déjà horizontalement dans sa carte
+// (`.ac-table-wrapper`) : c'est lui qui absorbe le manque de place,
+// pas la hauteur des lignes.
+.ac-row-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ac-space-2);
+}
+
+// --- Le compte par statut --------------------------------------------
+.ac-count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-2) 0;
+
+  & + & {
+    border-top: 1px solid var(--ac-border);
+  }
+}
+
+// --- La charge d'une journée, heure par heure ------------------------
+// DES BARRES, PAS UN CAMEMBERT.
+// L'œil compare mal des angles et bien des longueurs — c'est la seule
+// raison de cette forme. Les barres partent toutes de la même ligne,
+// ce qui rend la comparaison immédiate.
+//
+// La barre n'a PAS de maximum : elle est proportionnelle à l'heure la
+// plus chargée de la journée, pas à une capacité que le logiciel
+// serait incapable de fixer justement.
+.ac-load-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-1) 0;
+}
+
+.ac-load-row__hour {
+  flex: 0 0 3.5rem;
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-sm);
+}
+
+.ac-load-row__track {
+  flex: 1 1 auto;
+  height: 0.625rem;
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-chart-track);
+  overflow: hidden;
+}
+
+.ac-load-row__bar {
+  display: block;
+  height: 100%;
+  border-radius: var(--ac-radius-full);
+  // Une seule couleur : toutes ces barres mesurent LA MÊME chose à des
+  // heures différentes. Les colorer différemment inventerait une
+  // distinction qui n'existe pas.
+  background-color: var(--ac-chart-1);
+}
+
+.ac-load-row__value {
+  flex: 0 0 1.5rem;
+  text-align: right;
+  font-size: var(--ac-text-sm);
+  font-weight: 600;
+}
+
+// --- Choisir un véhicule dans une liste ------------------------------
+// Un <button> et non un <div> cliquable : la navigation au clavier et
+// les lecteurs d'écran le trouvent, et la touche Entrée le déclenche
+// sans une ligne de JavaScript.
+.ac-choice-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-3);
+  width: 100%;
+  padding: var(--ac-space-3);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-lg);
+  background-color: var(--ac-surface);
+  text-align: left;
+  transition: border-color var(--ac-transition), background-color var(--ac-transition);
+
+  & + & {
+    margin-top: var(--ac-space-2);
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--ac-primary-300);
+    background-color: var(--ac-primary-50);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+// La colonne d'actions ne se comprime pas au point de casser le
+// bouton principal en deux lignes de texte.
+.ac-table__actions .ac-row-actions .btn {
+  white-space: nowrap;
+}
+
+// --- Une ligne soldée ------------------------------------------------
+// Arrivé, absent, annulé : la ligne reste lisible mais recule d'un
+// plan. On ne la cache pas — c'est l'historique de la journée.
+.ac-table__row--muted {
+  color: var(--ac-text-secondary);
+}
+
+// --- Une fenêtre courte ----------------------------------------------
+.ac-modal--sm {
+  max-width: 420px;
+}

@@ -262,6 +262,61 @@ INSERT INTO time_entries
 -- EN COURS : Aliou est arrivé ce matin.
 (1, 1, 3, NOW() - INTERVAL 190 MINUTE, NULL, NULL);
 
+-- --- Les rendez-vous ----------------------------------------------
+-- Sept lignes qui couvrent tout ce que l'écran doit savoir afficher :
+-- un rendez-vous à venir, un confirmé, un dépassé qu'il faut traiter,
+-- un client de passage sans fiche, deux véhicules sur le même
+-- créneau, et l'historique d'une absence et d'une annulation.
+--
+-- Les prix sont RECOPIÉS du catalogue, comme le fait l'API : c'est
+-- ce qui a été annoncé au client, pas le tarif du jour.
+INSERT INTO bookings
+    (organization_id, station_id, service_id, customer_id, vehicle_id,
+     customer_name, customer_phone, plate_number,
+     scheduled_at, duration_minutes, price, status,
+     outcome_at, outcome_by_user_id, outcome_reason, notes, created_by_user_id) VALUES
+
+-- 1. Dans deux heures. Client connu, véhicule connu.
+(1, 1, 2, 1, 1, 'Cheikh Fall', '+221776112233', 'DK1234AA',
+ DATE_ADD(CURDATE(), INTERVAL 15 HOUR), 60, 10000, 'SCHEDULED',
+ NULL, NULL, NULL, NULL, 2),
+
+-- 2. Confirmé : quelqu'un a rappelé hier soir.
+(1, 1, 3, 2, 2, 'Fatou Ndiaye', '+221776223344', 'DK5678BC',
+ DATE_ADD(CURDATE(), INTERVAL 16 HOUR), 45, 7500, 'CONFIRMED',
+ NULL, NULL, NULL, 'A demandé qu\'on insiste sur les moquettes.', 2),
+
+-- 3. L'HEURE EST PASSÉE et personne n'a rien noté : c'est la ligne
+--    qui apparaît en tête de l'écran, dans « à traiter ».
+(1, 1, 1, 3, 3, 'Aminata Sarr', '+221776334455', 'DK9087DE',
+ DATE_ADD(CURDATE(), INTERVAL 8 HOUR), 30, 5000, 'SCHEDULED',
+ NULL, NULL, NULL, NULL, 3),
+
+-- 4. UN CLIENT DE PASSAGE : un nom, un numéro, rien d'autre. Ni
+--    fiche client, ni véhicule — c'est le cas normal au téléphone.
+(1, 1, 1, NULL, NULL, 'Moussa Diop', '+221775998877', NULL,
+ DATE_ADD(CURDATE(), INTERVAL 1 DAY) + INTERVAL 10 HOUR, 30, 5000, 'SCHEDULED',
+ NULL, NULL, NULL, 'Premier passage, a appelé pour les tarifs.', 3),
+
+-- 5 et 6. DEUX VÉHICULES DE LA MÊME ENTREPRISE, MÊME CRÉNEAU.
+--    C'est précisément le cas qu'une contrainte d'unicité sur
+--    (station, heure, téléphone) aurait refusé — voir la note de la
+--    migration 019.
+(1, 1, 1, NULL, NULL, 'SENEGAL LOGISTIQUE (flotte)', '+221338224466', 'DK7788KL',
+ DATE_ADD(CURDATE(), INTERVAL 1 DAY) + INTERVAL 11 HOUR, 30, 5000, 'SCHEDULED',
+ NULL, NULL, NULL, 'Deux véhicules, même heure.', 2),
+(1, 1, 1, NULL, NULL, 'SENEGAL LOGISTIQUE (flotte)', '+221338224466', 'DK7789KL',
+ DATE_ADD(CURDATE(), INTERVAL 1 DAY) + INTERVAL 11 HOUR, 30, 5000, 'SCHEDULED',
+ NULL, NULL, NULL, 'Deux véhicules, même heure.', 2),
+
+-- 7. L'HISTORIQUE : une absence et une annulation la semaine dernière.
+(1, 1, 4, 4, 4, 'Ibrahima Gueye', '+221776445566', 'TH4412CD',
+ DATE_SUB(CURDATE(), INTERVAL 4 DAY) + INTERVAL 9 HOUR, 120, 20000, 'NO_SHOW',
+ DATE_SUB(CURDATE(), INTERVAL 4 DAY) + INTERVAL 10 HOUR, 2, NULL, NULL, 2),
+(1, 1, 2, 1, 5, 'Cheikh Fall', '+221776112233', 'DK2201FG',
+ DATE_SUB(CURDATE(), INTERVAL 2 DAY) + INTERVAL 14 HOUR, 60, 10000, 'CANCELLED',
+ DATE_SUB(CURDATE(), INTERVAL 3 DAY) + INTERVAL 18 HOUR, 2, 'Le client a eu un imprévu, rappellera.', NULL, 2);
+
 -- --- Le journal d'audit -------------------------------------------
 -- Quelques lignes montrant le format attendu. Ce journal sera
 -- alimenté automatiquement par l'API à partir du lot 4.

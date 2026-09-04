@@ -109,6 +109,12 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'bookings',
+        title: 'Rendez-vous — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/bookings/bookings.page').then((m) => m.BookingsPage),
+      },
+      {
         path: 'team',
         title: 'Équipe — AUTOCARE OS',
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),

@@ -55,6 +55,7 @@ return [
         // Un manager ajuste les prix de sa station : c'est une
         // décision d'exploitation quotidienne, pas de structure.
         'services.update',
+        'bookings.*',
         'employees.view',
         // Le pointage est de la gestion quotidienne : c'est le
         // responsable de station qui constate les présences et
@@ -108,6 +109,31 @@ return [
         // retirer ces deux lignes.
         'payments.create',
         'payments.view',
+
+        // ================================================================
+        // LE CARNET DE RENDEZ-VOUS EST DU TRAVAIL DE COMPTOIR.
+        // ================================================================
+        // L'employé reçoit les trois droits, sans restriction — et
+        // c'est le seul module du produit où les trois rôles peuvent
+        // tout faire. Il faut le dire, parce que ça ressemble à un
+        // oubli.
+        //
+        // C'est un choix. Ailleurs, la séparation protège quelque
+        // chose de précis : l'argent (la caisse, les remboursements),
+        // les personnes (les rôles, les heures de paie), la structure
+        // (les stations, le catalogue). Un rendez-vous n'est rien de
+        // tout cela : c'est une ligne dans un cahier.
+        //
+        // Et c'est l'employé qui décroche le téléphone. Si noter,
+        // déplacer ou annuler un rendez-vous exigeait un responsable,
+        // il faudrait le déranger à chaque appel — ou reprendre le
+        // cahier, ce qui est exactement ce qu'on remplace.
+        //
+        // Inventer une hiérarchie là où le métier n'en a pas produit
+        // un logiciel qu'on contourne.
+        'bookings.view',
+        'bookings.create',
+        'bookings.update',
 
         // CHACUN POINTE POUR SOI.
         // Pointer à la place d'un collègue est le premier

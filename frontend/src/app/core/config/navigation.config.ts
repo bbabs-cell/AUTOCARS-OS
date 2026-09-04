@@ -61,7 +61,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
   {
     label: 'Opérations',
     items: [
-      { label: 'Réservations',   icon: 'calendar-week', route: null, lot: 13 },
     ],
   },
   {
@@ -97,6 +96,11 @@ export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
 export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   { label: 'Tableau de bord', icon: 'grid-1x2',  route: '/dashboard',  lot: 10 },
   { label: "File d'attente", icon: 'kanban',      route: '/queue',      lot: 8 },
+  // Juste après la file : les deux écrans répondent à la même
+  // question — « qu'est-ce qui arrive ? » — l'un pour maintenant,
+  // l'autre pour tout à l'heure.
+  { label: 'Rendez-vous',   icon: 'calendar-week', route: '/bookings', lot: 13,
+    permission: 'bookings.view' },
   { label: 'Encaissements', icon: 'credit-card', route: '/payments',   lot: 9,
     permission: 'payments.journal' },
   { label: 'Caisse',        icon: 'cash-stack',  route: '/cash',       lot: 9,

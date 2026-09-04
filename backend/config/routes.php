@@ -30,6 +30,7 @@ declare(strict_types=1);
 use Autocare\Core\Router;
 use Autocare\Http\Controllers\AttendanceController;
 use Autocare\Http\Controllers\AuthController;
+use Autocare\Http\Controllers\BookingController;
 use Autocare\Http\Controllers\CustomerController;
 use Autocare\Http\Controllers\HealthController;
 use Autocare\Http\Controllers\InspectionController;
@@ -126,6 +127,31 @@ return static function (Router $router): void {
         ['auth' => true, 'permission' => 'attendance.view']);
     $router->put('/api/attendance/{id}', [AttendanceController::class, 'correct'],
         ['auth' => true, 'permission' => 'attendance.correct']);
+
+    // --- Rendez-vous ----------------------------------------------------
+    // « statuses » est déclaré AVANT « {id} » : les deux motifs ont le
+    // même nombre de segments, et le routeur retient le premier qui
+    // correspond.
+    $router->get('/api/bookings/statuses', [BookingController::class, 'statuses'],
+        ['auth' => true, 'permission' => 'bookings.view']);
+    $router->get('/api/bookings',      [BookingController::class, 'index'],
+        ['auth' => true, 'permission' => 'bookings.view']);
+    $router->get('/api/bookings/{id}', [BookingController::class, 'show'],
+        ['auth' => true, 'permission' => 'bookings.view']);
+    $router->post('/api/bookings',     [BookingController::class, 'store'],
+        ['auth' => true, 'permission' => 'bookings.create']);
+    $router->put('/api/bookings/{id}', [BookingController::class, 'update'],
+        ['auth' => true, 'permission' => 'bookings.update']);
+    $router->put('/api/bookings/{id}/status', [BookingController::class, 'changeStatus'],
+        ['auth' => true, 'permission' => 'bookings.update']);
+
+    // L'arrivée OUVRE UN DOSSIER : elle exige donc aussi le droit de
+    // créer une opération. Deux permissions pour une route, parce
+    // qu'elle fait deux choses — c'est le routeur qui vérifie la
+    // première, le contrôleur qui n'existe que pour ceux qui ont
+    // l'autre.
+    $router->post('/api/bookings/{id}/arrive', [BookingController::class, 'arrive'],
+        ['auth' => true, 'permission' => 'operations.create']);
 
     // --- Clients ------------------------------------------------------
     // La vérification de doublon est déclarée AVANT /api/customers/{id} :
