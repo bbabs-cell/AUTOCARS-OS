@@ -19,7 +19,7 @@ jeton, la relecture du rôle en base, le contrôle de permission côté
 serveur, une jointure, une recherche, et le cloisonnement entre
 clients. Si ces deux-là sont justes, l'architecture tient.
 
-**Réponse : oui, la pile tient.** 197 tests le vérifient dans le vrai
+**Réponse : oui, la pile tient.** 219 tests le vérifient dans le vrai
 runtime Workers, et l'application Angular existante fonctionne contre
 cette API **sans une ligne modifiée**.
 
@@ -68,7 +68,7 @@ npm install --legacy-peer-deps   # voir la note plus bas
 cp .dev.vars.example .dev.vars   # puis remplir JWT_SECRET
 npm run types                    # engendre worker-configuration.d.ts
 
-npm test                         # 197 tests, dans le runtime Workers
+npm test                         # 219 tests, dans le runtime Workers
 npm run typecheck                # les deux tsconfig
 npm run dev                      # API locale sur :8787
 ```
@@ -280,6 +280,37 @@ elle, un corps de requête portant `organization_id` déplacerait un
 client chez un concurrent — le genre de défaut qu'on ne trouve jamais
 par hasard. Un test l'essaie.
 
+### Les inspections — la pièce qui protège les deux parties
+
+Sans constat d'arrivée, une rayure découverte après le lavage est
+indéfendable : personne ne peut dire si elle était là avant.
+
+| Refus | Ce qu'il protège |
+|---|---|
+| **Un constat ne se réécrit pas** | Un constat modifiable ne prouve rien. C'est toute sa valeur |
+| **L'entrée se constate avant le lavage** | Enregistrée après, elle ne constate plus l'état d'arrivée mais celui d'un véhicule déjà manipulé |
+| **« Dommage » sans description** est refusé | « Il y avait une rayure » ne dit ni où, ni laquelle |
+| **Client présent sans son nom** est refusé | Le nom vaut accord : c'est ce qui transforme un constat interne en constat contradictoire |
+
+Enregistrer le constat **fait avancer le dossier tout seul** — sans
+cela l'employé changerait le statut à la main juste après, et
+oublierait une fois sur deux. Mais cette commodité **ne passe pas
+devant la machine à états** : depuis « en attente », rien ne bouge,
+parce que le véhicule doit d'abord être pris en charge par quelqu'un.
+Deux tests le figent, dans les deux sens.
+
+> **Les photos ne sont pas dans ce lot.** Elles dépendent de la
+> décision du §4.4 du chiffrage — le ré-encodage des images, que
+> Workers ne sait pas faire gratuitement. Les inspections, elles,
+> n'attendaient pas.
+
+### Un détail que SQLite impose
+
+SQLite ne connaît pas les booléens : `has_damage` y est un 0/1. Rendu
+tel quel, `0` serait faux en JavaScript mais `"0"` serait vrai — le
+genre de nuance qui produit un bug une fois par an. L'API renvoie donc
+un vrai booléen, et un test le vérifie.
+
 ### Encore un contrat deviné plutôt que lu
 
 Même défaut qu'avec les opérations, en plus petit : mon `/api/cash/open`
@@ -309,12 +340,13 @@ frontend avant d'écrire le contrôleur.**
 
 | Fait | Pas encore |
 |---|---|
-| `login`, `register`, `refresh`, `logout`, `me` | Les 65 autres routes |
+| `login`, `register`, `refresh`, `logout`, `me` | Les 62 autres routes |
 | `vehicles`, `queue`, `stations`, changement de statut | Photos, sauvegardes, contrôle d'avant-vol |
 | Encaissements, remboursements, journal | |
 | Caisse : ouverture, clôture, écart, historique | |
-| **Tableau de bord, alertes** | |
-| **Clients : liste, fiche, création, modification** | |
+| Tableau de bord, alertes | |
+| Clients : liste, fiche, création, modification | |
+| **Inspections : constat, historique** | **Photos (§4.4 à trancher)** |
 | Cloisonnement multi-clients, avec son garde-fou | Les index de performance (à re-mesurer, pas à recopier) |
 | Matrice des droits, portée à l'identique | |
 | Les 21 tables, leurs contraintes et leurs déclencheurs | |

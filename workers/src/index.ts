@@ -25,6 +25,9 @@ import { encaisse, journal, pourDossier, rembourse } from './controllers/payment
 import { courante, ferme, historique, ouvre } from './controllers/cash';
 import { tableau } from './controllers/dashboard';
 import { cree, fiche, liste as listeClients, modifie } from './controllers/customers';
+import {
+  cree as creeInspection, montre, pourVehicule,
+} from './controllers/inspections';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -63,6 +66,9 @@ export default {
       const paiements = /^\/api\/operations\/(\d+)\/payments$/.exec(chemin);
       const remboursement = /^\/api\/payments\/(\d+)\/refund$/.exec(chemin);
       const client = /^\/api\/customers\/(\d+)$/.exec(chemin);
+      const inspections = /^\/api\/operations\/(\d+)\/inspections$/.exec(chemin);
+      const inspection = /^\/api\/inspections\/(\d+)$/.exec(chemin);
+      const inspectionsVehicule = /^\/api\/vehicles\/(\d+)\/inspections$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -80,6 +86,9 @@ export default {
         (chemin === '/api/dashboard' && G) ||
         (chemin === '/api/customers' && (G || P)) ||
         (client !== null && (G || request.method === 'PUT')) ||
+        (inspections !== null && P) ||
+        (inspection !== null && G) ||
+        (inspectionsVehicule !== null && G) ||
         (statut !== null && request.method === 'PUT') ||
         (paiements !== null && (G || P)) ||
         (remboursement !== null && P);
@@ -106,6 +115,16 @@ export default {
           return P
             ? await cree(request, env, utilisateur)
             : await listeClients(request, env, utilisateur);
+        }
+
+        if (inspections !== null) {
+          return await creeInspection(request, env, utilisateur, inspections[1]);
+        }
+
+        if (inspection !== null) return await montre(env, utilisateur, inspection[1]);
+
+        if (inspectionsVehicule !== null) {
+          return await pourVehicule(env, utilisateur, inspectionsVehicule[1]);
         }
 
         if (client !== null) {
