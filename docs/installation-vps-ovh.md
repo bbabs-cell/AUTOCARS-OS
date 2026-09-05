@@ -47,6 +47,37 @@ que la machine ; toute la zone DNS se règle sur
 | `A` | `api` | ⟨l'IPv4 de votre VPS⟩ | **DNS only** (nuage gris) |
 | `CNAME` | `app` | `cname.vercel-dns.com` | **DNS only** (nuage gris) |
 
+### Où trouver l'IPv4 du VPS
+
+Trois endroits, par ordre de commodité :
+
+1. **L'espace client OVHcloud** → *Bare Metal Cloud* → *VPS* → votre
+   VPS. L'adresse est dans « Informations générales », ou dans
+   l'onglet *IP*.
+2. **L'e-mail de livraison** d'OVH, celui qui contient l'accès `root`.
+3. **Depuis la machine**, une fois connecté en SSH :
+
+```bash
+hostname -I | awk '{print $1}'
+```
+
+Prenez bien l'adresse **IPv4** (quatre nombres séparés par des points,
+`51.68.x.x` par exemple), pas l'IPv6 (`2001:41d0:...`).
+
+> **Faut-il aussi un enregistrement `AAAA` (IPv6) ?** Non, ce n'est pas
+> nécessaire : un enregistrement `A` suffit à joindre le serveur. Si
+> vous en voulez un quand même, ajoutez-le avec l'IPv6 du VPS, en
+> *DNS only* également.
+>
+> En revanche, la configuration Nginx livrée écoute sur IPv4 **et**
+> IPv6 (`listen [::]:443`). Les VPS OVH ont l'IPv6 activée, donc cela
+> fonctionne. Mais si un jour `sudo nginx -t` refuse de démarrer avec
+> *« socket() [::]:80 failed (97: Address family not supported ) »*,
+> c'est que la machine n'a pas d'IPv6 : supprimez les deux lignes
+> `listen [::]:...` du fichier et rien d'autre ne change. (C'est
+> exactement ce qui s'est produit en essayant cette configuration dans
+> un conteneur sans IPv6.)
+
 ### Le nuage doit être GRIS, et c'est le point le plus important de cette page
 
 Cloudflare met le nuage sur **orange** par défaut. Orange signifie que
