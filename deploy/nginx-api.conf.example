@@ -1,0 +1,112 @@
+# ==================================================================
+# AUTOCARE OS — api.magyapro.com (VPS OVH)
+# ==================================================================
+# À UTILISER QUAND LE FRONTEND EST AILLEURS (Vercel).
+#
+# Le fichier voisin `nginx.conf.example` sert l'application ET l'API
+# sur un seul domaine. Celui-ci ne sert QUE l'API : le VPS n'héberge
+# aucun fichier Angular, c'est Vercel qui s'en charge.
+#
+# Installation :
+#   sudo cp deploy/nginx-api.conf.example      /etc/nginx/sites-available/autocare-api
+#   sudo cp deploy/security-headers.conf       /etc/nginx/autocare-security-headers.conf
+#   sudo ln -s /etc/nginx/sites-available/autocare-api /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# LA LIGNE À VÉRIFIER : le chemin de la socket PHP-FPM change avec la
+# version de PHP livrée par votre distribution. Trouvez la vôtre :
+#   ls /run/php/
+# puis ajustez `fastcgi_pass` plus bas.
+# ==================================================================
+
+# ------------------------------------------------------------------
+# HTTP : uniquement pour le renouvellement du certificat.
+# Tout le reste part en HTTPS.
+# ------------------------------------------------------------------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.magyapro.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name api.magyapro.com;
+
+    ssl_certificate     /etc/letsencrypt/live/api.magyapro.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.magyapro.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    # --------------------------------------------------------------
+    # En-têtes de sécurité
+    # --------------------------------------------------------------
+    # Ils sont posés ici ALORS QUE ce domaine ne sert aucune page HTML.
+    # Ce n'est pas inutile : si quelqu'un ouvre une réponse de l'API
+    # directement dans un navigateur, ou si un jour ce domaine sert
+    # autre chose, la protection est déjà là. Une API nue est le genre
+    # d'oubli qu'on ne remarque qu'après.
+    #
+    # Le détail de chaque en-tête est commenté dans le fichier inclus,
+    # ainsi que la raison pour laquelle il faut le RÉPÉTER dans tout
+    # `location` qui pose un add_header à lui.
+    include /etc/nginx/autocare-security-headers.conf;
+
+    server_tokens off;
+
+    # Les photos d'inspection font 12 Mo au maximum côté application.
+    client_max_body_size 14M;
+
+    # ==============================================================
+    # PAS DE `root` SUR CE SERVEUR. C'EST VOLONTAIRE.
+    # ==============================================================
+    # Ce domaine ne sert aucun fichier. Sans `root`, aucune requête ne
+    # peut atteindre le disque par accident : il n'y a rien à exposer,
+    # même en cas d'erreur de configuration future.
+
+    # --------------------------------------------------------------
+    # L'API : tout part au contrôleur frontal
+    # --------------------------------------------------------------
+    # On ne passe NI par `alias` NI par `try_files`. Dans un bloc qui
+    # utilise `alias`, le repli de `try_files` est résolu depuis la
+    # racine du site et non depuis l'alias : c'est le piège qui a fait
+    # que plus aucune route de l'API ne répondait, un POST vers
+    # /api/auth/login recevant « 405 Not Allowed ».
+    #
+    # backend/public/ ne contient qu'index.php : il n'y a aucun fichier
+    # statique à servir, donc rien à essayer. Le routeur PHP lit
+    # REQUEST_URI tel quel (src/Core/Request.php), le préfixe /api lui
+    # parvient intact, il n'y a rien à réécrire.
+    location /api {
+        include fastcgi_params;
+
+        # ← VÉRIFIEZ CETTE LIGNE : `ls /run/php/` donne votre version.
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+
+        fastcgi_param SCRIPT_FILENAME /var/www/autocare/backend/public/index.php;
+        fastcgi_param SCRIPT_NAME     /api/index.php;
+
+        # Le temps d'une restitution avec photos sur une connexion
+        # lente. Au-delà, quelque chose ne va pas.
+        fastcgi_read_timeout 60s;
+    }
+
+    # --------------------------------------------------------------
+    # Tout le reste n'existe pas
+    # --------------------------------------------------------------
+    # Ce domaine n'est pas un site web. Une requête hors /api ne doit
+    # rien révéler : ni une page d'accueil, ni une erreur bavarde.
+    location / {
+        return 404;
+    }
+}

@@ -47,6 +47,12 @@ RACINE="${AUTOCARE_ROOT:-/var/www/autocare}"
 BRANCHE="${AUTOCARE_BRANCH:-main}"
 WEB="${AUTOCARE_WEB:-/var/www/autocare-web}"
 
+# 1 : ce serveur sert aussi l'application Angular (installation sur un
+#     seul domaine, voir nginx.conf.example).
+# 0 : l'application est ailleurs — Vercel — et ce serveur ne sert que
+#     l'API. Node n'a alors rien a faire sur cette machine.
+SERT_FRONT="${AUTOCARE_SERVE_FRONTEND:-1}"
+
 cd "$RACINE"
 
 echo "=== 1. Sauvegarde avant tout ==="
@@ -65,32 +71,38 @@ echo "=== 3. Base de données ==="
 (cd backend && php tools/migrate.php)
 
 echo
-echo "=== 4. Application ==="
-(cd frontend && npm ci && npm run build)
+if [ "$SERT_FRONT" = "0" ]; then
+  echo "=== 4. Application — ignoree (servie ailleurs) ==="
+  echo "  AUTOCARE_SERVE_FRONTEND=0 : rien a compiler ici,"
+  echo "  Node n'est meme pas necessaire sur cette machine."
+else
+  echo "=== 4. Application ==="
+  (cd frontend && npm ci && npm run build)
 
-# PUBLICATION ATOMIQUE.
-#
-# Copier fichier par fichier par-dessus la version en place laisse,
-# pendant quelques secondes, un index.html neuf qui réclame des
-# fichiers pas encore copiés — et l'utilisateur voit une page blanche.
-#
-# On prépare à côté, puis on échange les dossiers d'un seul geste.
-rm -rf "${WEB}-nouveau"
-cp -r frontend/dist/frontend/browser "${WEB}-nouveau"
-
-# On refuse de publier un dossier sans index.html : ce serait un site
-# blanc en ligne, et le retour arriere devrait etre fait a la main.
-if [ ! -f "${WEB}-nouveau/index.html" ]; then
-  echo "  [ECHEC] la compilation n'a pas produit d'index.html."
+  # PUBLICATION ATOMIQUE.
+  #
+  # Copier fichier par fichier par-dessus la version en place laisse,
+  # pendant quelques secondes, un index.html neuf qui réclame des
+  # fichiers pas encore copiés — et l'utilisateur voit une page blanche.
+  #
+  # On prépare à côté, puis on échange les dossiers d'un seul geste.
   rm -rf "${WEB}-nouveau"
-  exit 1
-fi
+  cp -r frontend/dist/frontend/browser "${WEB}-nouveau"
 
-rm -rf "${WEB}-ancien"
-if [ -d "$WEB" ]; then
-  mv "$WEB" "${WEB}-ancien"
+  # On refuse de publier un dossier sans index.html : ce serait un site
+  # blanc en ligne, et le retour arriere devrait etre fait a la main.
+  if [ ! -f "${WEB}-nouveau/index.html" ]; then
+    echo "  [ECHEC] la compilation n'a pas produit d'index.html."
+    rm -rf "${WEB}-nouveau"
+    exit 1
+  fi
+
+  rm -rf "${WEB}-ancien"
+  if [ -d "$WEB" ]; then
+    mv "$WEB" "${WEB}-ancien"
+  fi
+  mv "${WEB}-nouveau" "$WEB"
 fi
-mv "${WEB}-nouveau" "$WEB"
 
 echo
 echo "=== 5. Contrôle d'avant-vol ==="
@@ -143,13 +155,16 @@ if [ -n "${AUTOCARE_HOST:-}" ] && command -v curl > /dev/null; then
   fi
   echo "  Les 6 en-tetes de securite sont servis."
 
-  if curl -s "https://${AUTOCARE_HOST}/" | grep -q 'rel="stylesheet"[^>]*onload='; then
+  if [ "$SERT_FRONT" != "0" ] \
+     && curl -s "https://${AUTOCARE_HOST}/" | grep -q 'rel="stylesheet"[^>]*onload='; then
     echo "  [ECHEC] la feuille de style utilise un onload= inline."
     echo "          La CSP le bloque : le site s'affichera SANS STYLE."
     echo "          Mettez optimization.styles.inlineCritical a false."
     exit 1
   fi
-  echo "  La feuille de style se charge sans script inline."
+  if [ "$SERT_FRONT" != "0" ]; then
+    echo "  La feuille de style se charge sans script inline."
+  fi
 fi
 
 echo

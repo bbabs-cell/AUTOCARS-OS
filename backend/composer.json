@@ -9,6 +9,8 @@
         "ext-mbstring": "*",
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
+        "ext-fileinfo": "*",
+        "ext-gd": "*",
         "firebase/php-jwt": "^7.1"
     },
     "autoload": {

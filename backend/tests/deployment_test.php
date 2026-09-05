@@ -62,6 +62,21 @@ $projet  = dirname($racine);
 $passed = 0;
 $failed = 0;
 
+/**
+ * Retire les commentaires d'une configuration Nginx.
+ *
+ * Indispensable : ces fichiers EXPLIQUENT en commentaire les pièges
+ * qu'ils évitent (« on ne passe NI par alias NI par try_files »).
+ * Chercher « alias » dans le texte brut, c'est échouer sur un fichier
+ * précisément parce qu'il est bien documenté.
+ */
+function directives(string $conf): string {
+    return implode("\n", array_map(
+        static fn (string $l): string => preg_replace('/#.*$/', '', $l) ?? '',
+        explode("\n", $conf),
+    ));
+}
+
 function check(string $d, bool $c, string $x = ''): void {
     global $passed, $failed;
     if ($c) { $passed++; echo "  [OK]     {$d}\n"; }
@@ -71,6 +86,7 @@ function check(string $d, bool $c, string $x = ''): void {
 $nginx    = (string) @file_get_contents($projet . '/deploy/nginx.conf.example');
 $entetes  = (string) @file_get_contents($projet . '/deploy/security-headers.conf');
 $deploy   = (string) @file_get_contents($projet . '/deploy/deploy.sh');
+$nginxApi = (string) @file_get_contents($projet . '/deploy/nginx-api.conf.example');
 $rollback = (string) @file_get_contents($projet . '/deploy/rollback.sh');
 $doc      = (string) @file_get_contents($projet . '/docs/deploiement.md');
 $env      = (string) @file_get_contents($projet . '/frontend/src/environments/environment.ts');
@@ -104,7 +120,7 @@ check(
 );
 
 echo "\n3. Le bloc /api ne retombe pas dans le piège alias+try_files (défaut n° 3)\n";
-preg_match('/location \/api \{(.*?)\n    \}/s', $nginx, $m3);
+preg_match('/location \/api \{(.*?)\n    \}/s', directives($nginx), $m3);
 $blocApi = $m3[1] ?? '';
 check('un bloc location /api existe', $blocApi !== '');
 check(
@@ -303,7 +319,66 @@ if (is_array($vercel)) {
     );
 }
 
-echo "\n10. deploy.sh refuse de publier un dossier vide\n";
+echo "\n10. La configuration « API seule » (VPS + frontend ailleurs)\n";
+check('deploy/nginx-api.conf.example existe', $nginxApi !== '');
+
+if ($nginxApi !== '') {
+    // Ce domaine ne sert AUCUN fichier. Sans `root`, aucune requête ne
+    // peut atteindre le disque, même par une erreur de configuration
+    // future : il n'y a rien à exposer.
+    check(
+        'aucun `root` sur le serveur de l\'API',
+        !preg_match('/^\s*root\s+/m', str_replace('root /var/www/certbot;', '', $apiDirectives ?? directives($nginxApi))),
+        'un root sur un domaine qui ne sert aucun fichier ne peut qu\'exposer quelque chose',
+    );
+    check(
+        'tout ce qui n\'est pas /api renvoie 404',
+        (bool) preg_match('/location \/ \{\s*return 404;/', $nginxApi),
+        'une API ne doit révéler ni page d\'accueil ni erreur bavarde',
+    );
+    $apiDirectives = directives($nginxApi);
+    check(
+        'le bloc /api n\'utilise pas le piège alias+try_files',
+        !(str_contains($apiDirectives, 'alias') && str_contains($apiDirectives, 'try_files')),
+    );
+    check(
+        'les en-têtes de sécurité sont inclus',
+        str_contains($nginxApi, 'security-headers.conf'),
+        'une API nue est l\'oubli qu\'on ne remarque qu\'après',
+    );
+    check(
+        'la taille maximale d\'envoi couvre une photo',
+        (bool) preg_match('/client_max_body_size\s+1[0-9]M/', $nginxApi),
+    );
+}
+
+echo "\n11. deploy.sh sait ne pas compiler de frontend\n";
+check(
+    'deploy.sh lit AUTOCARE_SERVE_FRONTEND',
+    str_contains($deploy, 'AUTOCARE_SERVE_FRONTEND'),
+    'sans ce mode, le script exigerait Node sur un serveur qui n\'en a pas besoin',
+);
+check(
+    'AUTOCARE_SERVE_FRONTEND est documentée',
+    str_contains($doc, 'AUTOCARE_SERVE_FRONTEND')
+        || str_contains((string) @file_get_contents($projet . '/docs/installation-vps-ovh.md'), 'AUTOCARE_SERVE_FRONTEND'),
+);
+
+echo "\n12. Les extensions PHP réellement utilisées sont déclarées\n";
+// Sans cette déclaration, `composer install` réussit sur un serveur
+// sans php-gd et la panne n'apparaît qu'à la PREMIÈRE PHOTO — en
+// pleine station, pendant le test terrain.
+$composer = json_decode((string) @file_get_contents($racine . '/composer.json'), true);
+$requis   = array_keys($composer['require'] ?? []);
+$photo    = (string) @file_get_contents($racine . '/src/Core/PhotoStorage.php');
+if (preg_match('/imagewebp|imagecreatefrom/', $photo) === 1) {
+    check('ext-gd est déclarée dans composer.json', in_array('ext-gd', $requis, true));
+}
+if (str_contains($photo, 'finfo_open')) {
+    check('ext-fileinfo est déclarée dans composer.json', in_array('ext-fileinfo', $requis, true));
+}
+
+echo "\n13. deploy.sh refuse de publier un dossier vide\n";
 check(
     'deploy.sh vérifie la présence d\'index.html avant de publier',
     str_contains($deploy, 'index.html'),

@@ -36,16 +36,16 @@ Ce document suppose que le choix est fait. Il ne le rediscute pas.
 ## 2. L'architecture retenue
 
 Vous avez indiqué qu'un sous-domaine vous suffit. On part donc de
-votre domaine existant, appelé ici `mon-entreprise.sn` :
+votre domaine existant, appelé ici `magyapro.com` :
 
 ```
-                 le navigateur ne parle QU'À app.mon-entreprise.sn
+                 le navigateur ne parle QU'À app.magyapro.com
                                     │
-        app.mon-entreprise.sn ──────┤
+        app.magyapro.com ──────┤
         (Vercel : Angular)          │
                                     │  réécriture /api/*
                                     ▼
-        api.mon-entreprise.sn ── API PHP + MySQL + photos
+        api.magyapro.com ── API PHP + MySQL + photos
         (votre hébergeur)
 ```
 
@@ -74,13 +74,17 @@ lien profond y fonctionnent tous.
 
 ## 3. Ce qu'il faut préparer
 
+L'installation complète du VPS OVH est décrite pas à pas dans
+[`installation-vps-ovh.md`](installation-vps-ovh.md). Ce qui suit en
+est le résumé.
+
 ### 3.1 L'API, en premier
 
 **Mettez l'API en ligne avant Vercel.** Sans elle, le site Vercel
 s'affiche mais aucune donnée n'arrive, et vous chercherez l'erreur du
 mauvais côté.
 
-Suivez [`deploiement.md`](deploiement.md) pour `api.mon-entreprise.sn`,
+Suivez [`deploiement.md`](deploiement.md) pour `api.magyapro.com`,
 avec une seule différence dans `backend/.env` :
 
 ```ini
@@ -89,13 +93,13 @@ APP_DEBUG=false
 
 # L'adresse du site Vercel, PAS celle de l'API.
 # C'est l'origine que le navigateur affiche.
-APP_FRONTEND_URL=https://app.mon-entreprise.sn
+APP_FRONTEND_URL=https://app.magyapro.com
 ```
 
 Vérifiez que l'API répond avant d'aller plus loin :
 
 ```bash
-curl -i https://api.mon-entreprise.sn/api/health
+curl -i https://api.magyapro.com/api/health
 ```
 
 ### 3.2 Les deux enregistrements DNS
@@ -108,6 +112,10 @@ curl -i https://api.mon-entreprise.sn/api/health
 ---
 
 ## 4. La seule ligne à modifier
+
+**C'est déjà fait pour `magyapro.com`** : `vercel.json` contient
+`https://api.magyapro.com`. Cette section ne sert qu'en cas de
+changement de domaine.
 
 Ouvrez [`vercel.json`](../vercel.json) à la racine du dépôt et
 remplacez le domaine de la réécriture :
@@ -124,7 +132,7 @@ par le vôtre :
 ```json
 {
   "source": "/api/:chemin*",
-  "destination": "https://api.mon-entreprise.sn/api/:chemin*"
+  "destination": "https://api.magyapro.com/api/:chemin*"
 }
 ```
 
@@ -148,7 +156,7 @@ fois, et à commiter.
    et les en-têtes. C'est délibéré — un réglage caché dans un tableau
    de bord est un réglage que personne ne retrouve six mois plus tard.
 3. *Deploy*.
-4. *Settings → Domains* : ajoutez `app.mon-entreprise.sn`.
+4. *Settings → Domains* : ajoutez `app.magyapro.com`.
 
 Chaque `git push` sur la branche principale remet le site à jour.
 
@@ -161,13 +169,13 @@ sécurité étaient écrits, commentés et relus — et servis à personne.
 
 ```bash
 # Les six en-têtes doivent apparaître
-curl -I https://app.mon-entreprise.sn/
+curl -I https://app.magyapro.com/
 
 # L'API doit répondre À TRAVERS le relais, pas seulement en direct
-curl -i https://app.mon-entreprise.sn/api/health
+curl -i https://app.magyapro.com/api/health
 
 # Un lien profond doit renvoyer l'application, pas une erreur 404
-curl -o /dev/null -w '%{http_code}\n' https://app.mon-entreprise.sn/queue
+curl -o /dev/null -w '%{http_code}\n' https://app.magyapro.com/queue
 ```
 
 Puis, dans un navigateur : connectez-vous, laissez la page ouverte
@@ -182,7 +190,7 @@ constater une fois.
 
 | Point | Pourquoi | Que faire si ça arrive |
 |---|---|---|
-| **Envoi de photos volumineuses** | Le navigateur compresse chaque photo en WebP 1600 px (environ 200 Ko), donc le cas normal est très en dessous de toute limite. Mais si la compression échoue — format exotique — le fichier d'origine part tel quel, jusqu'à 12 Mo, à travers le relais Vercel | Si un envoi de photo échoue en 413, pointez le frontend directement sur l'API : mettez `apiUrl: 'https://api.mon-entreprise.sn/api'` dans `environment.ts`. Le CORS est déjà géré côté API (`APP_FRONTEND_URL`), au prix d'une requête préliminaire par écriture |
+| **Envoi de photos volumineuses** | Le navigateur compresse chaque photo en WebP 1600 px (environ 200 Ko), donc le cas normal est très en dessous de toute limite. Mais si la compression échoue — format exotique — le fichier d'origine part tel quel, jusqu'à 12 Mo, à travers le relais Vercel | Si un envoi de photo échoue en 413, pointez le frontend directement sur l'API : mettez `apiUrl: 'https://api.magyapro.com/api'` dans `environment.ts`. Le CORS est déjà géré côté API (`APP_FRONTEND_URL`), au prix d'une requête préliminaire par écriture |
 | **Latence du relais** | Chaque appel passe par le réseau Vercel avant d'atteindre votre API | Mesurable dès la première journée. Si c'est sensible, hébergez l'API en Europe de l'Ouest plutôt qu'ailleurs |
 | **Les sauvegardes** | Elles tournent sur l'hébergeur de l'API, pas sur Vercel | Rien de particulier : `deploiement.md` §7 s'applique inchangé |
 | **`deploy/deploy.sh`** | Il publie le frontend ET l'API. Sur Vercel, c'est Vercel qui publie le frontend | Le script reste valable pour l'API seule ; les étapes 4 et 7 ne s'appliquent plus |

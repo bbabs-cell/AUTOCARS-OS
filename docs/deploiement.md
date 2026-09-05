@@ -175,6 +175,7 @@ sont donc listées ici, et un test le vérifie
 | `AUTOCARE_ROOT` | `/var/www/autocare` | Où le dépôt est cloné |
 | `AUTOCARE_BRANCH` | `main` | La branche à mettre en ligne |
 | `AUTOCARE_WEB` | `/var/www/autocare-web` | Où le frontend compilé est publié. **Doit être identique au `root` de Nginx** — un test vérifie que les deux ne divergent pas |
+| `AUTOCARE_SERVE_FRONTEND` | `1` | `1` : ce serveur sert aussi l'application Angular. `0` : l'application est ailleurs (Vercel) et il n'y a rien à compiler ici — Node devient inutile sur la machine. Voir [`installation-vps-ovh.md`](installation-vps-ovh.md) |
 | `AUTOCARE_HOST` | *(aucun)* | Le domaine, pour l'appel de vérification final. Sans lui, l'étape 6 s'annonce « non vérifiée » au lieu de faire échouer une mise en ligne réussie |
 
 Le script fait, dans cet ordre :
