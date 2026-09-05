@@ -646,6 +646,12 @@ Trois questions au moins n'ont pas de réponse crédible sans lui :
    lot 16 disent déjà qu'un lavage standard annoncé à 30 minutes en
    dure 36.)*
 
+La séance elle-même est préparée : `grille-observation-terrain.md`
+contient ce qu'il faut imprimer et emporter — les critères d'échec
+fixés avant le départ, les feuilles à remplir sur place, et la façon
+dont chaque observation se convertit en décision. Ces trois questions
+y sont la feuille 4.
+
 ---
 
 ## 11. Risques et points ouverts

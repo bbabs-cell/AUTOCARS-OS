@@ -98,6 +98,7 @@ AUTOCARS-OS/
 | [docs/audit-securite.md](docs/audit-securite.md) | Audit du lot 21 : méthode, défauts trouvés, risques acceptés |
 | [docs/deploiement.md](docs/deploiement.md) | Mise en production, sauvegarde, restauration |
 | [docs/performance.md](docs/performance.md) | Mesures à l'échelle, budgets par écran, ce qui a été trouvé |
+| [docs/grille-observation-terrain.md](docs/grille-observation-terrain.md) | **À imprimer** : comment observer une vraie station, et quoi en conclure |
 
 ---
 
@@ -168,7 +169,7 @@ sauvegarder et se restaurer.
 
 | Ce qui manque | Qui décide |
 |---|---|
-| **Le test terrain** dans une vraie station | Prévu au plan depuis le lot 10, jamais fait. C'est de loin le plus important : personne n'a encore utilisé ce produit pour travailler. |
+| **Le test terrain** dans une vraie station | Prévu au plan depuis le lot 10, jamais fait. C'est de loin le plus important : personne n'a encore utilisé ce produit pour travailler. La grille d'observation est prête : [`docs/grille-observation-terrain.md`](docs/grille-observation-terrain.md). |
 | Une **relecture de sécurité par un tiers** | Réclamée par l'audit du lot 21, avant les premières données réelles d'un client. |
 | L'**hébergement** | Le lot 22 suppose un VPS et dit ce qui change pour les autres. |
 | Le **fournisseur de paiement** et le **canal de notification client** | Rien ne sera codé avant qu'un compte marchand réel existe. |
