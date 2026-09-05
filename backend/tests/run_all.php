@@ -40,6 +40,7 @@ $tests = [
     'mail_test.php'           => 'Courrier',
     'security_audit_test.php' => "Audit de sécurité (lot 21)",
     'backup_test.php'         => 'Sauvegarde et restauration',
+    'deployment_test.php'     => 'Configuration de déploiement',
 ];
 
 $directory = __DIR__;

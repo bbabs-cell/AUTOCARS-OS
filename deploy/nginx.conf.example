@@ -57,7 +57,12 @@ server {
     # téléchargeable : identifiants de la base et clé de signature des
     # jetons, en une requête. Le contrôle `php tools/preflight.php`
     # vérifie ce point.
-    root /var/www/autocare/frontend;
+    # C'est le dossier PUBLIE par deploy/deploy.sh, pas le dossier
+    # source du frontend. Servir /var/www/autocare/frontend rendrait
+    # `src/`, `package.json` et `node_modules/` telechargeables, et il
+    # n'y aurait meme pas d'index.html a la racine : le site serait a
+    # la fois casse et expose.
+    root /var/www/autocare-web;
     index index.html;
 
     ssl_certificate     /etc/letsencrypt/live/app.ma-station.sn/fullchain.pem;
@@ -68,29 +73,15 @@ server {
     # --------------------------------------------------------------
     # En-têtes de sécurité
     # --------------------------------------------------------------
-    # HSTS : le navigateur refusera de revenir en HTTP pendant un an.
+    # Ils sont dans un fichier à part, et ce n'est pas de la coquetterie
+    # d'organisation : nginx REMPLACE les `add_header` hérités dès
+    # qu'un bloc en définit un seul. Trois `location` de ce fichier en
+    # définissent un (le cache). Sans l'`include` répété dans chacun,
+    # aucun en-tête de sécurité n'atteint le navigateur — c'est ce qui
+    # se passait, et seul un `curl -I` sur le site l'a montré.
     #
-    # À N'ACTIVER QU'UNE FOIS LE CERTIFICAT EN PLACE ET VÉRIFIÉ. Un
-    # HSTS posé sur un site dont le HTTPS casse rend le site
-    # inaccessible pour tous ceux qui l'ont déjà visité — et on ne
-    # peut pas le retirer de leur navigateur.
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-    # La politique de contenu. Elle se pose ICI et pas dans l'API :
-    # c'est ce serveur qui envoie la page, et une CSP ne protège que
-    # le document qui la porte.
-    #
-    # 'self' partout, aucun 'unsafe-inline' sur les scripts : Angular
-    # n'en a pas besoin en production. `style-src` tolère l'inline
-    # parce que le framework pose des styles calculés.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
-
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer" always;
-    add_header X-Frame-Options "DENY" always;
-
-    # Le navigateur n'a besoin d'aucune de ces permissions.
-    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+    # Le détail de chaque en-tête est commenté dans le fichier inclus.
+    include /etc/nginx/autocare-security-headers.conf;
 
     server_tokens off;
 
@@ -100,22 +91,46 @@ server {
     # --------------------------------------------------------------
     # L'API
     # --------------------------------------------------------------
+    # ==============================================================
+    # TOUT /api PART DIRECTEMENT AU CONTRÔLEUR FRONTAL. C'EST VOULU.
+    # ==============================================================
+    # La version précédente de ce fichier faisait :
+    #
+    #     alias /var/www/autocare/backend/public;
+    #     try_files $uri /index.php$is_args$args;
+    #     location ~ \.php$ { ... }
+    #
+    # et AUCUNE route de l'API ne fonctionnait. C'est le piège nginx
+    # le plus connu et le plus silencieux : dans un bloc qui utilise
+    # `alias`, le repli de `try_files` est résolu depuis la RACINE DU
+    # SITE, pas depuis l'alias. nginx cherchait donc `/index.php` dans
+    # le build Angular, ne le trouvait pas, et la requête finissait
+    # dans `location /` qui répond `index.html`. Un POST vers
+    # /api/auth/login recevait « 405 Not Allowed », qui ne ressemble
+    # en rien à la cause réelle.
+    #
+    # On supprime le piège au lieu de le contourner :
+    #
+    #   - `backend/public/` ne contient QUE index.php. Il n'y a aucun
+    #     fichier statique à servir sous /api, donc `try_files` n'a
+    #     rien à essayer et `alias` n'a rien à exposer.
+    #   - Le routeur PHP lit `REQUEST_URI` tel quel (voir
+    #     src/Core/Request.php) : le préfixe /api lui parvient intact,
+    #     il n'y a rien à réécrire.
+    #
+    # Une ligne de moins, un piège de moins, et les routes marchent.
     location /api {
-        # `alias` et non `root` : le dossier public/ de l'API n'est pas
-        # sous la racine du site.
-        alias /var/www/autocare/backend/public;
+        include fastcgi_params;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
 
-        try_files $uri /index.php$is_args$args;
+        # Le contrôleur frontal, en chemin absolu : il ne dépend ni de
+        # la racine du site ni de l'URL demandée.
+        fastcgi_param SCRIPT_FILENAME /var/www/autocare/backend/public/index.php;
+        fastcgi_param SCRIPT_NAME     /api/index.php;
 
-        location ~ \.php$ {
-            include snippets/fastcgi-php.conf;
-            fastcgi_pass unix:/run/php/php8.2-fpm.sock;
-            fastcgi_param SCRIPT_FILENAME /var/www/autocare/backend/public/index.php;
-
-            # Le temps d'une restitution avec photos sur une connexion
-            # lente. Au-delà, quelque chose ne va pas.
-            fastcgi_read_timeout 60s;
-        }
+        # Le temps d'une restitution avec photos sur une connexion
+        # lente. Au-delà, quelque chose ne va pas.
+        fastcgi_read_timeout 60s;
     }
 
     # --------------------------------------------------------------
@@ -128,11 +143,13 @@ server {
     location ~* \.(?:js|css|woff2|png|jpg|svg|ico)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        include /etc/nginx/autocare-security-headers.conf;
         try_files $uri =404;
     }
 
     location = /index.html {
         add_header Cache-Control "no-store" always;
+        include /etc/nginx/autocare-security-headers.conf;
     }
 
     # Toute autre URL rend index.html : c'est une application à page

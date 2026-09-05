@@ -106,9 +106,30 @@ fabriquer de faux jetons.
 Le fichier **[`deploy/nginx.conf.example`](../deploy/nginx.conf.example)**
 est commenté ligne à ligne. Deux points méritent d'être répétés ici.
 
-**La racine du site est `frontend/`, et l'API vit sous `/api` avec sa
-propre racine `backend/public/`.** Si la racine pointait sur le
-dossier du projet, `.env` serait téléchargeable. C'est l'erreur de
+**Deux fichiers sont à copier, pas un :**
+
+```bash
+sudo cp deploy/nginx.conf.example        /etc/nginx/sites-available/autocare
+sudo cp deploy/security-headers.conf     /etc/nginx/autocare-security-headers.conf
+sudo ln -s /etc/nginx/sites-available/autocare /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Le second contient les en-têtes de sécurité. Ils sont dans un fichier
+séparé à cause de la règle d'héritage la plus piégeuse de Nginx : **un
+`add_header` dans un `location` remplace *tous* ceux hérités du bloc
+`server`**, il ne s'y ajoute pas. Trois `location` posent un
+`add_header` de cache ; sans l'`include` répété dans chacun, HSTS, CSP,
+X-Frame-Options, nosniff, Referrer-Policy et Permissions-Policy ne
+sont servis sur **aucun** chemin. C'était le cas, et seul un `curl -I`
+sur le site l'a montré.
+
+**La racine du site est le dossier PUBLIÉ (`/var/www/autocare-web`),
+jamais le dossier source du frontend.** Servir `frontend/` exposerait
+`src/` et `package.json`, et il n'y aurait même pas d'`index.html` à
+la racine. L'API vit sous `/api` et part directement au contrôleur
+frontal `backend/public/index.php`. Si une racine pointait sur le
+dossier du projet, `.env` serait téléchargeable : c'est l'erreur de
 déploiement à ne pas faire, et `preflight.php` la cherche.
 
 **HSTS ne s'active qu'une fois le certificat en place et vérifié.** Un
@@ -135,6 +156,20 @@ sudo certbot renew --dry-run
 ./deploy/deploy.sh
 ```
 
+### Les quatre variables que lit `deploy.sh`
+
+Toutes ont une valeur par défaut utilisable telle quelle. Un script
+qui lit une variable absente de la documentation est un piège : elles
+sont donc listées ici, et un test le vérifie
+(`backend/tests/deployment_test.php`).
+
+| Variable | Défaut | À quoi elle sert |
+|---|---|---|
+| `AUTOCARE_ROOT` | `/var/www/autocare` | Où le dépôt est cloné |
+| `AUTOCARE_BRANCH` | `main` | La branche à mettre en ligne |
+| `AUTOCARE_WEB` | `/var/www/autocare-web` | Où le frontend compilé est publié. **Doit être identique au `root` de Nginx** — un test vérifie que les deux ne divergent pas |
+| `AUTOCARE_HOST` | *(aucun)* | Le domaine, pour l'appel de vérification final. Sans lui, l'étape 6 s'annonce « non vérifiée » au lieu de faire échouer une mise en ligne réussie |
+
 Le script fait, dans cet ordre :
 
 | Étape | Pourquoi cet ordre |
@@ -152,11 +187,36 @@ appelle des colonnes inexistantes.
 ### Revenir en arrière
 
 ```bash
+./deploy/rollback.sh
+```
+
+L'ancienne version du frontend est conservée à chaque déploiement.
+
+**Pourquoi un script pour une seule commande.** Cette documentation
+disait, avant d'avoir été essayée :
+
+```bash
 mv /var/www/autocare-web-ancien /var/www/autocare-web
 ```
 
-L'ancienne version du frontend est conservée à chaque déploiement. Le
-retour arrière de la **base**, lui, n'est pas automatique : voir §7.
+Cette commande est fausse, et fausse **silencieusement**. Quand la
+destination existe déjà — ce qui est toujours le cas ici, puisque la
+version cassée est en place — `mv` ne remplace pas le dossier : il
+déplace la source **à l'intérieur**. On obtient
+`/var/www/autocare-web/autocare-web-ancien/`, le site reste cassé,
+aucune erreur n'est affichée, et la personne qui vient de taper la
+commande croit avoir réparé. Un retour arrière se tape en panique :
+c'est le dernier endroit du projet où l'on peut se permettre une
+commande qui échoue sans le dire.
+
+`rollback.sh` refuse s'il n'y a rien à restaurer, vérifie qu'il
+restaure bien un frontend compilé, et conserve la version fautive dans
+`…-casse` — la seule pièce à conviction pour comprendre le lendemain.
+
+Le retour arrière de la **base**, lui, n'est pas automatique : voir §7.
+`rollback.sh` le rappelle à l'écran, parce qu'un frontend revenu en
+arrière sur une base déjà migrée est une panne différente, pas une
+réparation.
 
 ---
 
@@ -180,6 +240,39 @@ Les trois qu'il attrape le plus souvent :
 
 Aucun des trois ne fait planter quoi que ce soit. C'est ce qui les
 rend dangereux.
+
+### Ce que le contrôle d'avant-vol ne peut pas voir
+
+Il lit la configuration **du serveur**. Il ne voit pas ce que le
+navigateur reçoit. Toute une catégorie de défauts vit dans cet écart :
+une CSP écrite mais jamais servie, une feuille de style bloquée par
+cette même CSP, une route d'API avalée par une règle statique.
+
+C'est pourquoi `deploy.sh` se termine par une étape 7 qui interroge le
+site en ligne et vérifie **ce qui sort** : les six en-têtes de
+sécurité sont-ils dans la réponse, et la feuille de style se
+charge-t-elle sans script inline. Elle ne s'exécute que si
+`AUTOCARE_HOST` est défini.
+
+La règle générale, apprise à la première mise en ligne réelle : **on
+ne vérifie pas une configuration en la relisant.** Six en-têtes de
+sécurité étaient écrits, commentés, revus — et servis à personne. Un
+`curl -I` l'a montré en une seconde.
+
+```bash
+curl -I https://votre-domaine/
+```
+
+### Pourquoi trois en-têtes apparaissent en double
+
+Sur les réponses de l'API, `X-Frame-Options`, `X-Content-Type-Options`
+et `Referrer-Policy` sont envoyés deux fois, avec la **même valeur** :
+une fois par Nginx, une fois par `public/index.php`. Ce n'est pas un
+oubli. L'API doit se protéger elle-même si elle est un jour servie par
+autre chose que ce Nginx — un Apache en hébergement mutualisé, par
+exemple, où le `.htaccess` livré ne pose pas tout. Des valeurs
+identiques ne posent aucun problème au navigateur ; une API nue en
+poserait un.
 
 ---
 
