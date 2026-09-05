@@ -141,7 +141,12 @@ final class CashSessionRepository extends TenantRepository
                 AND method = 'CASH'
                 AND status = 'PAID'
                 AND cash_session_id IS NULL
-                AND DATE(paid_at) = CURDATE()"
+                -- Une borne, pas une fonction : `DATE(paid_at) = …`
+                -- interdit à MySQL d'utiliser le moindre index sur la
+                -- colonne, et lui fait relire tous les encaissements
+                -- de l'entreprise (lot 20).
+                AND paid_at >= CURDATE()
+                AND paid_at <  CURDATE() + INTERVAL 1 DAY"
         );
 
         $statement->execute([

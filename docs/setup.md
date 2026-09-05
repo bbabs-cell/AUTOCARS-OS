@@ -335,6 +335,28 @@ n'ont de sens que pour une machine jetable.
 
 ---
 
+## 7 ter. Mesurer les performances
+
+Le jeu de démonstration contient une quinzaine d'opérations : toutes
+les requêtes y répondent en une milliseconde, **y compris celles qui
+parcourent la table entière**. Mesurer dessus ne dit rien.
+
+```bash
+composer benchmark-seed          # ~13 s : 76 000 opérations, 3 ans
+composer benchmark               # mesure les écrans, serveur démarré
+php tools/benchmark_seed.php --purge
+```
+
+Le volume est écrit dans **une entreprise à part** (`banc-de-mesure`)
+et n'altère jamais le jeu de démonstration : on peut mesurer le lundi
+et faire une capture d'écran le mardi.
+
+Chaque écran porte un budget, et la commande sort en erreur si l'un
+d'eux le dépasse. Résultats détaillés et méthode :
+**[docs/performance.md](performance.md)**.
+
+---
+
 ## 8. Les deux commandes du quotidien
 
 ```bash

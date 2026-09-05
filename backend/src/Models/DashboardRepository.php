@@ -77,31 +77,59 @@ final class DashboardRepository
             OperationStatus::active()
         ));
 
-        $statement = $this->db->prepare(
+        // ==============================================================
+        // DEUX REQUÊTES DEPUIS LE LOT 20, ET LA RAISON EN VAUT LA PEINE.
+        // ==============================================================
+        // La version d'origine posait les quatre questions en une
+        // seule requête — plus élégant à lire, et SANS AUCUN FILTRE DE
+        // DATE. Elle parcourait donc l'historique ENTIER de
+        // l'entreprise à chaque ouverture du tableau de bord, pour
+        // compter ce qui s'est passé aujourd'hui.
+        //
+        // Le défaut ne se voyait pas : sur le jeu de démonstration, il
+        // y a quinze opérations. Sur trois ans de trois stations, il y
+        // en a 76 000 — et le coût de l'écran du matin grandit avec
+        // l'âge de l'entreprise, pour toujours. C'est exactement ce
+        // qu'un lot de performance existe pour trouver.
+        //
+        // Les quatre compteurs répondent en fait à DEUX questions :
+        //
+        //   « qu'est-ce qui a bougé aujourd'hui ? » — accueillis,
+        //     restitués, annulés. Toute ligne concernée porte
+        //     forcément un `updated_at` d'aujourd'hui, puisque cette
+        //     colonne se met à jour à chaque écriture. Le filtre
+        //     est donc exact, et il tient dans un index.
+        //
+        //   « qu'est-ce qui occupe la station MAINTENANT ? » — sans
+        //     rapport avec une date : un véhicule laissé la veille
+        //     compte toujours.
+        $today = $this->db->prepare(
             "SELECT
-                -- Accueillis aujourd'hui, quel que soit leur état
-                -- actuel : c'est le volume de la journée.
                 COALESCE(SUM(CASE WHEN DATE(o.created_at) = CURDATE() THEN 1 ELSE 0 END), 0) AS vehicles_in,
-
-                -- En cours MAINTENANT, même arrivés hier. Un véhicule
-                -- laissé la veille occupe toujours la station : le
-                -- compter sur sa date d'arrivée le rendrait invisible.
-                COALESCE(SUM(CASE WHEN o.status IN ({$active}) THEN 1 ELSE 0 END), 0) AS in_progress,
-
                 COALESCE(SUM(CASE WHEN DATE(o.released_at) = CURDATE() THEN 1 ELSE 0 END), 0) AS released,
                 COALESCE(SUM(CASE WHEN o.status = 'CANCELLED'
                                    AND DATE(o.updated_at) = CURDATE() THEN 1 ELSE 0 END), 0) AS cancelled
                FROM operations o
               WHERE o.organization_id = :organization_id
+                AND o.updated_at >= CURDATE()
                     {$filter}"
         );
 
-        $statement->execute($parameters + ['organization_id' => $this->organizationId()]);
-        $row = $statement->fetch() ?: [];
+        $today->execute($parameters + ['organization_id' => $this->organizationId()]);
+        $row = $today->fetch() ?: [];
+
+        $inProgress = $this->db->prepare(
+            "SELECT COUNT(*) FROM operations o
+              WHERE o.organization_id = :organization_id
+                AND o.status IN ({$active})
+                    {$filter}"
+        );
+
+        $inProgress->execute($parameters + ['organization_id' => $this->organizationId()]);
 
         return [
             'vehicles_in' => (int) ($row['vehicles_in'] ?? 0),
-            'in_progress' => (int) ($row['in_progress'] ?? 0),
+            'in_progress' => (int) $inProgress->fetchColumn(),
             'released'    => (int) ($row['released'] ?? 0),
             'cancelled'   => (int) ($row['cancelled'] ?? 0),
         ];
@@ -115,12 +143,26 @@ final class DashboardRepository
         $statement = $this->db->prepare(
             "SELECT COUNT(*) FROM operations o
               WHERE o.organization_id = :organization_id
-                AND DATE(o.created_at) = (CURDATE() - INTERVAL :days DAY)
+                -- UNE BORNE, PAS UNE FONCTION (lot 20).
+                --
+                -- `DATE(o.created_at) = …` oblige MySQL à calculer la
+                -- fonction sur CHAQUE ligne pour savoir si elle
+                -- correspond : aucun index sur `created_at` ne peut
+                -- alors servir, et la table entière y passe.
+                --
+                -- La même question posée en intervalle se lit
+                -- directement dans l'index. C'est le défaut le plus
+                -- répandu de tout le produit : il était présent dans
+                -- cinq requêtes, toutes écrites de bonne foi.
+                AND o.created_at >= (CURDATE() - INTERVAL :days DAY)
+                AND o.created_at <  (CURDATE() - INTERVAL :days_end DAY) + INTERVAL 1 DAY
                     {$filter}"
         );
 
         $statement->bindValue('organization_id', $this->organizationId(), PDO::PARAM_INT);
         $statement->bindValue('days', $daysAgo, PDO::PARAM_INT);
+        // PDO sans émulation refuse qu'un nom serve deux fois.
+        $statement->bindValue('days_end', $daysAgo, PDO::PARAM_INT);
 
         foreach ($parameters as $name => $value) {
             $statement->bindValue($name, $value);
@@ -147,12 +189,15 @@ final class DashboardRepository
             "SELECT COALESCE(SUM(p.amount), 0) FROM payments p
               WHERE p.organization_id = :organization_id
                 AND p.status = 'PAID'
-                AND DATE(p.paid_at) = (CURDATE() - INTERVAL :days DAY)
+                -- Une borne, pas une fonction — voir vehiclesInOnDay().
+                AND p.paid_at >= (CURDATE() - INTERVAL :days DAY)
+                AND p.paid_at <  (CURDATE() - INTERVAL :days_end DAY) + INTERVAL 1 DAY
                     {$filter}"
         );
 
         $statement->bindValue('organization_id', $this->organizationId(), PDO::PARAM_INT);
         $statement->bindValue('days', $daysAgo, PDO::PARAM_INT);
+        $statement->bindValue('days_end', $daysAgo, PDO::PARAM_INT);
 
         foreach ($parameters as $name => $value) {
             $statement->bindValue($name, $value);
@@ -232,7 +277,9 @@ final class DashboardRepository
                FROM payments p
               WHERE p.organization_id = :organization_id
                 AND p.status = 'PAID'
-                AND DATE(p.paid_at) = CURDATE()
+                -- Une borne, pas une fonction — voir vehiclesInOnDay().
+                AND p.paid_at >= CURDATE()
+                AND p.paid_at <  CURDATE() + INTERVAL 1 DAY
                     {$filter}
            GROUP BY p.method
            ORDER BY total DESC"

@@ -226,6 +226,7 @@ où elle a été livrée (ou est prévue).
 | EF-25 | Ouverture et clôture de caisse par vacation, avec fond de caisse déclaré | 9 | [FAIT] |
 | EF-26 | L'écart entre le compté et l'attendu est **enregistré, pas corrigé** | 9 | [FAIT] |
 | EF-27 | Un seul encaissement peut couvrir plusieurs dossiers ; un dossier peut recevoir plusieurs encaissements | 9 | [FAIT] |
+| EF-77 | **Le total d'une période compte TOUS les encaissements**, quelle que soit la longueur de la liste affichée | 9, corrigé au 20 | [FAIT] |
 | EF-28 | Les montants sont des **entiers** en francs CFA. Aucun flottant ne touche à l'argent | 3, 9 | [FAIT] |
 
 ### 4.6 Pilotage
@@ -421,12 +422,14 @@ par des tests. Les modifier, c'est changer de produit.
 
 | ID | Exigence | Statut |
 |---|---|:---:|
-| ENF-21 | Les écrans de comptoir répondent en moins d'une seconde sur les volumes d'une station | [FAIT] — index posés au lot 3 et suivants |
+| ENF-21 | Les écrans de comptoir répondent en moins d'une seconde sur les volumes d'une station | [FAIT] — **mesuré** au lot 20 sur 76 000 opérations |
 | ENF-22 | Les filtres financiers sont appliqués **côté serveur** : l'API n'envoie pas ce que l'utilisateur n'a pas le droit de voir | [FAIT] |
 | ENF-23 | Sauvegarde et restauration documentées | [PRÉVU] — lot 22 |
 | ENF-24 | Journalisation d'exploitation et supervision | [PRÉVU] — lots 20–22 |
 | ENF-25 | **Les tests tournent ailleurs que sur le poste de leur auteur** : intégration continue à chaque poussée | [FAIT] — lot 19 |
 | ENF-26 | Aucun élément d'interface **désactivé ou faux** n'est laissé en place « en attendant » | [FAIT] — lot 19 |
+| ENF-27 | **Chaque écran porte un budget de temps de réponse**, décidé d'après son usage et vérifié sur un volume réaliste | [FAIT] — lot 20 |
+| ENF-28 | Aucun écran ne parcourt un historique **non borné** : le coût d'un écran ne grandit pas avec l'âge du client | [FAIT] — lot 20 |
 
 ---
 
@@ -586,6 +589,7 @@ n'aurait pu les rattraper au moment de produire des statistiques.
 | Procédure de déploiement et de sauvegarde | [PRÉVU] — lot 22 |
 | Rapport d'audit de sécurité | [PRÉVU] — lot 21 |
 | Intégration continue (`.github/workflows/tests.yml`) | [FAIT] — lot 19 |
+| `docs/performance.md` — mesures, budgets, méthode | [FAIT] — lot 20 |
 
 ### 9.2 Critères d'acceptation d'un lot
 
@@ -618,10 +622,10 @@ déjà.
 | **A — Fondations** | 1–3 | Projet, design system, base de données | ✅ |
 | **B — Cœur du MVP** | 4–10 | Authentification, installation, clients, opérations, file, argent, tableau de bord | ✅ **MVP utilisable** |
 | **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | **18/18 — terminée** |
-| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | 1/4 |
+| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | 2/4 |
 
-**857 tests** (786 backend, 71 frontend) tiennent l'ensemble au
-lot 19, et tournent désormais à chaque poussée.
+**860 tests** (789 backend, 71 frontend) tiennent l'ensemble au
+lot 20, et tournent à chaque poussée.
 
 ### Le test terrain — la tâche la plus importante qui reste
 

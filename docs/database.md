@@ -615,20 +615,16 @@ garder.
 
 ## Index et performance
 
-L'index le plus important du produit :
+> Détail complet des mesures, avant/après : **[docs/performance.md](performance.md)**.
+
+L'index posé au lot 3 pour la file d'attente :
 
 ```sql
 KEY idx_operations_queue (organization_id, station_id, status, priority)
 ```
 
-C'est la requête de la file d'attente, rechargée en permanence sur
-tous les postes. L'ordre des colonnes suit celui du filtrage réel —
-MySQL ne peut utiliser un index composé que de la gauche vers la
-droite.
-
-**Mesuré sur 2 000 opérations** (`php tests/schema_test.php`) :
-l'index est retenu par l'optimiseur et n'examine que 60 à 180 lignes
-au lieu des 2 004.
+L'ordre des colonnes suit celui du filtrage réel — MySQL ne peut
+utiliser un index composé que **de la gauche vers la droite**.
 
 > Piège à connaître : sur une table de quatre lignes, l'optimiseur
 > **ignore volontairement** les index — lire quatre lignes coûte moins
@@ -636,6 +632,37 @@ au lieu des 2 004.
 > index sur des données de démonstration ne prouve donc rien. C'est
 > pourquoi le test charge un volume réaliste, avec une répartition
 > réaliste des statuts (2 % d'opérations actives, le reste terminé).
+
+### Ce que le lot 20 a corrigé
+
+Cet index a une limite que seule une mesure à l'échelle a révélée :
+`station_id` est en **deuxième** position. Il sert donc parfaitement
+quand on filtre sur une station, et presque pas quand on ne filtre pas
+— c'est-à-dire pour un propriétaire qui regarde tout son réseau.
+Mesuré sur 76 000 opérations : **10 ms filtré, 87 ms sans filtre**.
+
+Quatre index ont été ajoutés (migration 022), chacun après une mesure :
+
+| Index | Ce qu'il sert | Gain mesuré |
+|---|---|---|
+| `idx_operations_org_status_priority` | File d'attente et dossiers en cours, sans filtre de station | 87 ms → 1,4 ms |
+| `idx_operations_org_customer_created` | « Quels clients reviennent ? » | 80 ms → 24 ms |
+| `idx_operations_analytics` | Balayages de statistiques (index **couvrant**) | ×1,5 |
+| `idx_operations_org_updated` | Compteurs du jour au tableau de bord | 50 ms → 0,8 ms |
+| `idx_payments_org_paid` | Recette par date (couvrant) | 21 ms → 0,2 ms |
+
+### Deux règles apprises
+
+**Un index couvrant évite d'ouvrir la table.** Quand toutes les
+colonnes lues par la requête sont dans l'index, MySQL n'a plus besoin
+de la table — le plan l'annonce par « Using index ». Ajouter `status`
+(un octet) à un index a divisé un parcours par trois.
+
+**`DATE(colonne) = …` interdit tout index.** Appliquer une fonction à
+une colonne oblige MySQL à la calculer sur chaque ligne. La même
+question posée en intervalle (`>= …` et `< … + 1 jour`) se lit
+directement dans l'index. Le motif était présent dans cinq requêtes,
+toutes écrites de bonne foi.
 
 ---
 

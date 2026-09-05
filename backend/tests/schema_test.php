@@ -81,12 +81,26 @@ echo "=== AUTOCARE OS — vérification du schéma ===\n\n";
  * On efface donc les traces d'une exécution précédente AVANT de
  * commencer, et pas seulement à la fin.
  */
+// ==================================================================
+// LES IDENTIFIANTS DE TEST SONT HORS DE PORTÉE DES VRAIES DONNÉES.
+// ==================================================================
+// Ce test posait ses lignes de contrôle sur les identifiants 99. Il a
+// cassé le jour où le banc de mesure du lot 20 a créé 2 750
+// véhicules : l'un d'eux portait le numéro 99, il avait des
+// opérations, et le nettoyage du test s'est heurté à une clé
+// étrangère.
+//
+// Le défaut n'était pas dans le banc de mesure : c'était le test qui
+// se croyait seul sur la base. On choisit donc un numéro qu'aucune
+// séquence n'atteindra dans la vie du produit.
+const TEST_ID = 999000099;
+
 function cleanUpTestData(PDO $connection): void
 {
     $connection->exec("DELETE FROM operations WHERE reference LIKE 'PERF-%'");
-    $connection->exec('DELETE FROM vehicles WHERE id = 99');
-    $connection->exec('DELETE FROM customers WHERE id = 99');
-    $connection->exec('DELETE FROM organizations WHERE id = 99');
+    $connection->exec('DELETE FROM vehicles WHERE id = ' . TEST_ID);
+    $connection->exec('DELETE FROM customers WHERE id = ' . TEST_ID);
+    $connection->exec('DELETE FROM organizations WHERE id = ' . TEST_ID);
 }
 
 cleanUpTestData($connection);
@@ -210,16 +224,17 @@ checkRejected(
 
 // La même plaque DOIT rester possible dans une AUTRE entreprise :
 // deux stations concurrentes peuvent servir le même véhicule.
-$connection->exec("INSERT INTO organizations (id, name, slug) VALUES (99, 'Autre Entreprise', 'autre-entreprise')");
+$connection->exec("INSERT INTO organizations (id, name, slug) VALUES ("
+    . TEST_ID . ", 'Autre Entreprise', 'autre-entreprise')");
 $connection->exec("INSERT INTO customers (id, organization_id, first_name, last_name, phone)
-                   VALUES (99, 99, 'Client', 'Autre', '+221770000000')");
+                   VALUES (" . TEST_ID . ", " . TEST_ID . ", 'Client', 'Autre', '+221770000000')");
 
 $sameplateAllowed = true;
 
 try {
     $connection->exec(
         "INSERT INTO vehicles (id, organization_id, customer_id, plate_number, brand, model)
-         VALUES (99, 99, 99, 'DK1234AA', 'Toyota', 'Corolla')"
+         VALUES (" . TEST_ID . ", " . TEST_ID . ", " . TEST_ID . ", 'DK1234AA', 'Toyota', 'Corolla')"
     );
 } catch (PDOException) {
     $sameplateAllowed = false;
@@ -357,9 +372,23 @@ $connection->query('ANALYZE TABLE operations')->fetchAll();
 
 $planAtScale = $connection->query("EXPLAIN {$queueQuery}")->fetch();
 
+// ==================================================================
+// ON VÉRIFIE LA PROPRIÉTÉ, PAS LE NOM DE L'INDEX (corrigé au lot 20).
+// ==================================================================
+// Ce test exigeait `key === 'idx_operations_queue'`. Il a échoué le
+// jour où le lot 20 a ajouté un index MEILLEUR pour cette requête :
+// l'optimiseur a choisi le nouveau, et le test a déclaré une
+// régression là où il y avait un progrès.
+//
+// Un test qui nomme l'index vérifie une implémentation. Ce qui compte
+// est ailleurs : qu'un index — n'importe lequel — évite de relire
+// toute la table. On mesure donc les lignes examinées.
+$indexUsed  = $planAtScale !== false && ($planAtScale['key'] ?? null) !== null;
+$rowsRead   = (int) ($planAtScale['rows'] ?? PHP_INT_MAX);
+
 check(
-    "sur 2 000 opérations, l'index est effectivement utilisé (pas de balayage complet)",
-    $planAtScale !== false && $planAtScale['key'] === 'idx_operations_queue'
+    "sur 2 000 opérations, un index est effectivement utilisé (pas de balayage complet)",
+    $indexUsed && $rowsRead < 400
 );
 
 echo "           (index retenu : " . ($planAtScale['key'] ?? 'aucun')

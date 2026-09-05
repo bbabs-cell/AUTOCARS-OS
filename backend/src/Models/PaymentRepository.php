@@ -81,41 +81,8 @@ final class PaymentRepository extends TenantRepository
      */
     public function journal(array $filters = [], int $limit = 200): array
     {
-        $conditions = [];
-        $parameters = [];
+        [$extra, $parameters] = $this->buildFilters($filters);
 
-        // Les bornes portent sur paid_at, la date de l'encaissement —
-        // pas sur created_at. Un paiement d'hier saisi ce matin
-        // appartient à la recette d'hier : c'est ce jour-là que
-        // l'argent est entré.
-        if (!empty($filters['from'])) {
-            $conditions[] = 'p.paid_at >= :from';
-            $parameters['from'] = $filters['from'] . ' 00:00:00';
-        }
-
-        if (!empty($filters['to'])) {
-            $conditions[] = 'p.paid_at <= :to';
-            $parameters['to'] = $filters['to'] . ' 23:59:59';
-        }
-
-        foreach (['method', 'status'] as $column) {
-            if (!empty($filters[$column])) {
-                $conditions[] = "p.{$column} = :{$column}";
-                $parameters[$column] = $filters[$column];
-            }
-        }
-
-        if (!empty($filters['station_id'])) {
-            $conditions[] = 'p.station_id = :station_id';
-            $parameters['station_id'] = (int) $filters['station_id'];
-        }
-
-        if (!empty($filters['cash_session_id'])) {
-            $conditions[] = 'p.cash_session_id = :cash_session_id';
-            $parameters['cash_session_id'] = (int) $filters['cash_session_id'];
-        }
-
-        $extra = $conditions === [] ? '' : ' AND ' . implode(' AND ', $conditions);
         $limit = max(1, min($limit, 500));
 
         $statement = $this->db->prepare(
@@ -161,24 +128,112 @@ final class PaymentRepository extends TenantRepository
      */
     public function totals(array $filters = []): array
     {
+        // ==============================================================
+        // CETTE MÉTHODE DONNAIT UN TOTAL FAUX (corrigé au lot 20).
+        // ==============================================================
+        // Elle appelait `journal($filters, 500)` et additionnait les
+        // lignes en PHP. Deux conséquences, et la seconde est un
+        // véritable défaut :
+        //
+        //   - elle rapatriait cinq cents lignes avec toutes leurs
+        //     jointures pour n'en lire que deux colonnes ;
+        //   - SURTOUT, elle s'arrêtait à cinq cents. Au-delà, le
+        //     total affiché sous le journal était SILENCIEUSEMENT
+        //     INFÉRIEUR à la recette réelle. Sur les quatre-vingt-dix
+        //     jours que propose l'écran, une station un peu active
+        //     dépasse ce seuil sans rien remarquer.
+        //
+        // Le défaut était invisible sur le jeu de démonstration, qui
+        // compte une quinzaine d'encaissements. C'est le banc de
+        // mesure du lot 20 qui l'a fait apparaître — un lot de
+        // performance qui trouve un mensonge sur un montant.
+        //
+        // Un total se demande à la base, qui sait additionner sans
+        // rien rapatrier : deux colonnes, aucune jointure, aucune
+        // limite.
         $filters['status'] = 'PAID';
-        $rows = $this->journal($filters, 500);
+
+        [$extra, $parameters] = $this->buildFilters($filters);
+
+        $statement = $this->db->prepare(
+            "SELECT p.method, COALESCE(SUM(p.amount), 0) AS total, COUNT(*) AS operations
+               FROM payments p
+              WHERE p.organization_id = :organization_id
+                    {$extra}
+           GROUP BY p.method"
+        );
+
+        $statement->execute($parameters + ['organization_id' => $this->organizationId()]);
 
         $byMethod = [];
         $total    = 0;
+        $count    = 0;
 
-        foreach ($rows as $row) {
-            $amount = (int) $row['amount'];
-            $method = (string) $row['method'];
+        foreach ($statement->fetchAll() as $row) {
+            $amount = (int) $row['total'];
 
-            $byMethod[$method] = ($byMethod[$method] ?? 0) + $amount;
+            $byMethod[(string) $row['method']] = $amount;
             $total += $amount;
+            $count += (int) $row['operations'];
         }
 
         return [
             'total'     => $total,
             'by_method' => $byMethod,
-            'count'     => count($rows),
+            'count'     => $count,
+        ];
+    }
+
+    /**
+     * Les conditions communes au journal et à ses totaux.
+     *
+     * ELLES ÉTAIENT ÉCRITES DEUX FOIS — enfin, elles allaient l'être.
+     * Les totaux réutilisaient le journal entier pour hériter de ses
+     * filtres, ce qui coûtait cinq cents lignes et un total faux. Les
+     * extraire ici donne le même filtrage aux deux, sans copie.
+     *
+     * @param array<string,mixed> $filters
+     * @return array{0:string, 1:array<string,mixed>}
+     */
+    private function buildFilters(array $filters): array
+    {
+        $conditions = [];
+        $parameters = [];
+
+        // Les bornes portent sur paid_at, la date de l'encaissement —
+        // pas sur created_at. Un paiement d'hier saisi ce matin
+        // appartient à la recette d'hier : c'est ce jour-là que
+        // l'argent est entré.
+        if (!empty($filters['from'])) {
+            $conditions[] = 'p.paid_at >= :from';
+            $parameters['from'] = $filters['from'] . ' 00:00:00';
+        }
+
+        if (!empty($filters['to'])) {
+            $conditions[] = 'p.paid_at <= :to';
+            $parameters['to'] = $filters['to'] . ' 23:59:59';
+        }
+
+        foreach (['method', 'status'] as $column) {
+            if (!empty($filters[$column])) {
+                $conditions[] = "p.{$column} = :{$column}";
+                $parameters[$column] = $filters[$column];
+            }
+        }
+
+        if (!empty($filters['station_id'])) {
+            $conditions[] = 'p.station_id = :station_id';
+            $parameters['station_id'] = (int) $filters['station_id'];
+        }
+
+        if (!empty($filters['cash_session_id'])) {
+            $conditions[] = 'p.cash_session_id = :cash_session_id';
+            $parameters['cash_session_id'] = (int) $filters['cash_session_id'];
+        }
+
+        return [
+            $conditions === [] ? '' : ' AND ' . implode(' AND ', $conditions),
+            $parameters,
         ];
     }
 

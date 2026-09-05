@@ -123,8 +123,10 @@ function reg(string $name, string $sfx): array {
         'email' => "g-{$sfx}-" . strtolower($name) . "@t.local", 'password' => 'mot-de-passe-de-test',
     ]);
     return [
-        'token'   => $r['body']['data']['access_token'] ?? null,
-        'station' => $r['body']['data']['user']['station_ids'][0] ?? 0,
+        'token'        => $r['body']['data']['access_token'] ?? null,
+        'station'      => $r['body']['data']['user']['station_ids'][0] ?? 0,
+        'id'           => $r['body']['data']['user']['id'] ?? 0,
+        'organization' => $r['body']['data']['user']['organization_id'] ?? 0,
     ];
 }
 
@@ -340,6 +342,67 @@ check("les remboursements ne sont PAS comptés dans la recette",
 check("filtrer par moyen fonctionne",
     count(call('GET', '/api/payments?method=MOBILE_MONEY', null, $a['token'])
         ['body']['data']['payments'] ?? []) === 2);
+
+// ==================================================================
+// LE TOTAL NE S'ARRÊTE PAS À LA PREMIÈRE PAGE (lot 20).
+// ==================================================================
+// La version d'origine calculait les totaux en additionnant les
+// lignes du journal — limité à cinq cents. Au-delà, le montant
+// affiché sous le journal était SILENCIEUSEMENT inférieur à la
+// recette réelle.
+//
+// Le défaut était invisible sur quinze encaissements de test. On en
+// écrit donc six cents, directement en base : les créer par l'API
+// prendrait des minutes et ne testerait rien de plus.
+$today = date('Y-m-d');
+
+$avant = (int) (call('GET', "/api/payments?from={$today}&to={$today}",
+    null, $a['token'])['body']['data']['totals']['total'] ?? 0);
+
+$insert = $db->prepare(
+    "INSERT INTO payments
+        (organization_id, station_id, customer_id, amount, method, status,
+         paid_at, recorded_by_user_id)
+     VALUES (:org, :station, NULL, 100, 'CASH', 'PAID', NOW(), :user)"
+);
+
+$db->beginTransaction();
+
+for ($i = 0; $i < 600; $i++) {
+    $insert->execute([
+        'org'     => $a['organization'],
+        'station' => $a['station'],
+        'user'    => $a['id'],
+    ]);
+}
+
+$db->commit();
+$insert->closeCursor();
+
+$apres = call('GET', "/api/payments?from={$today}&to={$today}", null, $a['token']);
+$total = (int) ($apres['body']['data']['totals']['total'] ?? 0);
+
+check(
+    "le total compte les 600 encaissements, pas seulement les 500 premiers",
+    $total === $avant + 60000,
+    "attendu " . ($avant + 60000) . ", reçu {$total}"
+);
+
+check(
+    "le compte annoncé suit le même chemin",
+    (int) ($apres['body']['data']['totals']['count'] ?? 0) > 500,
+    'compte = ' . ($apres['body']['data']['totals']['count'] ?? '?')
+);
+
+// La LISTE, elle, reste bornée : un journal n'affiche pas six cents
+// lignes d'un coup. C'est le total qui devait cesser de l'être.
+check(
+    "la liste affichée reste bornée",
+    count($apres['body']['data']['payments'] ?? []) <= 500
+);
+
+$db->prepare("DELETE FROM payments WHERE organization_id = :org AND amount = 100 AND customer_id IS NULL")
+   ->execute(['org' => $a['organization']]);
 
 echo "\n7. Qui a le droit de quoi\n";
 

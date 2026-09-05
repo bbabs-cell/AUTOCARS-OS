@@ -95,6 +95,7 @@ AUTOCARS-OS/
 | [docs/api.md](docs/api.md) | Contrat de l'API REST |
 | [docs/database.md](docs/database.md) | Modèle de données |
 | [docs/security.md](docs/security.md) | Règles de sécurité du projet |
+| [docs/performance.md](docs/performance.md) | Mesures à l'échelle, budgets par écran, ce qui a été trouvé |
 
 ---
 
@@ -129,7 +130,7 @@ suivant.
 
 **Phase D — Industrialisation**
 - [x] **Lot 19** — Qualité : le lien de mot de passe oublié part enfin, trois éléments morts retirés de l'en-tête, intégration continue, 23 tests de plus
-- [ ] Lot 20 — Performance sur volumes réels
+- [x] **Lot 20** — Performance : un banc de mesure à 76 000 opérations, cinq index posés après mesure, un total de caisse faux découvert au passage, 3 tests de plus
 - [ ] Lot 21 — Audit de sécurité complet
 - [ ] Lot 22 — Déploiement, sauvegarde et restauration
 
@@ -150,7 +151,7 @@ restitution :
 et le tableau de bord qui dit, le lendemain matin, ce qui demande une
 action.
 
-**857 tests** (786 backend, 71 frontend) tiennent l'ensemble, et tournent
+**860 tests** (789 backend, 71 frontend) tiennent l'ensemble, et tournent
 à chaque poussée grâce à l'intégration continue.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie

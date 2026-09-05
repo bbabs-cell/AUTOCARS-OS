@@ -26,6 +26,8 @@
         "lint": "php tools/lint.php",
         "migrate": "php tools/migrate.php",
         "seed": "php tools/seed.php",
-        "test": "php tests/run_all.php"
+        "test": "php tests/run_all.php",
+        "benchmark": "php tools/benchmark.php",
+        "benchmark-seed": "php tools/benchmark_seed.php"
     }
 }
