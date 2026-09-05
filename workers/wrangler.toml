@@ -14,3 +14,5 @@ migrations_dir = "migrations"
 # de ce fichier — qui est suivi par Git.
 [vars]
 JWT_ACCESS_TTL_MINUTES = "30"
+# local | production — décide notamment de l'attribut Secure du cookie.
+APP_ENV = "production"

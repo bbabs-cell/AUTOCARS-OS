@@ -66,13 +66,16 @@ Le point délicat : **9 transactions** (`beginTransaction` / `commit` /
 `rollBack`), dont celle qui crée une organisation et son
 administrateur en un seul tout. D1 **n'a pas de transaction
 interactive** : il propose `batch()`, qui exécute une liste
-d'instructions préparées d'avance, sans possibilité de décider de la
-suivante d'après le résultat de la précédente.
+d'instructions préparées d'avance.
 
-Les neuf transactions doivent donc être réexaminées une par une.
-Certaines entrent dans un `batch()`. Les autres demandent de repenser
-la logique. Aucun verrou `FOR UPDATE` n'est utilisé — c'est autant de
-gagné.
+> **CORRIGÉ À L'ÉTAPE 3.** Cette crainte n'était pas fondée. Deux
+> essais l'ont montré : `last_insert_rowid()` fonctionne À
+> L'INTÉRIEUR d'un `batch()`, et un `batch()` qui échoue ne laisse
+> rien. La seconde insertion peut donc désigner la ligne créée par la
+> première, et l'atomicité est acquise. Les neuf transactions se
+> portent sans repenser la logique — seule l'écriture change.
+
+Aucun verrou `FOR UPDATE` n'est utilisé — c'est autant de gagné.
 
 ### 4.2 MySQL → SQLite · les 22 migrations
 
@@ -192,7 +195,7 @@ précédentes.
 |---|---|---|
 | 1 | ~~**Une tranche verticale d'abord** : connexion + liste des véhicules~~ **— FAITE** | ✅ 45 tests dans le runtime Workers ; l'application Angular affiche ses véhicules sans avoir été modifiée. Voir [`workers/README.md`](../workers/README.md) |
 | 2 | ~~Le schéma D1 complet et ses contraintes `CHECK`~~ **— FAITE** | ✅ 21 tables, 289 colonnes, aucun écart avec MySQL. Clés étrangères vérifiées appliquées par D1 |
-| 3 | Le socle : multi-tenance, permissions, jetons | Les tests d'isolation repassent, réécrits |
+| 3 | ~~Le socle : multi-tenance, permissions, jetons~~ **— FAITE** | ✅ Sessions tournantes, détection de rejeu, inscription. L'application reste connectée |
 | 4 | Les dépôts et contrôleurs, par domaine métier | Domaine par domaine, avec ses tests |
 | 5 | Photos et envois | Après votre décision du §4.4 |
 | 6 | Sauvegarde, restauration, avant-vol | Une restauration d'essai réussie |

@@ -1,8 +1,9 @@
 # API AUTOCARE OS sur Cloudflare Workers
 
-> **Étapes 1 et 2 faites.** La tranche verticale, puis le schéma
-> complet. Le backend PHP reste la référence en service dans
-> `../backend/` tant que la migration n'est pas terminée.
+> **Étapes 1 à 3 faites.** La tranche verticale, le schéma complet,
+> puis le socle d'authentification. Le backend PHP reste la référence
+> en service dans `../backend/` tant que la migration n'est pas
+> terminée.
 
 ---
 
@@ -17,7 +18,7 @@ jeton, la relecture du rôle en base, le contrôle de permission côté
 serveur, une jointure, une recherche, et le cloisonnement entre
 clients. Si ces deux-là sont justes, l'architecture tient.
 
-**Réponse : oui, la pile tient.** 61 tests le vérifient dans le vrai
+**Réponse : oui, la pile tient.** 89 tests le vérifient dans le vrai
 runtime Workers, et l'application Angular existante fonctionne contre
 cette API **sans une ligne modifiée**.
 
@@ -66,7 +67,7 @@ npm install --legacy-peer-deps   # voir la note plus bas
 cp .dev.vars.example .dev.vars   # puis remplir JWT_SECRET
 npm run types                    # engendre worker-configuration.d.ts
 
-npm test                         # 61 tests, dans le runtime Workers
+npm test                         # 89 tests, dans le runtime Workers
 npm run typecheck                # les deux tsconfig
 npm run dev                      # API locale sur :8787
 ```
@@ -119,20 +120,81 @@ le déclarait pas `unsigned`.
 
 ---
 
+## Étape 3 — le socle d'authentification
+
+**L'application reste connectée.** C'est ce qui manquait : un
+rechargement de page la renvoyait à l'écran de connexion. Le
+rafraîchissement par cookie tournant du lot 21 est porté, et la
+session survit désormais à un rechargement complet.
+
+### Ce que le chiffrage croyait perdu, et qui ne l'est pas
+
+Le §4.1 annonçait les 9 transactions du PHP comme le point le plus
+délicat : D1 n'a pas de transaction interactive, et il faudrait
+« repenser la logique » de celles qui ont besoin du résultat d'une
+insertion pour la suivante.
+
+**Deux essais ont montré que ce n'est pas nécessaire :**
+
+| Vérifié | Conséquence |
+|---|---|
+| `last_insert_rowid()` fonctionne **à l'intérieur** d'un `batch()` | La seconde insertion peut désigner la ligne créée par la première |
+| Un `batch()` qui échoue en cours de route ne laisse **rien** | Il est bien atomique |
+
+`POST /api/auth/register` crée donc l'organisation, l'administrateur,
+sa station et son rattachement en un seul `batch()` — même garantie
+qu'en PHP, écriture différente, logique inchangée.
+`test/transactions.test.ts` fige ces deux comportements de la
+plateforme.
+
+### La rotation et la détection de rejeu
+
+Chaque rafraîchissement révoque le jeton présenté et en émet un
+nouveau. Si un jeton **déjà révoqué** revient, deux personnes
+détiennent la même session : on ne sait pas laquelle se présente, donc
+on ferme **tout** pour cet utilisateur et on l'inscrit au journal
+d'audit.
+
+C'est brutal — le propriétaire légitime est déconnecté lui aussi — et
+c'est le comportement voulu au lot 21 : mieux vaut une reconnexion
+qu'un intrus qui reste. Quatorze tests couvrent la rotation, le rejeu,
+la déconnexion sélective et la révocation immédiate.
+
+> Cette détection n'est utilisable que parce que l'application
+> Angular ne lance **qu'un seul rafraîchissement à la fois**. Livrée
+> seule au lot 21, elle déconnectait tout le monde à chaque
+> expiration : une quinzaine de requêtes parallèles déclenchaient
+> chacune leur rafraîchissement, et le second passait pour un rejeu.
+> Le correctif client existe déjà — rien à changer au frontend.
+
+### Le cookie, et ce qui n'y est pas
+
+`HttpOnly` (une faille XSS ne donne pas la session) · `SameSite=Strict`
+(protection CSRF sans jeton supplémentaire) · `Path=/api/auth` (les 88
+autres routes ne le voient jamais) · `Secure` hors développement.
+
+Le **jeton d'accès**, lui, n'est pas dans un cookie : il vit en mémoire
+dans l'application. Un cookie serait envoyé automatiquement partout,
+ce qui est exactement ce qu'on ne veut pas d'un jeton porteur. Un test
+vérifie qu'il n'apparaît dans aucun en-tête `Set-Cookie`.
+
+---
+
 ## Ce qui est là, et ce qui ne l'est pas
 
 | Fait | Pas encore |
 |---|---|
-| `POST /api/auth/login` | Le rafraîchissement par cookie tournant (lot 21) |
-| `GET /api/vehicles` | Les 86 autres routes |
-| Cloisonnement multi-clients, avec son garde-fou | Photos, sauvegardes, contrôle d'avant-vol |
-| Matrice des droits, portée à l'identique | Les index de performance (à re-mesurer, pas à recopier) |
-| **Les 21 tables**, leurs contraintes et leurs déclencheurs | |
+| `login`, `register`, `refresh`, `logout`, `me` | Les 83 autres routes |
+| `GET /api/vehicles` | Photos, sauvegardes, contrôle d'avant-vol |
+| Cloisonnement multi-clients, avec son garde-fou | Les index de performance (à re-mesurer, pas à recopier) |
+| Matrice des droits, portée à l'identique | |
+| Les 21 tables, leurs contraintes et leurs déclencheurs | |
+| **Sessions tournantes, journal d'audit** | |
 
-L'application Angular se connecte et affiche ses véhicules. Elle ne
-peut pas rester connectée au-delà : `/api/auth/refresh` n'existe pas
-encore, et son absence renvoie à l'écran de connexion. C'est le
-périmètre de l'étape, pas un défaut.
+L'application Angular se connecte, **reste connectée** et affiche ses
+véhicules. Les écrans qui appellent des routes non encore portées
+(tableau de bord, file d'attente…) restent vides : c'est le périmètre
+des étapes suivantes, pas un défaut.
 
 ---
 

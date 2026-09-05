@@ -17,7 +17,7 @@
  * migration n'est pas terminée.
  */
 
-import { connexion } from './controllers/auth';
+import { connexion, deconnexion, inscription, moi, rafraichis } from './controllers/auth';
 import { liste } from './controllers/vehicles';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
@@ -38,8 +38,17 @@ export default {
         );
       }
 
-      if (chemin === '/api/auth/login' && request.method === 'POST') {
-        return await connexion(request, env);
+      if (request.method === 'POST') {
+        if (chemin === '/api/auth/login')    return await connexion(request, env);
+        if (chemin === '/api/auth/register') return await inscription(request, env);
+        if (chemin === '/api/auth/refresh')  return await rafraichis(request, env);
+        if (chemin === '/api/auth/logout')   return await deconnexion(request, env);
+      }
+
+      if (chemin === '/api/auth/me' && request.method === 'GET') {
+        const utilisateur = await identifie(request, env.DB, env.JWT_SECRET);
+
+        return utilisateur === null ? nonAuthentifie() : moi(utilisateur);
       }
 
       if (chemin === '/api/vehicles' && request.method === 'GET') {
