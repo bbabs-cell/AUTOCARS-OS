@@ -329,6 +329,33 @@ check(
 );
 
 // ==================================================================
+echo "\n7. Ce que l'API répond quand la route n'existe pas\n";
+// ==================================================================
+// Ces deux messages sont les seuls du produit qu'aucun écran ne met
+// en forme : ils sortent bruts, dans la console d'un développeur ou
+// dans un journal. Ils doivent quand même dire quoi que ce soit
+// d'utile — et le dire en français correct.
+
+$unknown = call('GET', '/api/inconnue', null, $alpha['token']);
+
+check("une route inconnue répond 404", $unknown['status'] === 404);
+check("elle nomme la route demandée",
+    str_contains($unknown['body']['message'] ?? '', '/api/inconnue'));
+
+// 405 et non 404 : le chemin EXISTE, c'est le verbe qui ne convient
+// pas. Répondre 404 enverrait chercher une faute de frappe dans une
+// URL parfaitement correcte.
+$wrongMethod = call('DELETE', '/api/health');
+
+check("un verbe non autorisé répond 405, pas 404", $wrongMethod['status'] === 405);
+check("le message est en français correct, accents compris",
+    str_contains($wrongMethod['body']['message'] ?? '', 'méthode')
+    && str_contains($wrongMethod['body']['message'] ?? '', 'autorisée'));
+
+check("aucune trace de PHP ne fuit dans la réponse",
+    !str_contains(json_encode($unknown['body']) ?: '', 'Autocare\\'));
+
+// ==================================================================
 // Nettoyage : on retire les entreprises créées par ce test.
 // ==================================================================
 $connection->exec("DELETE FROM audit_logs WHERE organization_id IN

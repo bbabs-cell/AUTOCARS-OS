@@ -139,9 +139,13 @@ final class Router
             return;
         }
 
+        // Les deux messages qui suivent sont les seuls du produit
+        // qu'aucun écran ne met en forme : ils sortent bruts, dans la
+        // console d'un développeur ou dans un journal. Ils sont écrits
+        // en français correct, accents compris, comme tous les autres.
         if ($pathExistsWithOtherMethod) {
             Response::error(
-                "La methode {$request->method} n'est pas autorisee sur {$request->path}.",
+                "La méthode {$request->method} n'est pas autorisée sur {$request->path}.",
                 [],
                 405
             );

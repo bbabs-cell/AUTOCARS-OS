@@ -103,7 +103,7 @@ dit pas non n'est pas un périmètre.
 | **Gestion de stock** (produits, consommables) | Réel, mais pas dans la chaîne de traçabilité du véhicule. Candidat pour une version ultérieure. |
 | **Intégration de paiement en ligne** | **Aucune intégration ne sera codée tant qu'un compte marchand réel n'existe pas.** Voir §7.4 — c'est une exigence, pas un retard. |
 | **Envoi de SMS / WhatsApp / e-mail au client** | Aucun envoi sortant tant que le canal, son coût et son consentement ne sont pas décidés. Le produit n'envoie rien aujourd'hui. |
-| **Application mobile native** | L'application web responsive couvre le besoin. Une application native se justifierait par le mode hors-ligne (§7.6), pas avant. |
+| **Application mobile native** | L'application web responsive couvre le besoin. Une application native se justifierait par le mode hors-ligne (§7.7), pas avant. |
 | **Marketplace / réservation par le client final** | Le rendez-vous est pris par la station, pas par le client. Ouvrir la prise de rendez-vous au public est un autre produit. |
 
 ---
@@ -314,13 +314,25 @@ où elle a été livrée (ou est prévue).
 > l'entreprise : ils se règlent sur sa fiche. Et la devise est devenue
 > EF-70, c'est-à-dire l'inverse d'un réglage — voir §7.5.
 
-### 4.12 Aide et robustesse d'usage — [PRÉVU]
+### 4.12 Aide et robustesse d'usage
 
 | ID | Exigence | Lot | Statut |
 |---|---|:---:|:---:|
-| EF-64 | Pages d'erreur explicites : 404, 403, panne serveur, session expirée | 18 | [PRÉVU] |
-| EF-65 | Aide contextuelle expliquant les règles qui **refusent** quelque chose (« pourquoi ne puis-je pas rendre ce véhicule ? ») | 18 | [PRÉVU] |
+| EF-64 | Écrans d'erreur explicites : 404, 403, perte de connexion, session expirée | 18 | [FAIT] |
+| EF-65 | Aide expliquant les règles qui **refusent** quelque chose (« pourquoi ne puis-je pas rendre ce véhicule ? ») | 18 | [FAIT] |
 | EF-66 | Chaque message d'erreur de l'API dit ce qui bloque **sans révéler** l'existence de données d'une autre entreprise | 4 | [FAIT] |
+| EF-71 | Une adresse inconnue **ne redirige plus en silence** : elle le dit | 18 | [FAIT] |
+| EF-72 | Un écran interdit affiche une explication nommant le **rôle**, jamais la permission technique | 18 | [FAIT] |
+| EF-73 | L'aide est organisée **par refus**, pas par module, et chaque réponse dit quoi faire ensuite | 18 | [FAIT] |
+| EF-74 | L'aide **ne recopie aucun seuil chiffré** : elle explique des règles, dont les valeurs vivent dans le serveur | 18 | [FAIT] |
+
+> **EF-64 a changé de forme en cours de route, et il faut le dire.**
+> Le cahier annonçait une *page* de panne serveur. C'est devenu un
+> **bandeau**. Une page détruit l'écran en cours : quelqu'un en train
+> de saisir une inspection, un client devant lui, perdrait sa saisie
+> parce qu'un rafraîchissement automatique a échoué en arrière-plan.
+> Sur le terrain visé, une coupure de trente secondes est ordinaire.
+> Voir §7.6.
 
 ---
 
@@ -497,7 +509,27 @@ ne le lit encore. Un réglage qui n'agit sur rien est pire qu'un
 réglage absent — le gérant croirait avoir réglé son fuseau, et la
 recette continuerait de basculer à minuit UTC.
 
-### 7.6 Le mode hors-ligne, et pourquoi il n'est pas là
+### 7.6 Une panne serveur n'interrompt pas le travail en cours
+
+Décidé au lot 18, contre l'exigence telle qu'elle était écrite.
+
+Quand l'API ne répond plus, le produit affiche un **bandeau** sous
+l'en-tête, et non une page d'erreur. Le bandeau apparaît à la
+première requête qui n'arrive pas, disparaît à la première qui
+aboutit, et **ne remplace rien à l'écran**.
+
+Une page d'erreur aurait détruit l'écran en cours — et donc la saisie
+en cours. Le remède aurait été pire que le mal.
+
+Le bandeau dit aussi ce qui est vrai *et* ce qui ne l'est pas :
+« ce qui est affiché reste à l'écran, mais rien n'est enregistré ».
+Laisser croire l'un ou l'autre serait pire que le silence.
+
+Seul un échec **réseau** l'allume. Une réponse 500 prouve que le
+serveur répond : c'est un bug, pas une coupure, et envoyer un gérant
+redémarrer son routeur pour un bug ne l'aide pas.
+
+### 7.7 Le mode hors-ligne, et pourquoi il n'est pas là
 
 Une station peut perdre le réseau. C'est le risque le plus sérieux du
 produit sur le terrain visé.
@@ -582,11 +614,11 @@ déjà.
 |---|---|---|---|
 | **A — Fondations** | 1–3 | Projet, design system, base de données | ✅ |
 | **B — Cœur du MVP** | 4–10 | Authentification, installation, clients, opérations, file, argent, tableau de bord | ✅ **MVP utilisable** |
-| **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | 17/18 |
+| **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | **18/18 — terminée** |
 | **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | À venir |
 
-**809 tests** (758 backend, 51 frontend) tiennent l'ensemble au
-lot 17.
+**834 tests** (763 backend, 71 frontend) tiennent l'ensemble au
+lot 18.
 
 ### Le test terrain — la tâche la plus importante qui reste
 
@@ -599,7 +631,7 @@ Trois questions au moins n'ont pas de réponse crédible sans lui :
 
 1. Un gérant lit-il « livré » et « encaissé » comme deux chiffres
    distincts, ou en choisit-il un et ignore l'autre ?
-2. Quels écrans doivent survivre à une coupure réseau (§7.6) ?
+2. Quels écrans doivent survivre à une coupure réseau (§7.7) ?
 3. Les seuils d'alerte de la file d'attente, posés « au bon sens » au
    lot 8, correspondent-ils à la réalité ? *(Les premières mesures du
    lot 16 disent déjà qu'un lavage standard annoncé à 30 minutes en
@@ -611,7 +643,7 @@ Trois questions au moins n'ont pas de réponse crédible sans lui :
 
 | Risque | Impact | Traitement |
 |---|---|---|
-| **Coupure réseau en station** | Le comptoir s'arrête | Non traité en v1 (§7.6). Le test terrain doit dire quels écrans en ont besoin |
+| **Coupure réseau en station** | Le comptoir s'arrête | Signalée, pas absorbée (§7.6). Le travail hors-ligne reste hors périmètre v1 (§7.7). Le test terrain doit dire quels écrans en ont besoin |
 | **Le produit est conçu à distance du terrain** | Des écrans justes et inutiles | Test terrain avant les lots 17–18 |
 | **Absence d'intégration de paiement** | Saisie manuelle des encaissements | Assumé (§7.4) : rien ne sera simulé |
 | **Référencement de la page publique** | Un robot qui n'exécute pas le JavaScript voit une page vide | Décision au lot 22, avec l'hébergement. Le partage de lien sur WhatsApp — canal principal de la zone — fonctionne déjà |

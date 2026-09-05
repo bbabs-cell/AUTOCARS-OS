@@ -807,6 +807,141 @@ attraper, et que la compilation ne verra jamais.
 
 ---
 
+## L'aide et les écrans d'erreur (lot 18)
+
+### L'aide est organisée par refus, pas par menu
+
+Une aide classique décrit les écrans : « la page Rendez-vous vous
+permet de… ». Personne ne la lit, parce que personne n'ouvre l'aide
+pour apprendre à quoi sert un écran qu'il a sous les yeux.
+
+**On ouvre l'aide quand le logiciel a dit non.** « Pourquoi je ne peux
+pas rendre ce véhicule ? » — et à ce moment-là, une table des matières
+par module ne sert à rien.
+
+Chaque entrée est donc formulée comme la question qu'on se pose devant
+le refus, et répond dans cet ordre :
+
+1. ce que le logiciel refuse,
+2. **pourquoi** — la raison métier, jamais « c'est comme ça »,
+3. **quoi faire** maintenant.
+
+### Tout est déplié
+
+Le réflexe serait un accordéon : vingt-huit questions repliées, une
+seule ouverte à la fois. C'est joli, et il faut cliquer vingt-huit
+fois pour savoir si la réponse cherchée est là.
+
+Tout est visible d'emblée, et la recherche filtre. Le navigateur peut
+chercher dans la page, et l'impression donne le manuel complet.
+
+### L'aide ne recopie aucun seuil
+
+C'est la règle qui la garde honnête. Les vraies règles vivent dans le
+serveur — c'est lui qui refuse — et le fichier de contenu en est
+forcément une **seconde copie**, écrite en français. Une seconde copie
+finit toujours par diverger.
+
+On limite les dégâts en n'écrivant que ce qui ne bouge pas : le sens
+de la règle, jamais sa valeur. *« On ne déclare pas une absence avant
+l'heure du rendez-vous »* restera vrai si le délai de grâce passe de
+quinze à trente minutes ; *« quinze minutes après l'heure »* serait
+faux le jour du changement, et personne ne penserait à venir le
+corriger.
+
+Un test vérifie qu'aucune réponse ne contient de durée chiffrée.
+
+### Les ancres sont publiques
+
+`/help#restitution-impayee` mène directement à la bonne réponse, et
+celle-ci est surlignée. C'est ce qui permet à un écran d'erreur d'y
+renvoyer plutôt que de déposer le lecteur en haut d'une longue page.
+Les identifiants ne se renomment donc pas à la légère.
+
+---
+
+### Un écran d'erreur dit trois choses, dans cet ordre
+
+1. **Ce qui s'est passé**, en français et sans jargon.
+2. **Pourquoi**, quand on le sait. *« Erreur 403 »* n'apprend rien à
+   personne ; *« cet écran demande des droits que votre compte n'a
+   pas »* se comprend et se résout.
+3. **Une sortie.** Un écran d'erreur sans lien est un cul-de-sac :
+   l'utilisateur ferme l'onglet, et c'est la dernière fois qu'il ouvre
+   le produit ce jour-là.
+
+Le code HTTP est affiché **en petit, sous le message**. Il ne sert pas
+à l'utilisateur : il sert à la personne qu'il appellera. En gros
+chiffre au milieu de l'écran, il donnerait au code plus d'importance
+qu'à l'explication.
+
+**Ni illustration, ni humour.** Pas de robot cassé, pas de « oups ! ».
+Quelqu'un qui tombe là a un client devant lui et une voiture à rendre.
+
+La pastille de l'icône est **neutre, pas rouge** : une page inconnue
+ou un écran réservé n'est pas une panne, et une couleur d'alarme
+ferait croire à un incident.
+
+### Une redirection muette est une réponse fausse
+
+Jusqu'au lot 18, `path: '**'` renvoyait toute adresse inconnue vers
+l'accueil, sans un mot. Quelqu'un qui suivait un lien contenant une
+faute de frappe atterrissait sur le tableau de bord et en concluait
+que le dossier qu'il cherchait avait disparu.
+
+Rediriger en silence, c'est affirmer « voilà ce que vous cherchiez »
+quand la vérité est « cette adresse n'existe pas ».
+
+### Un écran vide ne dit pas « vous n'avez pas le droit »
+
+La barre latérale masque depuis le lot 4 les modules qu'un rôle ne
+peut pas ouvrir. Mais taper `/cash` dans la barre d'adresse affichait
+l'écran quand même — vide, puisque le serveur refusait ses requêtes.
+Le commentaire du composant de navigation le disait déjà : *« l'écran
+resterait vide »*.
+
+Un écran vide se lit « c'est cassé », ou « il n'y a rien
+aujourd'hui ». Deux conclusions fausses, et l'une se termine par un
+appel au support. Un garde de route mène désormais vers un écran qui
+**nomme le rôle** plutôt que la permission manquante : *« il vous
+manque `payments.journal` »* ne veut rien dire pour quelqu'un qui
+tient un comptoir.
+
+### La panne serveur est un bandeau, pas une page
+
+C'est la décision la plus discutée du lot, et elle va contre
+l'attente : le cahier des charges annonçait une **page** d'erreur.
+
+Une page **détruit l'écran en cours**. Quelqu'un en train de saisir
+une inspection, un client devant lui, perdrait sa saisie parce qu'un
+rafraîchissement automatique de la file d'attente a échoué en
+arrière-plan. Sur le terrain visé, une coupure de trente secondes est
+ordinaire : le remède serait pire que le mal.
+
+Le bandeau s'affiche **sous l'en-tête, au-dessus du contenu** — il
+pousse la page vers le bas plutôt que de flotter dessus, un bandeau
+flottant cacherait la première ligne d'un tableau, c'est-à-dire
+souvent la plus urgente. Teinte d'avertissement et non de danger : la
+donnée n'est pas perdue, elle attend.
+
+Il dit aussi ce qui est vrai **et** ce qui ne l'est pas : *« ce qui est
+affiché reste à l'écran, mais rien n'est enregistré »*. Laisser croire
+l'un ou l'autre serait pire que le silence.
+
+### « Votre session a expiré » n'est pas la même chose qu'une déconnexion
+
+Quand le renouvellement de session échouait, la session était effacée
+mais l'utilisateur restait sur son écran, à cliquer sur des boutons
+qui répondaient 401 en silence — le garde de route ne s'exécute qu'à
+la navigation suivante, et rien ne l'y poussait.
+
+Il est maintenant conduit à l'écran de connexion, avec une phrase qui
+explique pourquoi et la promesse de le ramener où il était. Sans elle,
+l'écran est identique à celui d'une déconnexion volontaire, et la
+conclusion est *« le logiciel m'a jeté dehors sans raison »*.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

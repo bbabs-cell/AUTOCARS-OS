@@ -1,6 +1,24 @@
 <h1 class="h3 mb-2">Connexion</h1>
 <p class="ac-text-secondary mb-5">Accédez à votre station.</p>
 
+<!--
+  LA SESSION A EXPIRÉ PENDANT QU'IL TRAVAILLAIT.
+
+  Sans cette phrase, l'écran est exactement le même que s'il s'était
+  déconnecté lui-même — et la conclusion est « le logiciel m'a jeté
+  dehors sans raison ». C'est un avertissement, pas une erreur : rien
+  n'est cassé, la session a simplement une durée.
+-->
+@if (hasExpired) {
+  <div class="ac-alert ac-alert--warning mb-4">
+    <i class="bi bi-clock-history"></i>
+    <div>
+      <strong>Votre session a expiré.</strong>
+      Reconnectez-vous : vous reviendrez sur l'écran que vous aviez ouvert.
+    </div>
+  </div>
+}
+
 @if (errorMessage(); as message) {
   <div class="ac-alert ac-alert--danger mb-4">
     <i class="bi bi-exclamation-triangle-fill"></i>

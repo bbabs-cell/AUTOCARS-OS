@@ -79,9 +79,7 @@ export const NAVIGATION: readonly NavigationGroup[] = [
  * Entrées du bas de la barre latérale, toujours séparées du reste.
  * Ce sont des outils, pas des modules métier.
  */
-export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
-  { label: 'Aide',       icon: 'question-circle', route: null, lot: 18 },
-];
+export const NAVIGATION_FOOTER: readonly NavigationItem[] = [];
 
 /**
  * Entrées disponibles dès maintenant. Elles sont listées à part pour
@@ -132,6 +130,10 @@ export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   // pas des modules métier. Réservés au propriétaire.
   { label: 'Paramètres',    icon: 'gear',     route: '/settings',   lot: 17,
     permission: 'organization.view' },
+  // L'aide est ouverte à TOUS les rôles, sans permission : c'est
+  // l'employé au comptoir qui rencontre le plus de refus, et lui
+  // cacher les explications serait exactement à l'envers.
+  { label: 'Aide',          icon: 'question-circle', route: '/help', lot: 18 },
   { label: 'Design system', icon: 'palette',  route: '/styleguide', lot: 2 },
   { label: 'Diagnostic',    icon: 'activity', route: '/health',     lot: 1 },
 ];

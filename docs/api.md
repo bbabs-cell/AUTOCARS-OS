@@ -62,6 +62,26 @@ Angular d'afficher le message directement sous le bon input.
 **401 ou 403 ?** 401 = « je ne sais pas qui tu es ».
 403 = « je sais qui tu es, et tu n'as pas le droit ».
 
+**404 ou 405 ?** 405 quand le chemin EXISTE et que c'est le verbe qui
+ne convient pas. Répondre 404 dans ce cas enverrait chercher une faute
+de frappe dans une URL parfaitement correcte.
+
+```
+GET /api/inconnue   → 404  « La route GET /api/inconnue n'existe pas. »
+DELETE /api/health  → 405  « La méthode DELETE n'est pas autorisée sur /api/health. »
+```
+
+Ce sont les deux seuls messages du produit qu'aucun écran ne met en
+forme : ils sortent bruts, dans la console d'un développeur ou dans un
+journal. Ils nomment donc la route et le verbe — et sont écrits en
+français correct, accents compris. Aucun nom de classe PHP n'y figure,
+et un test le vérifie : une trace d'exception renseigne un attaquant
+sur la structure du code.
+
+Côté navigateur, une adresse inconnue affiche depuis le lot 18 une
+**page 404** au lieu d'une redirection muette vers l'accueil. Voir
+`docs/design-system.md`.
+
 ---
 
 ## Conventions de nommage

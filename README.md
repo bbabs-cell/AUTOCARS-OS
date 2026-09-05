@@ -125,9 +125,13 @@ suivant.
 - [x] **Lot 15** — Abonnements : des lavages payés d'avance, l'argent dans la caisse le jour de la vente, la dette rendue visible, 62 tests de plus
 - [x] **Lot 16** — Statistiques : aucune table ajoutée, l'identité comptable du produit vérifiée à l'écran, une faille de contrôle d'accès refermée, 49 tests de plus
 - [x] **Lot 17** — Multi-stations et paramètres : la station se choisit une fois dans l'en-tête, on ferme une station sans l'effacer, la devise n'est pas un réglage, 70 tests de plus
-- [ ] Lot 18 — Aide et pages d'erreur
+- [x] **Lot 18** — Aide et écrans d'erreur : une aide organisée par refus et non par menu, plus de redirection muette, un bandeau plutôt qu'une page quand le serveur tombe, 25 tests de plus
 
 **Phase D — Industrialisation** · Lots 19 à 22
+
+> **La phase C est terminée.** Les dix-huit premiers lots couvrent le
+> produit ; les quatre derniers le préparent à tourner ailleurs que
+> sur un poste de développement.
 
 ---
 
@@ -142,7 +146,7 @@ restitution :
 et le tableau de bord qui dit, le lendemain matin, ce qui demande une
 action.
 
-**809 tests** (758 backend, 51 frontend) tiennent l'ensemble.
+**834 tests** (763 backend, 71 frontend) tiennent l'ensemble.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie
 station : les modules restants gagneront à être conçus sur ce qu'un

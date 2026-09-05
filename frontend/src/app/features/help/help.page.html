@@ -1,0 +1,102 @@
+<ac-page-header
+  title="Aide"
+  subtitle="Pourquoi le logiciel refuse, et quoi faire ensuite"
+/>
+
+<!--
+  L'AIDE EST ORGANISÉE PAR REFUS, PAS PAR MENU.
+  On n'ouvre pas l'aide pour apprendre à quoi sert un écran qu'on a
+  sous les yeux : on l'ouvre quand quelque chose a été refusé.
+-->
+<div class="ac-card mb-4">
+  <div class="ac-card__body">
+    <form [formGroup]="searchForm" (ngSubmit)="$event.preventDefault()">
+      <label for="help-search" class="form-label">Chercher</label>
+      <input
+        id="help-search"
+        type="search"
+        class="form-control"
+        formControlName="search"
+        placeholder="caisse, pointage, rendez-vous, devise…"
+        autocomplete="off"
+      />
+      <div class="ac-caption mt-2">
+        La recherche porte aussi sur les réponses, et se moque des accents.
+      </div>
+    </form>
+
+    @if (!searchForm.controls.search.value) {
+      <nav class="ac-help-toc mt-4" aria-label="Sommaire de l'aide">
+        @for (section of sections(); track section.id) {
+          <a class="ac-help-toc__link" [href]="'#' + section.id">
+            <i class="bi bi-{{ section.icon }}" aria-hidden="true"></i>
+            {{ section.label }}
+          </a>
+        }
+      </nav>
+    } @else {
+      <p class="mt-3 mb-0 ac-text-secondary">
+        {{ matchCount() }} réponse(s) sur {{ totalCount }}.
+        <button type="button" class="btn btn-link p-0 align-baseline" (click)="clearSearch()">
+          Tout afficher
+        </button>
+      </p>
+    }
+  </div>
+</div>
+
+@if (sections().length === 0) {
+  <div class="ac-card">
+    <ac-empty-state
+      icon="bi-search"
+      title="Aucune réponse pour cette recherche"
+      text="Essayez un mot plus court — « caisse » plutôt que « clôture de caisse » — ou
+            appelez-nous : si la question revient, elle a sa place ici."
+      actionLabel="Tout afficher"
+      (action)="clearSearch()"
+    />
+  </div>
+}
+
+@for (section of sections(); track section.id) {
+  <div class="ac-card mb-4" [id]="section.id">
+    <div class="ac-card__header">
+      <h2 class="ac-card__title">
+        <i class="bi bi-{{ section.icon }} me-2 ac-text-secondary" aria-hidden="true"></i>
+        {{ section.label }}
+      </h2>
+    </div>
+
+    <div class="ac-card__body">
+      @for (entry of section.entries; track entry.id) {
+        <!--
+          `id` est une ANCRE PUBLIQUE : un message d'erreur peut
+          renvoyer vers /help#restitution-impayee. La réponse visée
+          est surlignée, sinon l'utilisateur atterrit au milieu d'une
+          longue page et doit deviner laquelle est la sienne.
+        -->
+        <article
+          class="ac-help-entry"
+          [id]="entry.id"
+          [class.ac-help-entry--highlighted]="highlighted() === entry.id"
+        >
+          <h3 class="ac-help-entry__question">{{ entry.question }}</h3>
+
+          <p class="ac-help-entry__answer">{{ entry.answer }}</p>
+
+          <p class="ac-help-entry__todo">
+            <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+            <span>{{ entry.todo }}</span>
+          </p>
+        </article>
+      }
+    </div>
+  </div>
+}
+
+<p class="ac-caption">
+  Cette aide explique des règles, jamais des valeurs : vous n'y trouverez pas de
+  seuil ni de délai chiffré. Les vraies règles vivent dans le serveur — c'est lui
+  qui refuse — et un chiffre recopié ici serait faux le jour où il changerait,
+  sans que personne pense à venir le corriger.
+</p>

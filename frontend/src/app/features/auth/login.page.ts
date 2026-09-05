@@ -31,6 +31,17 @@ export class LoginPage {
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
 
+  /**
+   * L'utilisateur arrive-t-il ici parce que sa session a expiré ?
+   *
+   * Sans cette distinction, il voit le même écran que s'il s'était
+   * déconnecté lui-même, et conclut à un bug — « je n'ai rien fait,
+   * et il m'a jeté dehors ». C'est l'intercepteur qui pose ce
+   * paramètre quand le renouvellement de session échoue.
+   */
+  protected readonly hasExpired =
+    this.route.snapshot.queryParamMap.get('expired') !== null;
+
   protected readonly form = this.formBuilder.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
@@ -60,7 +71,8 @@ export class LoginPage {
         this.isSubmitting.set(false);
         this.errorMessage.set(
           error.status === 0
-            ? "Impossible de joindre le serveur. Vérifie que l'API est démarrée."
+            ? 'Impossible de joindre le serveur. Vérifiez votre connexion, ou '
+              + 'réessayez dans un instant.'
             : (error.error?.message ?? 'La connexion a échoué.'),
         );
       },

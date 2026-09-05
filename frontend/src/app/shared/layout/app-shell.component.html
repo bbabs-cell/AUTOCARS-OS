@@ -15,6 +15,30 @@
   <div class="ac-shell__main">
     <ac-topbar (toggleSidebar)="toggleSidebar()" />
 
+    <!--
+      LE LIEN AVEC LE SERVEUR EST COUPÉ.
+
+      Un bandeau, pas une page d'erreur : une page détruirait l'écran
+      en cours, et une coupure de trente secondes est ordinaire sur le
+      terrain visé. Il apparaît sur la première requête qui n'arrive
+      pas, et disparaît sur la première qui aboutit.
+
+      Il dit aussi ce qui est vrai et ce qui ne l'est pas : la saisie
+      à l'écran n'est pas perdue, mais elle n'est pas non plus
+      enregistrée. Laisser croire l'un ou l'autre serait pire que le
+      silence.
+    -->
+    @if (connection.isOffline()) {
+      <div class="ac-shell__offline" role="status">
+        <i class="bi bi-wifi-off" aria-hidden="true"></i>
+        <div>
+          <strong>Le serveur ne répond plus.</strong>
+          Ce qui est affiché reste à l'écran, mais rien n'est enregistré tant que
+          la connexion n'est pas revenue. Ne fermez pas cette page.
+        </div>
+      </div>
+    }
+
     <main class="ac-shell__content">
       <div class="ac-shell__container">
         <router-outlet />

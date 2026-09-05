@@ -4,6 +4,7 @@ import { AppShellComponent } from './shared/layout/app-shell.component';
 import { AuthLayoutComponent } from './shared/layout/auth-layout.component';
 import { authGuard, guestGuard, landingGuard } from './core/guards/auth.guard';
 import { onboardingGuard, onboardingPendingGuard } from './core/guards/onboarding.guard';
+import { permissionGuard } from './core/guards/permission.guard';
 
 /**
  * Table de routage
@@ -110,47 +111,63 @@ export const routes: Routes = [
       },
       {
         path: 'bookings',
+        canActivate: [permissionGuard],
+        data: { permission: 'bookings.view' },
         title: 'Rendez-vous — AUTOCARE OS',
         loadComponent: () =>
           import('./features/bookings/bookings.page').then((m) => m.BookingsPage),
       },
       {
         path: 'loyalty',
+        canActivate: [permissionGuard],
+        data: { permission: 'loyalty.view' },
         title: 'Fidélité — AUTOCARE OS',
         loadComponent: () =>
           import('./features/loyalty/loyalty.page').then((m) => m.LoyaltyPage),
       },
       {
         path: 'subscriptions',
+        canActivate: [permissionGuard],
+        data: { permission: 'subscriptions.view' },
         title: 'Abonnements — AUTOCARE OS',
         loadComponent: () =>
           import('./features/subscriptions/subscriptions.page').then((m) => m.SubscriptionsPage),
       },
       {
         path: 'analytics',
+        canActivate: [permissionGuard],
+        data: { permission: 'reports.view' },
         title: 'Statistiques — AUTOCARE OS',
         loadComponent: () =>
           import('./features/analytics/analytics.page').then((m) => m.AnalyticsPage),
       },
       {
         path: 'team',
+        canActivate: [permissionGuard],
+        data: { permission: 'employees.view' },
         title: 'Équipe — AUTOCARE OS',
         loadComponent: () => import('./features/team/team.page').then((m) => m.TeamPage),
       },
       {
         path: 'attendance',
+        canActivate: [permissionGuard],
+        data: { permission: 'attendance.view' },
         title: 'Pointage — AUTOCARE OS',
         loadComponent: () =>
           import('./features/attendance/attendance.page').then((m) => m.AttendancePage),
       },
       {
         path: 'payments',
+        canActivate: [permissionGuard],
+        data: { permission: 'payments.journal' },
         title: 'Encaissements — AUTOCARE OS',
         loadComponent: () =>
           import('./features/payments/payments.page').then((m) => m.PaymentsPage),
       },
       {
         path: 'cash',
+        canActivate: [permissionGuard],
+        data: { permission: 'cash.view' },
         title: 'Caisse — AUTOCARE OS',
         loadComponent: () => import('./features/cash/cash.page').then((m) => m.CashPage),
       },
@@ -186,20 +203,16 @@ export const routes: Routes = [
       },
       {
         path: 'stations',
+        canActivate: [permissionGuard],
+        data: { permission: 'stations.view' },
         title: 'Stations — AUTOCARE OS',
         loadComponent: () =>
           import('./features/stations/stations.page').then((m) => m.StationsPage),
       },
       {
-        // AUCUNE GARDE DE RÔLE SUR CETTE ROUTE, ni sur la précédente.
-        //
-        // La protection est côté serveur : `organization.view` n'est
-        // accordé qu'à l'ADMIN, et l'API répond 403 à tout le reste.
-        // Ajouter une garde ici n'ajouterait aucune sécurité — elle
-        // afficherait seulement un écran vide au lieu d'un message.
-        // Une deuxième copie de la règle des droits, côté navigateur,
-        // finirait par diverger de la vraie.
         path: 'settings',
+        canActivate: [permissionGuard],
+        data: { permission: 'organization.view' },
         title: 'Paramètres — AUTOCARE OS',
         loadComponent: () =>
           import('./features/settings/settings.page').then((m) => m.SettingsPage),
@@ -214,6 +227,23 @@ export const routes: Routes = [
         path: 'health',
         title: 'Diagnostic — AUTOCARE OS',
         loadComponent: () => import('./features/health/health.page').then((m) => m.HealthPage),
+      },
+      {
+        // L'aide est ouverte à tous les rôles, sans exception : c'est
+        // l'employé au comptoir qui rencontre le plus de refus.
+        path: 'help',
+        title: 'Aide — AUTOCARE OS',
+        loadComponent: () => import('./features/help/help.page').then((m) => m.HelpPage),
+      },
+      {
+        // Où mène `permissionGuard`. Dans la coque applicative, pas
+        // en dehors : quelqu'un qui n'a pas le droit d'ouvrir un
+        // écran reste chez lui, avec sa barre latérale, et repart
+        // ailleurs en un clic.
+        path: '403',
+        title: 'Accès refusé — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/errors/forbidden.page').then((m) => m.ForbiddenPage),
       },
     ],
   },
@@ -265,7 +295,28 @@ export const routes: Routes = [
     ],
   },
 
-  // Toute URL inconnue revient à l'accueil, qui redirigera selon
-  // l'état de connexion. Une vraie page 404 arrive au lot 18.
-  { path: '**', redirectTo: '' },
+  // ================================================================
+  // 4. Toute URL inconnue
+  // ================================================================
+  // ELLE NE REDIRIGE PLUS EN SILENCE (lot 18).
+  //
+  // Jusqu'ici, `redirectTo: ''` renvoyait n'importe quelle adresse
+  // inconnue vers l'accueil, sans un mot. Quelqu'un qui suivait un
+  // lien contenant une faute de frappe atterrissait sur le tableau de
+  // bord et en concluait que le dossier qu'il cherchait avait
+  // disparu.
+  //
+  // Une redirection muette est une réponse FAUSSE : elle affirme
+  // « voilà ce que vous cherchiez » quand la vérité est « cette
+  // adresse n'existe pas ».
+  //
+  // La page est déclarée hors des trois zones, sans coque ni garde :
+  // elle doit s'afficher pour un visiteur comme pour un utilisateur
+  // connecté, et c'est elle qui adapte son bouton de sortie.
+  {
+    path: '**',
+    title: 'Page introuvable — AUTOCARE OS',
+    loadComponent: () =>
+      import('./features/errors/not-found.page').then((m) => m.NotFoundPage),
+  },
 ];

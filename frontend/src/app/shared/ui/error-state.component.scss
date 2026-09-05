@@ -1,0 +1,65 @@
+// =====================================================================
+// Écran d'erreur
+// =====================================================================
+// Centré, aéré, sans illustration. Il reprend les jetons de l'état
+// vide : les deux écrans disent « il n'y a rien ici », l'un parce que
+// la donnée manque, l'autre parce que le chemin est fermé.
+
+.ac-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: var(--ac-space-8) var(--ac-space-4);
+  text-align: center;
+}
+
+.ac-error__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: var(--ac-space-4);
+  border-radius: var(--ac-radius-full);
+  // Fond neutre, pas rouge : une page inconnue ou un écran réservé
+  // n'est pas une panne, et une pastille d'alarme ferait croire à un
+  // incident.
+  background-color: var(--ac-gray-100);
+  color: var(--ac-text-secondary);
+  font-size: var(--ac-text-2xl);
+}
+
+.ac-error__title {
+  margin-bottom: var(--ac-space-3);
+  font-size: var(--ac-text-xl);
+  font-weight: var(--ac-weight-bold);
+  color: var(--ac-text);
+}
+
+.ac-error__text {
+  margin-bottom: var(--ac-space-2);
+  color: var(--ac-text-secondary);
+}
+
+.ac-error__hint {
+  margin-bottom: var(--ac-space-5);
+  color: var(--ac-text-muted);
+  font-size: var(--ac-text-sm);
+}
+
+.ac-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ac-space-3);
+}
+
+// Le code technique : utile à qui dépanne, à personne d'autre.
+.ac-error__code {
+  margin-top: var(--ac-space-6);
+  margin-bottom: 0;
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-muted);
+}

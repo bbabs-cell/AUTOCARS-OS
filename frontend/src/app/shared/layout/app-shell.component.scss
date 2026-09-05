@@ -39,3 +39,35 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+// =====================================================================
+// Bandeau de perte de connexion (lot 18)
+// =====================================================================
+// Sous l'en-tête, au-dessus du contenu : impossible à manquer, sans
+// rien recouvrir. Il pousse la page vers le bas plutôt que de flotter
+// dessus — un bandeau flottant cacherait la première ligne d'un
+// tableau, c'est-à-dire souvent la plus urgente.
+.ac-shell__offline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-3) var(--ac-space-6);
+  // Teinte d'avertissement, pas de danger : la donnée n'est pas
+  // perdue, elle attend. Le rouge annoncerait un incident.
+  background-color: var(--ac-warning-50);
+  border-bottom: 1px solid var(--ac-warning-700);
+  color: var(--ac-text);
+  font-size: var(--ac-text-sm);
+
+  i {
+    color: var(--ac-warning-700);
+    font-size: var(--ac-text-lg);
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ac-shell__offline {
+    padding-inline: var(--ac-space-4);
+  }
+}

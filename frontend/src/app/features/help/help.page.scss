@@ -1,0 +1,79 @@
+// =====================================================================
+// L'aide
+// =====================================================================
+
+.ac-help-entry {
+  padding: var(--ac-space-4) 0;
+
+  // Le défilement s'arrête sous l'en-tête, pas dessous. Déclaré AVANT
+  // les règles imbriquées : Sass avertit sur une déclaration placée
+  // après, parce que CSS et Sass ne l'appliquent pas dans le même
+  // ordre.
+  scroll-margin-top: var(--ac-space-8);
+
+  & + & {
+    border-top: 1px solid var(--ac-border);
+  }
+
+  // La cible d'une ancre : la réponse vers laquelle un message
+  // d'erreur a renvoyé. Sans ce repère, l'utilisateur atterrit au
+  // milieu d'une longue page et doit deviner laquelle des questions
+  // est la sienne.
+  &--highlighted {
+    margin-inline: calc(-1 * var(--ac-space-4));
+    padding-inline: var(--ac-space-4);
+    border-radius: var(--ac-radius);
+    background-color: var(--ac-primary-50);
+  }
+}
+
+.ac-help-entry__question {
+  margin-bottom: var(--ac-space-2);
+  font-size: var(--ac-text-base);
+  font-weight: var(--ac-weight-semibold);
+  color: var(--ac-text);
+}
+
+.ac-help-entry__answer {
+  margin-bottom: var(--ac-space-2);
+  color: var(--ac-text-secondary);
+}
+
+// « Ce qu'il faut faire » se distingue de « pourquoi » : c'est la
+// partie qu'on relit en diagonale, une fois la raison comprise.
+.ac-help-entry__todo {
+  display: flex;
+  gap: var(--ac-space-2);
+  align-items: baseline;
+  margin: 0;
+  color: var(--ac-text);
+
+  i {
+    color: var(--ac-primary);
+  }
+}
+
+// Le sommaire, en haut : vingt-six questions se parcourent mal sans
+// point d'entrée.
+.ac-help-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ac-space-2);
+}
+
+.ac-help-toc__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  padding: var(--ac-space-2) var(--ac-space-3);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-full);
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-secondary);
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--ac-primary);
+    color: var(--ac-primary);
+  }
+}
