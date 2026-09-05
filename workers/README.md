@@ -19,7 +19,7 @@ jeton, la relecture du rôle en base, le contrôle de permission côté
 serveur, une jointure, une recherche, et le cloisonnement entre
 clients. Si ces deux-là sont justes, l'architecture tient.
 
-**Réponse : oui, la pile tient.** 125 tests le vérifient dans le vrai
+**Réponse : oui, la pile tient.** 165 tests le vérifient dans le vrai
 runtime Workers, et l'application Angular existante fonctionne contre
 cette API **sans une ligne modifiée**.
 
@@ -68,7 +68,7 @@ npm install --legacy-peer-deps   # voir la note plus bas
 cp .dev.vars.example .dev.vars   # puis remplir JWT_SECRET
 npm run types                    # engendre worker-configuration.d.ts
 
-npm test                         # 125 tests, dans le runtime Workers
+npm test                         # 165 tests, dans le runtime Workers
 npm run typecheck                # les deux tsconfig
 npm run dev                      # API locale sur :8787
 ```
@@ -221,6 +221,40 @@ l'implémentation ne vérifierait rien.
 Les trois premiers étaient muets. C'est la construction du domaine
 métier qui les a fait apparaître — pas une relecture.
 
+### L'argent — encaissements et caisse
+
+| Refus | Ce qui l'exerce |
+|---|---|
+| **Un trop-perçu** est refusé | C'est presque toujours une faute de frappe — 50 000 au lieu de 5 000 — et une fois enregistrée, elle fausse la caisse du soir sans que personne ne comprenne pourquoi |
+| Un montant **décimal** est refusé | Le franc CFA n'a pas de centimes ; l'accepter créerait des arrondis dans une caisse qui doit tomber juste |
+| **On ne corrige pas un encaissement**, on le rembourse | Modifier une ligne enregistrée effacerait la trace de l'erreur. Le remboursement écrit deux lignes, motif obligatoire, et aucune ne compte plus dans le total |
+| **Une seule caisse ouverte** par station | Une clé unique dans le schéma, pas une vérification qu'un contrôleur pourrait oublier |
+| **L'écart ne s'ajuste pas** | Une caisse dont on peut réécrire le résultat ne prouve plus rien. Il se constate, il se commente, il ne s'efface pas |
+| La recette **n'est pas visible de tous** | `payments.journal` et `cash.view`, vérifiés côté serveur. Un employé voit ce qui a été réglé sur le dossier qu'il rend, pas la recette du jour |
+
+Deux distinctions que la migration a préservées :
+
+- **`difference` est le seul entier signé du schéma.** Un manque
+  s'enregistre en négatif, et la base l'accepte — c'était l'objet de
+  l'exception notée à l'étape 2.
+- **Le mobile money compte dans la vacation, pas dans le tiroir.** Une
+  session de caisse n'est pas un tiroir mais une vacation au comptoir ;
+  confondre les deux ferait apparaître un écart énorme tous les soirs.
+
+### Encore un contrat deviné plutôt que lu
+
+Même défaut qu'avec les opérations, en plus petit : mon `/api/cash/open`
+exigeait un `station_id` que **le frontend n'envoie pas** — au comptoir
+on ouvre la caisse de sa station, on ne la choisit pas. L'API répondait
+422 et l'écran était inutilisable, ce qui ne se voyait qu'en cliquant.
+
+`/api/cash/current` avait le même défaut : il manquait `movements` et
+`cash_outside_session`, et l'écran affichait « aucun encaissement »
+alors qu'il y en avait un.
+
+**La règle, désormais appliquée sans exception : lire le modèle du
+frontend avant d'écrire le contrôleur.**
+
 ### Les refus, tenus par le serveur
 
 | Refus | Ce qui l'exerce |
@@ -236,8 +270,10 @@ métier qui les a fait apparaître — pas une relecture.
 
 | Fait | Pas encore |
 |---|---|
-| `login`, `register`, `refresh`, `logout`, `me` | Les 79 autres routes |
+| `login`, `register`, `refresh`, `logout`, `me` | Les 71 autres routes |
 | `vehicles`, `queue`, `stations`, changement de statut | Photos, sauvegardes, contrôle d'avant-vol |
+| **Encaissements, remboursements, journal** | |
+| **Caisse : ouverture, clôture, écart, historique** | |
 | Cloisonnement multi-clients, avec son garde-fou | Les index de performance (à re-mesurer, pas à recopier) |
 | Matrice des droits, portée à l'identique | |
 | Les 21 tables, leurs contraintes et leurs déclencheurs | |

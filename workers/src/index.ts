@@ -21,6 +21,8 @@ import { connexion, deconnexion, inscription, moi, rafraichis } from './controll
 import { liste } from './controllers/vehicles';
 import { changeStatut, file } from './controllers/operations';
 import { liste as listeStations } from './controllers/stations';
+import { encaisse, journal, pourDossier, rembourse } from './controllers/payments';
+import { courante, ferme, historique, ouvre } from './controllers/cash';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -56,13 +58,25 @@ export default {
       // problème n'est pas le jeton, c'est l'adresse.
       // --------------------------------------------------------------
       const statut = /^\/api\/operations\/(\d+)\/status$/.exec(chemin);
+      const paiements = /^\/api\/operations\/(\d+)\/payments$/.exec(chemin);
+      const remboursement = /^\/api\/payments\/(\d+)\/refund$/.exec(chemin);
+
+      const G = request.method === 'GET';
+      const P = request.method === 'POST';
 
       const protegee =
-        (chemin === '/api/auth/me' && request.method === 'GET') ||
-        (chemin === '/api/vehicles' && request.method === 'GET') ||
-        (chemin === '/api/queue' && request.method === 'GET') ||
-        (chemin === '/api/stations' && request.method === 'GET') ||
-        (statut !== null && request.method === 'PUT');
+        (chemin === '/api/auth/me' && G) ||
+        (chemin === '/api/vehicles' && G) ||
+        (chemin === '/api/queue' && G) ||
+        (chemin === '/api/stations' && G) ||
+        (chemin === '/api/payments' && G) ||
+        (chemin === '/api/cash/current' && G) ||
+        (chemin === '/api/cash/sessions' && G) ||
+        (chemin === '/api/cash/open' && P) ||
+        (chemin === '/api/cash/close' && P) ||
+        (statut !== null && request.method === 'PUT') ||
+        (paiements !== null && (G || P)) ||
+        (remboursement !== null && P);
 
       if (protegee) {
         const utilisateur = await identifie(request, env.DB, env.JWT_SECRET);
@@ -75,7 +89,22 @@ export default {
         if (chemin === '/api/vehicles') return await liste(request, env, utilisateur);
         if (chemin === '/api/queue') return await file(request, env, utilisateur);
         if (chemin === '/api/stations') return await listeStations(request, env, utilisateur);
+        if (chemin === '/api/payments') return await journal(request, env, utilisateur);
+        if (chemin === '/api/cash/current') return await courante(request, env, utilisateur);
+        if (chemin === '/api/cash/sessions') return await historique(request, env, utilisateur);
+        if (chemin === '/api/cash/open') return await ouvre(request, env, utilisateur);
+        if (chemin === '/api/cash/close') return await ferme(request, env, utilisateur);
         if (statut !== null) return await changeStatut(request, env, utilisateur, statut[1]);
+
+        if (paiements !== null) {
+          return P
+            ? await encaisse(request, env, utilisateur, paiements[1])
+            : await pourDossier(env, utilisateur, paiements[1]);
+        }
+
+        if (remboursement !== null) {
+          return await rembourse(request, env, utilisateur, remboursement[1]);
+        }
       }
 
       return introuvable("Cette adresse n'existe pas.");
