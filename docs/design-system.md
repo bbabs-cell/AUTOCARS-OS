@@ -942,6 +942,45 @@ conclusion est *« le logiciel m'a jeté dehors sans raison »*.
 
 ---
 
+## Trois éléments morts retirés de l'en-tête (lot 19)
+
+Ils étaient là depuis le lot 2, désactivés ou faux, en attendant
+d'être branchés. Dix-sept lots plus tard, ils ne faisaient toujours
+rien.
+
+| Élément | Depuis | Ce qu'il annonçait |
+|---|---|---|
+| Recherche globale | Lot 2 | Un champ désactivé, « à brancher au lot 6 » |
+| Cloche de notifications | Lot 2 | Une pastille rouge affichant **3**, écrite en dur |
+| « Mon profil » | Lot 2 | Une entrée de menu grisée |
+
+### Le pire des trois était la cloche
+
+La recherche et « Mon profil » ne faisaient rien. La cloche, elle,
+**affirmait quelque chose de faux** : trois notifications, en rouge, à
+côté d'un bouton de pointage qui, lui, dit la vérité. Trois quoi ? Le
+chiffre n'a jamais bougé — ni quand un véhicule dépassait sa durée, ni
+quand une caisse restait ouverte.
+
+Un élément mort ne se contente pas d'être inutile. **Il apprend à
+l'utilisateur que l'interface peut mentir**, et cette leçon vaut
+ensuite pour les éléments qui, eux, disent vrai. C'est exactement ce
+qu'on ne peut pas se permettre sur un écran dont tout l'intérêt est
+d'être cru : la file d'attente, les alertes, le montant dû.
+
+### Un champ désactivé est une porte peinte sur un mur
+
+On l'essaie une fois, deux fois, puis on cesse de croire ce que
+l'interface annonce. Chercher un véhicule ou un client se fait sur
+leurs écrans, qui ont chacun leur recherche — et qui, eux,
+fonctionnent.
+
+Les trois reviendront le jour où ils feront quelque chose. Ce qui
+demande une action est déjà au tableau de bord, dans le bloc « à
+regarder maintenant », et il se vide quand tout va bien.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

@@ -7,6 +7,7 @@ namespace Autocare\Http\Controllers;
 use Autocare\Core\AuditLogger;
 use Autocare\Core\Database;
 use Autocare\Core\Env;
+use Autocare\Core\Mailer;
 use Autocare\Core\Request;
 use Autocare\Core\Response;
 use Autocare\Core\Security\AuthContext;
@@ -323,12 +324,24 @@ final class AuthController
     /**
      * POST /api/auth/forgot-password
      *
-     * L'envoi d'e-mail n'est PAS implémenté : aucun serveur SMTP n'est
-     * configuré, et on ne simule pas une intégration qui n'existe pas.
-     * Le lien est journalisé côté serveur, et renvoyé dans la réponse
-     * uniquement en développement (APP_DEBUG=true) pour permettre de
-     * tester le parcours de bout en bout.
-     * L'envoi réel arrivera au lot 15, avec une vraie configuration.
+     * ==================================================================
+     * LE LIEN PART VRAIMENT DEPUIS LE LOT 19.
+     * ==================================================================
+     * Pendant quinze lots, ce parcours a fonctionné à moitié : le
+     * jeton était généré, stocké haché, vérifié à l'usage — et le lien
+     * n'arrivait nulle part. Il était écrit dans le journal du
+     * serveur, ce qui dépanne un développeur et n'aide en rien un
+     * gérant enfermé dehors.
+     *
+     * `Mailer` s'en charge maintenant, avec deux transports : un
+     * fichier en développement, `mail()` en production tant qu'aucun
+     * prestataire n'est choisi.
+     *
+     * L'ÉCHEC D'ENVOI NE CHANGE RIEN À LA RÉPONSE. Elle est
+     * volontairement identique que le compte existe ou non ; une
+     * erreur affichée parce que l'envoi a échoué trahirait justement
+     * ce qu'on cherche à taire. La panne part dans le journal, pas à
+     * l'écran.
      */
     public function forgotPassword(Request $request): void
     {
@@ -359,7 +372,18 @@ final class AuthController
             $link = rtrim((string) Env::get('APP_FRONTEND_URL', ''), '/')
                 . '/reset-password?token=' . $token;
 
-            error_log("[AUTOCARE][RESET] Lien pour {$email} : {$link}");
+            Mailer::send(
+                $email,
+                'Réinitialisation de votre mot de passe — AUTOCARE OS',
+                "Bonjour,\n\n"
+                . "Une réinitialisation de mot de passe a été demandée pour votre compte "
+                . "AUTOCARE OS.\n\n"
+                . "Ouvrez ce lien pour choisir un nouveau mot de passe :\n"
+                . "{$link}\n\n"
+                . "Ce lien est valable une heure et ne fonctionne qu'une fois.\n\n"
+                . "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : "
+                . "votre mot de passe actuel reste valable.\n"
+            );
 
             AuditLogger::record(
                 action: 'auth.password_reset_requested',
@@ -426,6 +450,31 @@ final class AuthController
         TokenService::revokeAllForUser($userId);
 
         AuditLogger::record('auth.password_reset', userId: $userId);
+
+        // ON PRÉVIENT LE PROPRIÉTAIRE DU COMPTE (lot 19).
+        //
+        // Ce message ne sert à rien à celui qui vient de changer son
+        // mot de passe : il sait ce qu'il a fait. Il sert au cas
+        // contraire — quelqu'un d'autre a pris la main sur la boîte
+        // mail ou sur le lien, et cette notification est le seul
+        // signal que la victime recevra.
+        //
+        // Il n'est envoyé QU'APRÈS le changement réussi, jamais avant.
+        $user = (new UserRepository())->findById($userId);
+
+        if ($user !== null && is_string($user['email'] ?? null)) {
+            Mailer::send(
+                $user['email'],
+                'Votre mot de passe a été modifié — AUTOCARE OS',
+                "Bonjour,\n\n"
+                . "Le mot de passe de votre compte AUTOCARE OS vient d'être modifié, "
+                . "et toutes vos sessions ouvertes ont été fermées.\n\n"
+                . "Si vous êtes à l'origine de ce changement, il n'y a rien à faire.\n\n"
+                . "SI CE N'EST PAS VOUS, quelqu'un a eu accès à ce lien ou à votre "
+                . "messagerie : demandez immédiatement une nouvelle réinitialisation et "
+                . "prévenez l'administrateur de votre entreprise.\n"
+            );
+        }
 
         Response::success(null, 'Mot de passe modifié. Vous pouvez vous connecter.');
     }

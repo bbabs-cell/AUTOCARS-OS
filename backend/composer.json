@@ -21,7 +21,11 @@
         "optimize-autoloader": true
     },
     "scripts": {
-        "serve": "php -S localhost:8000 -t public",
-        "check-db": "php tools/check_db.php"
+        "serve": "php -S localhost:8000 -t public router.php",
+        "check-db": "php tools/check_db.php",
+        "lint": "php tools/lint.php",
+        "migrate": "php tools/migrate.php",
+        "seed": "php tools/seed.php",
+        "test": "php tests/run_all.php"
     }
 }

@@ -367,6 +367,14 @@ et déconnecté — et vérifie que chaque chaîne s'arrête.
   système de fichiers, donc le passage à un stockage objet ne touchera
   que cette classe. La décision se prendra sur des volumes réels, pas
   par anticipation.
+- Le prestataire d'envoi de courrier. Depuis le lot 19, `Mailer` a
+  deux transports — un fichier en développement, `mail()` en
+  production — et c'est le seul point de contact du produit avec le
+  courrier. Passer à un service d'envoi ne touchera que cette classe,
+  exactement comme `PhotoStorage` pour les fichiers. La décision se
+  prendra au lot 22, avec l'hébergement : la délivrabilité dépend du
+  domaine et du serveur, pas du code.
+
 - Les fournisseurs de paiement : **aucune intégration ne sera codée
   tant qu'un compte marchand réel n'existe pas.** Les encaissements
   sont saisis manuellement (lot 9), et les colonnes `provider` et

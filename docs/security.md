@@ -675,6 +675,62 @@ oublié de les filtrer.
 Un test envoie délibérément les six champs interdits et vérifie
 qu'aucun n'a bougé.
 
+## 7 nonies. Le courrier (lot 19)
+
+### Ce qui ne partait pas
+
+Pendant quinze lots, « mot de passe oublié » a fonctionné à moitié :
+le jeton était généré, stocké **haché**, à usage unique, valable une
+heure, vérifié à l'usage — et le lien n'arrivait nulle part. Il
+partait dans le journal d'erreurs du serveur, ce qui dépanne un
+développeur et n'aide en rien un gérant enfermé dehors.
+
+Le trou n'était pas dans la cryptographie ; il était à la sortie, là
+où aucun test ne regardait.
+
+### Ce n'est pas une « fausse intégration »
+
+Le produit s'interdit de simuler un fournisseur de paiement tant
+qu'aucun compte marchand n'existe (lot 9). La règle tient toujours, et
+`Mailer` ne la contredit pas : **SMTP n'est pas un fournisseur, c'est
+un protocole**, et `mail()` est la façon standard de l'utiliser en PHP
+sans bibliothèque. Rien n'est simulé — ou bien le message part, ou
+bien il est écrit dans un fichier, et le journal dit lequel des deux.
+
+| Transport | Ce qu'il fait |
+|---|---|
+| `log` *(défaut)* | Écrit le message dans `storage/logs/mail.log`. Aucun envoi. |
+| `mail` | Remet le message au serveur de courrier de la machine. |
+
+Le défaut est le transport le plus **prudent**, pas le plus utile :
+pendant un test, aucun message ne part vers l'adresse réelle d'un
+client.
+
+### Le fichier de journal est un secret
+
+`storage/logs/mail.log` contient des liens de réinitialisation, c'est-
+à-dire de quoi prendre la main sur un compte. Il est hors du dossier
+exposé au web et ignoré par Git, comme les photos d'inspection. Un
+test vérifie qu'il n'atterrit pas sous `public/`.
+
+### Un échec d'envoi ne change pas la réponse
+
+La réponse de `forgot-password` est volontairement identique que
+l'adresse soit connue ou non — sinon le formulaire devient un moyen
+commode de découvrir quelles adresses sont enregistrées. Une **panne
+d'envoi** ne doit pas rompre ce silence : `Mailer` ne lève jamais
+d'exception, l'échec part dans le journal, et l'API répond la même
+phrase dans tous les cas. Un test le vérifie en comparant les deux
+réponses mot pour mot.
+
+### Un changement réussi prévient le propriétaire du compte
+
+Ce message ne sert à rien à celui qui vient de changer son mot de
+passe : il sait ce qu'il a fait. **Il sert au cas contraire** — si
+quelqu'un a pris la main sur la messagerie ou sur le lien, cette
+notification est le seul signal que la victime recevra. Elle dit quoi
+faire, et elle n'est envoyée qu'**après** le changement effectif.
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -734,7 +790,7 @@ la question centrale en cas de litige sur un véhicule.
 | Journal d'audit | ✅ Lot 4 |
 | Jetons courts + rotation | ✅ Lot 4 |
 | Limitation des tentatives de connexion | ✅ Lot 4 |
-| Envoi d'e-mail (mot de passe oublié) | 🔜 Lot 15 |
+| Envoi d'e-mail (mot de passe oublié) | ✅ Lot 19 |
 | Upload sécurisé | ✅ Lot 7 |
 | Machine à états vérifiée côté serveur | ✅ Lot 7 |
 | Procédure de restitution contrôlée | ✅ Lot 7 |
@@ -767,6 +823,10 @@ la question centrale en cas de litige sur un véhicule.
 | Dernière station ouverte protégée | ✅ Lot 17 |
 | Personne sans station impossible | ✅ Lot 17 |
 | Devise, fuseau, pays et slug non modifiables par l'API | ✅ Lot 17 |
+| Un écran interdit répond une explication, pas un écran vide | ✅ Lot 18 |
+| Aucune trace de PHP dans les réponses d'erreur du routeur | ✅ Lot 18 |
+| Le lien de réinitialisation part réellement | ✅ Lot 19 |
+| Un changement de mot de passe prévient son propriétaire | ✅ Lot 19 |
 | Statistiques réservées à `reports.view` | ✅ Lot 16 |
 | Incohérence comptable affichée, jamais masquée | ✅ Lot 16 |
 | Audit de sécurité complet | 🔜 Lot 21 |

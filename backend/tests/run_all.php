@@ -37,6 +37,7 @@ $tests = [
     'api_subscription_test.php' => 'API — abonnements',
     'api_analytics_test.php'  => 'API — statistiques',
     'api_settings_test.php'   => 'API — multi-stations et paramètres',
+    'mail_test.php'           => 'Courrier',
 ];
 
 $directory = __DIR__;

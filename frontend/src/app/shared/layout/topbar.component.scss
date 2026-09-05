@@ -17,33 +17,6 @@
   }
 }
 
-// --- Recherche ------------------------------------------------------
-
-.ac-topbar__search {
-  position: relative;
-  flex: 1;
-  max-width: 460px;
-
-  i {
-    position: absolute;
-    left: var(--ac-space-3);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--ac-icon-muted);
-    pointer-events: none;
-  }
-
-  .form-control {
-    padding-left: 2.25rem;
-    background-color: var(--ac-gray-50);
-    border-color: transparent;
-
-    &:focus {
-      background-color: var(--ac-surface);
-      border-color: var(--ac-primary);
-    }
-  }
-}
 
 // --- Actions --------------------------------------------------------
 
@@ -92,25 +65,6 @@
     text-overflow: ellipsis;
   }
 
-  // ====================================================================
-  // LE CHAMP DE RECHERCHE DISPARAÎT SUR TÉLÉPHONE (lot 17).
-  // ====================================================================
-  // Il n'y avait pas la place pour les deux : à 390 pixels, le menu,
-  // la recherche, la station, le pointage, les notifications et le
-  // profil débordaient — l'avatar sortait de l'écran.
-  //
-  // On garde la commande, on retire le champ. Ce n'est pas un
-  // arbitrage difficile : cette recherche est DÉSACTIVÉE depuis le
-  // lot 2 et l'est toujours. Un champ mort qui pousse un bouton vivant
-  // hors de l'écran est le pire des deux mondes.
-  //
-  // Elle reviendra ici le jour où elle cherchera vraiment quelque
-  // chose — et il faudra alors lui trouver sa place, probablement en
-  // plein écran comme le font les applications mobiles.
-  .ac-topbar__search {
-    display: none;
-  }
-
   // Le menu s'ancre à gauche du bouton et ne dépasse pas de l'écran.
   .ac-topbar__menu--stations {
     min-width: 14rem;
@@ -132,22 +86,6 @@
   }
 }
 
-// Pastille de notifications non lues
-.ac-topbar__badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 17px;
-  height: 17px;
-  padding-inline: 4px;
-  border-radius: var(--ac-radius-full);
-  background-color: var(--ac-danger);
-  color: var(--ac-text-inverse);
-  font-size: 0.625rem;
-  font-weight: var(--ac-weight-bold);
-  line-height: 17px;
-  text-align: center;
-}
 
 // --- Profil ---------------------------------------------------------
 

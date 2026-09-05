@@ -82,6 +82,28 @@ Copie le résultat dans `JWT_SECRET=`.
 > listé dans `.gitignore`. Il contient tes mots de passe : s'il se
 > retrouve sur GitHub, considère-les comme compromis et change-les.
 
+### Le courrier (lot 19)
+
+Rien à configurer pour développer. Par défaut, les messages — lien de
+mot de passe oublié, confirmation de changement — sont **écrits dans
+`storage/logs/mail.log`** au lieu d'être envoyés :
+
+```ini
+MAIL_DRIVER=log
+```
+
+C'est volontairement le réglage le plus prudent : on relit le lien de
+réinitialisation dans le fichier, et aucun message ne part par erreur
+vers l'adresse réelle d'un client pendant un test.
+
+En production, `MAIL_DRIVER=mail` remet le message au serveur de
+courrier de la machine. Le choix d'un prestataire d'envoi est attendu
+au lot 22, avec l'hébergement.
+
+> Ce fichier contient des liens de réinitialisation, donc de quoi
+> prendre la main sur un compte. Il est hors du dossier exposé au web
+> et ignoré par Git — ne le recopie nulle part.
+
 ### Créer la base
 
 ```sql
@@ -260,18 +282,56 @@ Angular (4200) → HttpClient → API PHP (8000) → MySQL
 Depuis `backend/`, avec le serveur PHP démarré dans un autre terminal :
 
 ```bash
-php tests/run_all.php
+composer test        # ou : php tests/run_all.php
 ```
 
 Les tests d'API sont ignorés proprement si le serveur ne répond pas —
 ils ne font pas échouer l'ensemble. Les tests de schéma et la machine
 à états, eux, tournent sans serveur.
 
+Vérifier la syntaxe de tout le code PHP, sans rien installer :
+
+```bash
+composer lint        # ou : php tools/lint.php
+```
+
 Côté frontend, depuis `frontend/` :
 
 ```bash
-npm test
+npm test             # ouvre un navigateur et reste en écoute
+npm run test:ci      # une seule passe, sans fenêtre
 ```
+
+### Chrome refuse de démarrer ? (conteneur, ou session root)
+
+Chrome ne s'ouvre pas en tant que `root` — c'est le cas dans beaucoup
+de conteneurs. Il faut alors lui passer `--no-sandbox`, ce que Karma
+ne fait pas tout seul :
+
+```bash
+printf '#!/bin/sh\nexec /usr/bin/chromium --no-sandbox --headless=new "$@"\n' \
+  > /tmp/chrome-nosandbox && chmod +x /tmp/chrome-nosandbox
+
+CHROME_BIN=/tmp/chrome-nosandbox npm run test:ci
+```
+
+C'est un contournement de POSTE, pas une configuration du projet : le
+bac à sable protège d'un site hostile, et il n'y en a pas ici — mais
+la décision de le désactiver doit rester visible dans la commande, pas
+cachée dans un fichier du dépôt.
+
+---
+
+## 7 bis. L'intégration continue
+
+Depuis le lot 19, `.github/workflows/tests.yml` rejoue tout cela à
+chaque poussée : les suites du serveur contre une vraie base MySQL, et
+côté navigateur les tests unitaires plus la compilation de production.
+
+**Rien à installer pour en profiter.** Le seul point d'attention est
+que la configuration y est fabriquée à la volée : `.env` n'est pas
+dans Git, et l'intégration continue s'en écrit un avec des valeurs qui
+n'ont de sens que pour une machine jetable.
 
 ---
 

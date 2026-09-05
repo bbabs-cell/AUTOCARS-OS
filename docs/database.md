@@ -48,7 +48,13 @@ transactions.
 
 ---
 
-## Les 14 tables
+## Les 21 tables
+
+> **Ce titre annonçait « 14 tables » jusqu'au lot 19**, et le schéma
+> ci-dessous s'arrêtait au lot 3. Les six tables ajoutées entre-temps
+> étaient bien décrites plus bas dans ce document, mais absentes de la
+> vue d'ensemble — c'est-à-dire du seul endroit qu'on lit vraiment
+> quand on découvre le projet.
 
 ```
 organizations                    l'entreprise cliente du SaaS
@@ -59,6 +65,12 @@ organizations                    l'entreprise cliente du SaaS
    │      └── vehicles           véhicules, rattachés à un client
    ├── services                  catalogue des prestations
    ├── cash_sessions             journées de caisse (une par station)
+   ├── time_entries              pointages (lot 12)
+   ├── bookings                  rendez-vous (lot 13)
+   ├── loyalty_programs          règles de la carte à tampons (lot 14)
+   │      └── loyalty_entries    le grand livre des points
+   ├── subscription_plans        forfaits proposés (lot 15)
+   │      └── subscriptions      forfaits vendus
    └── operations         ◄──────  LA TABLE CENTRALE
           ├── inspections           état constaté du véhicule
           │      └── inspection_photos   les preuves
@@ -69,6 +81,11 @@ audit_logs                       qui a fait quoi, et quand
 
 Deux tables techniques s'y ajoutent — `refresh_tokens` et
 `password_resets` — plus `migrations`, tenue par l'outil.
+
+**Les lots 16, 17 et 18 n'ont ajouté aucune table.** Les statistiques
+se contentent d'interroger l'existant ; le multi-stations était prévu
+dans le schéma depuis le lot 3 ; l'aide et les écrans d'erreur ne
+touchent pas aux données.
 
 ### Trois tables volontairement absentes
 

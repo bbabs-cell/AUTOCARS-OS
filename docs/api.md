@@ -270,11 +270,17 @@ Profil de l'utilisateur connecté.
 Répond **toujours** `200` avec le même message, que le compte existe
 ou non.
 
-> ⚠️ L'envoi d'e-mail n'est pas implémenté : aucun serveur SMTP n'est
-> configuré, et on ne simule pas une intégration inexistante. Le lien
-> est écrit dans le journal du serveur, et renvoyé dans la réponse
-> (`debug_reset_link`) uniquement si `APP_DEBUG=true`.
-> L'envoi réel arrive au **lot 15**.
+**Le lien part réellement depuis le lot 19.** Le transport se règle
+par `MAIL_DRIVER` dans `.env` : `log` (défaut) écrit le message dans
+`storage/logs/mail.log` sans rien envoyer, `mail` le remet au serveur
+de courrier de la machine.
+
+Un **échec d'envoi ne change pas la réponse** : elle doit rester
+identique que l'adresse soit connue ou non, sinon le formulaire
+devient un moyen de découvrir quelles adresses sont enregistrées. La
+panne part dans le journal du serveur.
+
+`debug_reset_link` n'est renvoyé que si `APP_DEBUG=true`.
 
 ### `POST /api/auth/reset-password`
 
@@ -283,6 +289,11 @@ ou non.
 ```
 
 Change le mot de passe et **révoque toutes les sessions ouvertes**.
+
+Envoie ensuite une **confirmation au propriétaire du compte**. Ce
+message ne sert à rien à celui qui vient de changer son mot de passe ;
+il sert au cas contraire — si quelqu'un d'autre a eu accès au lien ou
+à la messagerie, c'est le seul signal que la victime recevra.
 
 ---
 

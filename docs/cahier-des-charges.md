@@ -424,7 +424,9 @@ par des tests. Les modifier, c'est changer de produit.
 | ENF-21 | Les écrans de comptoir répondent en moins d'une seconde sur les volumes d'une station | [FAIT] — index posés au lot 3 et suivants |
 | ENF-22 | Les filtres financiers sont appliqués **côté serveur** : l'API n'envoie pas ce que l'utilisateur n'a pas le droit de voir | [FAIT] |
 | ENF-23 | Sauvegarde et restauration documentées | [PRÉVU] — lot 22 |
-| ENF-24 | Journalisation d'exploitation et supervision | [PRÉVU] — lots 19–22 |
+| ENF-24 | Journalisation d'exploitation et supervision | [PRÉVU] — lots 20–22 |
+| ENF-25 | **Les tests tournent ailleurs que sur le poste de leur auteur** : intégration continue à chaque poussée | [FAIT] — lot 19 |
+| ENF-26 | Aucun élément d'interface **désactivé ou faux** n'est laissé en place « en attendant » | [FAIT] — lot 19 |
 
 ---
 
@@ -583,6 +585,7 @@ n'aurait pu les rattraper au moment de produire des statistiques.
 | Ce cahier des charges | [FAIT] |
 | Procédure de déploiement et de sauvegarde | [PRÉVU] — lot 22 |
 | Rapport d'audit de sécurité | [PRÉVU] — lot 21 |
+| Intégration continue (`.github/workflows/tests.yml`) | [FAIT] — lot 19 |
 
 ### 9.2 Critères d'acceptation d'un lot
 
@@ -615,10 +618,10 @@ déjà.
 | **A — Fondations** | 1–3 | Projet, design system, base de données | ✅ |
 | **B — Cœur du MVP** | 4–10 | Authentification, installation, clients, opérations, file, argent, tableau de bord | ✅ **MVP utilisable** |
 | **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | **18/18 — terminée** |
-| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | À venir |
+| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | 1/4 |
 
-**834 tests** (763 backend, 71 frontend) tiennent l'ensemble au
-lot 18.
+**857 tests** (786 backend, 71 frontend) tiennent l'ensemble au
+lot 19, et tournent désormais à chaque poussée.
 
 ### Le test terrain — la tâche la plus importante qui reste
 
@@ -658,7 +661,10 @@ Trois questions au moins n'ont pas de réponse crédible sans lui :
 
 - L'hébergement de production et le rendu côté serveur (lot 22).
 - Le stockage des photos à grande échelle.
-- Le fournisseur de paiement et le canal de notification client.
+- Le fournisseur de paiement, et le canal de notification **au client
+  final** (SMS, WhatsApp). Le courrier vers les COMPTES, lui, part
+  depuis le lot 19 ; c'est le prestataire d'envoi qui reste à choisir,
+  au lot 22 avec l'hébergement.
 - La tarification du SaaS lui-même et la gestion de l'abonnement des
   entreprises clientes — le produit sait gérer les abonnements *des
   clients d'une station*, pas encore les siens.

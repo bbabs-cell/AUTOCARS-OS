@@ -11,21 +11,22 @@
   </button>
 
   <!--
-    Recherche globale.
-    Elle sera branchée au Lot 6, quand il y aura des véhicules et des
-    clients à chercher. Le champ est désactivé plutôt qu'absent :
-    ainsi la mise en page définitive est validée dès maintenant.
+    ============================================================
+    LA RECHERCHE GLOBALE A ÉTÉ RETIRÉE (lot 19).
+    ============================================================
+    Elle était là depuis le lot 2, désactivée, en attendant d'être
+    branchée « au lot 6 ». Dix-sept lots plus tard, elle ne cherchait
+    toujours rien.
+
+    Un champ de saisie désactivé n'est pas une promesse : c'est une
+    porte peinte sur un mur. On l'essaie une fois, deux fois, puis on
+    cesse de croire ce que l'interface annonce — y compris là où elle
+    dit vrai.
+
+    Chercher un véhicule ou un client se fait sur leurs écrans, qui
+    ont chacun leur recherche et qui, eux, fonctionnent. Une recherche
+    globale reviendra ici le jour où elle cherchera pour de bon.
   -->
-  <div class="ac-topbar__search">
-    <i class="bi bi-search" aria-hidden="true"></i>
-    <input
-      type="search"
-      class="form-control"
-      placeholder="Rechercher un véhicule, un client, une plaque…"
-      disabled
-      aria-label="Recherche globale"
-    />
-  </div>
 
   <div class="ac-topbar__actions">
 
@@ -135,14 +136,25 @@
       </button>
     }
 
-    <!-- Notifications -->
-    <button type="button" class="ac-btn-icon position-relative" aria-label="Notifications">
-      <i class="bi bi-bell fs-5" aria-hidden="true"></i>
+    <!--
+      ============================================================
+      LA CLOCHE DE NOTIFICATIONS A ÉTÉ RETIRÉE (lot 19).
+      ============================================================
+      Elle affichait une pastille rouge avec « 3 » depuis le lot 2.
+      Trois quoi ? Rien. Le chiffre était écrit en dur dans le
+      composant, et il n'a jamais bougé — ni quand un véhicule
+      dépassait sa durée, ni quand une caisse restait ouverte.
 
-      @if (unreadNotifications > 0) {
-        <span class="ac-topbar__badge">{{ unreadNotifications }}</span>
-      }
-    </button>
+      C'est le pire des trois éléments morts de cet en-tête, parce
+      qu'il ne se contentait pas de ne rien faire : il AFFIRMAIT
+      quelque chose de faux, en rouge, à côté d'une horloge qui, elle,
+      dit la vérité.
+
+      Ce qui demande une action est au tableau de bord, dans le bloc
+      « à regarder maintenant », et il se vide quand tout va bien.
+      Un centre de notifications reviendra ici s'il compte de vraies
+      choses.
+    -->
 
     <!-- Profil -->
     <div class="ac-topbar__profile">
@@ -172,9 +184,12 @@
         <div class="ac-overlay-invisible" (click)="closeProfileMenu()"></div>
 
         <div class="ac-topbar__menu" role="menu">
-          <button class="ac-topbar__menu-item" role="menuitem" disabled>
-            <i class="bi bi-person" aria-hidden="true"></i> Mon profil
-          </button>
+          <!--
+            « Mon profil » a été retiré au lot 19, pour la même raison
+            que les deux éléments ci-dessus : il était grisé depuis le
+            lot 2. Il reviendra avec un écran qui permet vraiment de
+            changer son mot de passe.
+          -->
           @if (canSeeSettings()) {
             <a
               class="ac-topbar__menu-item"

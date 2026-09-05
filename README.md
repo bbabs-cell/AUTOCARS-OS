@@ -127,7 +127,11 @@ suivant.
 - [x] **Lot 17** — Multi-stations et paramètres : la station se choisit une fois dans l'en-tête, on ferme une station sans l'effacer, la devise n'est pas un réglage, 70 tests de plus
 - [x] **Lot 18** — Aide et écrans d'erreur : une aide organisée par refus et non par menu, plus de redirection muette, un bandeau plutôt qu'une page quand le serveur tombe, 25 tests de plus
 
-**Phase D — Industrialisation** · Lots 19 à 22
+**Phase D — Industrialisation**
+- [x] **Lot 19** — Qualité : le lien de mot de passe oublié part enfin, trois éléments morts retirés de l'en-tête, intégration continue, 23 tests de plus
+- [ ] Lot 20 — Performance sur volumes réels
+- [ ] Lot 21 — Audit de sécurité complet
+- [ ] Lot 22 — Déploiement, sauvegarde et restauration
 
 > **La phase C est terminée.** Les dix-huit premiers lots couvrent le
 > produit ; les quatre derniers le préparent à tourner ailleurs que
@@ -146,7 +150,8 @@ restitution :
 et le tableau de bord qui dit, le lendemain matin, ce qui demande une
 action.
 
-**834 tests** (763 backend, 71 frontend) tiennent l'ensemble.
+**857 tests** (786 backend, 71 frontend) tiennent l'ensemble, et tournent
+à chaque poussée grâce à l'intégration continue.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie
 station : les modules restants gagneront à être conçus sur ce qu'un

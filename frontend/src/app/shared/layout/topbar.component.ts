@@ -19,8 +19,20 @@ import { AvatarComponent } from '../ui/avatar.component';
  * quinzaine de lignes d'Angular évitent toute une catégorie de bugs,
  * et le comportement reste maîtrisé de bout en bout.
  *
- * Le nom et le rôle viennent du service d'authentification. Le nombre
- * de notifications reste fictif jusqu'au lot 15.
+ * Le nom et le rôle viennent du service d'authentification.
+ *
+ * ------------------------------------------------------------------
+ * TROIS ÉLÉMENTS ONT DISPARU AU LOT 19
+ *
+ * La recherche globale, la cloche de notifications et « Mon profil »
+ * étaient là depuis le lot 2, désactivés ou faux, en attendant d'être
+ * branchés. Dix-sept lots plus tard, ils ne faisaient toujours rien.
+ *
+ * Le plus nuisible était la cloche : sa pastille rouge annonçait
+ * « 3 » notifications, un chiffre écrit en dur qui n'a jamais bougé.
+ * Un élément mort ne se contente pas d'être inutile — il apprend à
+ * l'utilisateur que l'interface peut mentir, et cette leçon vaut
+ * ensuite pour les éléments qui, eux, disent vrai.
  */
 @Component({
   selector: 'ac-topbar',
@@ -118,9 +130,6 @@ export class TopbarComponent {
 
     return role ? labels[role] : '';
   });
-
-  // Provisoire : viendra du centre de notifications (lot 15).
-  protected readonly unreadNotifications = 3;
 
   constructor() {
     // La liste des stations est chargée une seule fois pour toute
