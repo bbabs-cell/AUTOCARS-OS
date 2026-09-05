@@ -72,6 +72,18 @@ return [
         // rattrape les oublis, pas le propriétaire depuis Dakar.
         'attendance.*',
         'reports.view',
+
+        // IL VOIT LES STATIONS, IL N'EN OUVRE NI N'EN FERME (lot 17).
+        //
+        // `stations.view` lui sert à filtrer ses écrans et à changer
+        // de site ; `stations.create` et `stations.update` restent à
+        // l'ADMIN. Ouvrir un point de service engage un bail, du
+        // matériel et des salaires — et le fermer coupe la station de
+        // tout nouveau travail. Ce sont des décisions de propriétaire.
+        //
+        // Il ne reçoit pas non plus `organization.view` : la raison
+        // sociale et les coordonnées de l'entreprise ne sont pas de
+        // l'exploitation quotidienne.
         'stations.view',
         'onboarding.view',
     ],

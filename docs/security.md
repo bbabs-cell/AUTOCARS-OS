@@ -604,6 +604,77 @@ chiffres.
 
 ---
 
+## 7 octies. Multi-stations et paramètres
+
+### Ouvrir et fermer sont des décisions de propriétaire
+
+`stations.create` et `stations.update` restent à l'`ADMIN`. Un manager
+reçoit `stations.view` — il change de site à longueur de journée et
+filtre ses écrans avec — mais ouvrir un point de service engage un
+bail, du matériel et des salaires, et le fermer coupe la station de
+tout nouveau travail.
+
+`organization.view` et `organization.update` ne sont accordés à
+personne d'autre que l'`ADMIN`. Un employé n'a même pas
+`stations.view` : la liste des points de service ne lui apprendrait
+rien d'utile, et le serveur répond `403`.
+
+### Une station se ferme, elle ne se supprime pas
+
+Troisième fois dans le produit, après les prestations (lot 5) et les
+comptes (lot 12). Aucune route ne SUPPRIME une station : `DELETE`
+répond `405`. Une station figure sur des milliers de dossiers,
+d'encaissements et d'heures de travail — effacer la ligne troue
+l'historique, c'est-à-dire précisément ce qui sert en cas de litige.
+
+Fermer a un effet réel, vérifié par des tests : `POST /api/operations`
+et `POST /api/bookings` refusent son identifiant en `422`. Sans cela,
+« fermer » ne serait qu'une étiquette, et le gérant découvrirait des
+dossiers ouverts sur un site qu'il croyait clos.
+
+### Deux refus qui protègent l'entreprise d'elle-même
+
+| Refus | Pourquoi |
+|---|---|
+| La **dernière station ouverte** ne se ferme pas | Une entreprise sans point de service ouvert ne peut plus rien enregistrer : ni accueillir, ni encaisser. Même forme que le dernier administrateur actif (lot 12) — un refus explicite plutôt que subi. |
+| Une station **avec des véhicules sur place** ne se ferme pas | Ces voitures appartiennent à des clients qui vont revenir. Leur dossier doit pouvoir aller jusqu'à la restitution. |
+
+### Personne ne reste sans station
+
+`PUT /api/team/{id}/stations` refuse une liste vide. Une personne sans
+rattachement n'a aucun rôle, donc aucun droit : elle pourrait se
+connecter sans rien pouvoir faire — un état pire que ne pas exister,
+parce qu'il ressemble à une panne. Pour retirer l'accès à quelqu'un,
+on désactive son compte.
+
+Le retrait d'une station coupe l'accès **immédiatement** : le membre
+retiré reçoit `403` sur cette station à la requête suivante. C'est le
+même mécanisme que pour un compte désactivé — les droits sont relus à
+chaque requête, jamais gardés dans le jeton.
+
+### La devise ne se change pas depuis un formulaire
+
+C'est le refus le plus important du lot, et il ne ressemble pas à de
+la sécurité — c'en est pourtant.
+
+Tous les montants sont des **entiers dans la plus petite unité de la
+devise** (lot 3). En franc CFA, cette unité est le franc lui-même.
+Accepter `currency_code = "EUR"` ne convertirait rien : les `5000`
+déjà en base deviendraient « 50,00 € », et le chiffre d'affaires de la
+station serait divisé par cent, en silence, d'un seul clic dans un
+formulaire.
+
+La protection n'est pas une validation qui refuse la valeur : c'est
+une **liste blanche de colonnes modifiables** dans
+`OrganizationRepository`. `name`, `phone`, `email` — rien d'autre.
+Tout ce que le navigateur enverrait en plus est ignoré sans bruit, y
+compris `slug` et `status`. Un `UPDATE` construit à partir des clés
+reçues aurait laissé passer les trois le jour où un contrôleur aurait
+oublié de les filtrer.
+
+Un test envoie délibérément les six champs interdits et vérifie
+qu'aucun n'a bougé.
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -690,6 +761,12 @@ la question centrale en cas de litige sur un véhicule.
 | Forfait périmé / épuisé calculé, jamais stocké | ✅ Lot 15 |
 | Aucun remboursement au prorata inventé | ✅ Lot 15 |
 | Accès station vérifié par organisation, admins compris | ✅ Lot 16 |
+| Ouvrir/fermer une station réservé au propriétaire | ✅ Lot 17 |
+| Aucune suppression de station (405) | ✅ Lot 17 |
+| Station fermée : refuse le travail, garde son passé | ✅ Lot 17 |
+| Dernière station ouverte protégée | ✅ Lot 17 |
+| Personne sans station impossible | ✅ Lot 17 |
+| Devise, fuseau, pays et slug non modifiables par l'API | ✅ Lot 17 |
 | Statistiques réservées à `reports.view` | ✅ Lot 16 |
 | Incohérence comptable affichée, jamais masquée | ✅ Lot 16 |
 | Audit de sécurité complet | 🔜 Lot 21 |

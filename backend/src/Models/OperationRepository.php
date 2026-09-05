@@ -492,6 +492,53 @@ final class OperationRepository extends TenantRepository
     }
 
     /**
+     * Combien de véhicules sont ACTUELLEMENT sur place, par station.
+     *
+     * « Sur place » veut dire : un dossier ouvert, à n'importe quelle
+     * étape entre l'accueil et la restitution. C'est la définition
+     * qu'utilise déjà `openOperationFor()` pour interdire deux
+     * dossiers simultanés sur un même véhicule — on réutilise la même
+     * liste de statuts plutôt que d'en écrire une seconde, qui
+     * finirait par diverger le jour où une étape sera ajoutée.
+     *
+     * Sert à empêcher la fermeture d'une station qui a encore des
+     * clés dans son tiroir.
+     *
+     * @return array<int,int> Indexé par station_id
+     */
+    public function openCountByStation(): array
+    {
+        $quoted = implode(', ', array_map(
+            fn (string $status): string => $this->db->quote($status),
+            OperationStatus::active()
+        ));
+
+        $statement = $this->db->prepare(
+            "SELECT station_id, COUNT(*) AS total
+               FROM operations
+              WHERE organization_id = :organization_id
+                AND status IN ({$quoted})
+           GROUP BY station_id"
+        );
+
+        $statement->execute(['organization_id' => $this->organizationId()]);
+
+        $counts = [];
+
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $counts[(int) $row['station_id']] = (int) $row['total'];
+        }
+
+        return $counts;
+    }
+
+    /** Le même compte, pour une seule station. */
+    public function openCountAtStation(int $stationId): int
+    {
+        return $this->openCountByStation()[$stationId] ?? 0;
+    }
+
+    /**
      * Compte les opérations par statut, pour une station donnée.
      * Alimente les compteurs du comptoir et, au lot 10, le tableau
      * de bord.

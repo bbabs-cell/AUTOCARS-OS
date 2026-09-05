@@ -1,0 +1,37 @@
+// =====================================================================
+// Les stations
+// =====================================================================
+// Un seul style local : le code de station. Tout le reste vient des
+// composants partagés et des jetons validés au lot 2.
+
+// Le code se lit comme un identifiant, pas comme une phrase : chasse
+// fixe, comme les plaques et les références de dossier ailleurs dans
+// le produit.
+.ac-station-code {
+  display: inline-block;
+  padding: 0.125rem var(--ac-space-2);
+  border: 1px solid var(--ac-border);
+  border-radius: var(--ac-radius-sm);
+  background-color: var(--ac-gray-50);
+  // MÊME TRAITEMENT QUE LES PLAQUES (`.ac-plate`, lot 6) : Manrope,
+  // interlettrage élargi. La règle §37 fige la typographie du produit —
+  // introduire une police à chasse fixe ici ferait une seconde
+  // typographie pour une seule pastille.
+  font-family: 'Manrope', monospace;
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-bold);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--ac-text-secondary);
+}
+
+// Le nom de la station ne se coupe pas mot à mot sur un téléphone.
+//
+// Le tableau défile déjà horizontalement (`.ac-table-wrapper`) : lui
+// laisser rétrécir la première colonne jusqu'à trois lignes par nom
+// ne gagne rien et rend la liste illisible. Même correction qu'au
+// lot 13 sur les actions du carnet de rendez-vous.
+.ac-table td:first-child,
+.ac-table th:first-child {
+  min-width: 11rem;
+}

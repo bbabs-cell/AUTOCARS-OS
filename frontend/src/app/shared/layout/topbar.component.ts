@@ -1,8 +1,9 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
 import { AttendanceService } from '../../core/services/attendance.service';
-import { CatalogService } from '../../core/services/catalog.service';
+import { StationContextService } from '../../core/services/station-context.service';
 import { AvatarComponent } from '../ui/avatar.component';
 
 /**
@@ -23,7 +24,7 @@ import { AvatarComponent } from '../ui/avatar.component';
  */
 @Component({
   selector: 'ac-topbar',
-  imports: [AvatarComponent],
+  imports: [AvatarComponent, RouterLink],
   templateUrl: './topbar.component.html',
   styleUrl: './topbar.component.scss',
 })
@@ -32,10 +33,13 @@ export class TopbarComponent {
   readonly toggleSidebar = output<void>();
 
   private readonly auth = inject(AuthService);
-  private readonly catalog = inject(CatalogService);
   private readonly attendance = inject(AttendanceService);
 
+  /** Public : le gabarit lit directement ses signaux. */
+  protected readonly stationContext = inject(StationContextService);
+
   protected readonly isProfileMenuOpen = signal(false);
+  protected readonly isStationMenuOpen = signal(false);
   protected readonly isClocking = signal(false);
 
   /**
@@ -75,17 +79,30 @@ export class TopbarComponent {
   });
 
   /**
-   * Nom de la station affiché en haut à droite.
+   * La station qu'on regarde, en haut à droite.
    *
-   * Il était écrit en dur jusqu'au lot 5 — ce qui affichait
-   * « Station principale » alors que le gérant venait de la renommer.
-   * Un libellé faux est pire qu'un libellé absent : il fait douter du
-   * reste de l'écran.
+   * Elle a d'abord été écrite en dur (« Station principale »), puis
+   * remplacée au lot 5 par le nom réel de la première station — un
+   * libellé faux étant pire qu'un libellé absent.
    *
-   * On charge la première station au démarrage. Le sélecteur pour les
-   * entreprises multi-stations arrive au lot 17.
+   * DEPUIS LE LOT 17, C'EST UN CHOIX, pas un affichage. L'entreprise
+   * peut avoir plusieurs stations, et ce menu décide de ce que
+   * montrent le tableau de bord, la file d'attente, les rendez-vous
+   * et les statistiques — tous à la fois. Il reste un simple libellé
+   * quand il n'y a qu'une station : proposer un choix qui n'en est
+   * pas un ajoute un clic pour rien.
    */
-  protected readonly stationName = signal('');
+  protected readonly stationLabel = computed(() => this.stationContext.label());
+
+  /**
+   * Les paramètres de l'entreprise sont réservés au propriétaire.
+   *
+   * Le menu est masqué pour les autres — mais c'est du confort
+   * d'affichage, pas une protection : le serveur refuse la route à
+   * qui n'a pas `organization.view`, et c'est cette barrière-là qui
+   * compte.
+   */
+  protected readonly canSeeSettings = computed(() => this.auth.can('organization.view'));
 
   protected readonly userName = computed(() => this.auth.user()?.full_name ?? '');
 
@@ -106,17 +123,29 @@ export class TopbarComponent {
   protected readonly unreadNotifications = 3;
 
   constructor() {
-    // Un employé n'a pas le droit de lister les stations : l'appel
-    // échouerait avec un 403. On n'affiche alors simplement rien,
-    // plutôt que de laisser une erreur remonter dans la console.
-    this.catalog.stations().subscribe({
-      next: (stations) => this.stationName.set(stations[0]?.name ?? ''),
-      error: () => this.stationName.set(''),
-    });
+    // La liste des stations est chargée une seule fois pour toute
+    // l'application : c'est le service de contexte qui la garde, pas
+    // cet en-tête. Un employé n'a pas `stations.view` — l'appel
+    // répond 403 et la liste reste vide, ce qui masque simplement le
+    // menu.
+    this.stationContext.ensureLoaded();
 
     // L'état du pointage est chargé une fois, à l'ouverture de
     // l'application : le bouton doit être juste dès le premier écran.
     this.attendance.refreshMine();
+  }
+
+  protected toggleStationMenu(): void {
+    this.isStationMenuOpen.update((open) => !open);
+  }
+
+  protected closeStationMenu(): void {
+    this.isStationMenuOpen.set(false);
+  }
+
+  protected chooseStation(stationId: number): void {
+    this.stationContext.select(stationId);
+    this.closeStationMenu();
   }
 
   protected logout(): void {

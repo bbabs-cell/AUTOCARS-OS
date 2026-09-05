@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AmountPipe } from '../../shared/pipes/amount.pipe';
@@ -11,6 +11,7 @@ import {
 import { SplitBarComponent, SplitSegment } from '../../shared/ui/split-bar.component';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { StationContextService } from '../../core/services/station-context.service';
 import { Dashboard } from '../../core/models/dashboard.model';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '../../core/models/payment.model';
 
@@ -55,6 +56,7 @@ import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '../../core/models/paymen
 })
 export class DashboardPage {
   private readonly service = inject(DashboardService);
+  private readonly stationContext = inject(StationContextService);
   private readonly auth = inject(AuthService);
 
   protected readonly isLoading = signal(true);
@@ -132,13 +134,22 @@ export class DashboardPage {
   );
 
   constructor() {
-    this.load();
+    // LE TABLEAU DE BORD SUIT LA STATION CHOISIE EN HAUT DE L'ÉCRAN.
+    //
+    // L'effet se déclenche une première fois au démarrage — il
+    // remplace donc l'appel direct qui était ici — puis à chaque
+    // changement de station. Le gérant qui bascule sur Thiès voit
+    // Thiès, sans avoir à recharger la page.
+    effect(() => {
+      this.stationContext.selectedId();
+      this.load();
+    });
   }
 
   protected load(): void {
     this.isLoading.set(true);
 
-    this.service.dashboard().subscribe({
+    this.service.dashboard(this.stationContext.queryId() ?? undefined).subscribe({
       next: (dashboard) => {
         this.data.set(dashboard);
         this.isLoading.set(false);

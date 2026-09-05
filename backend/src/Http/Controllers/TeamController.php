@@ -55,6 +55,7 @@ final class TeamController
                 // La liste complète quand la personne est rattachée à
                 // plusieurs stations : « Dakar Plateau, Thiès ».
                 'station_names' => $member['station_names'],
+                'station_ids'   => $member['station_ids'],
                 'station_count' => (int) $member['station_count'],
                 'last_login_at' => $member['last_login_at'],
             ],
@@ -186,6 +187,115 @@ final class TeamController
             $status === 'DISABLED'
                 ? "Compte désactivé. L'historique de cette personne est conservé."
                 : 'Membre mis à jour.'
+        );
+    }
+
+    /**
+     * PUT /api/team/{id}/stations
+     * ==================================================================
+     * RATTACHER QUELQU'UN À PLUSIEURS STATIONS (lot 17).
+     * ==================================================================
+     *
+     * La table `station_users` accepte plusieurs lignes par personne
+     * depuis le lot 4, et `members()` sait déjà les agréger. Ce qui
+     * manquait, c'était le geste : jusqu'ici un membre restait
+     * définitivement rattaché à la station où il avait été créé.
+     *
+     * ------------------------------------------------------------------
+     * POURQUOI UNE ROUTE À PART, ET PAS UN CHAMP DE PLUS DANS `update()` ?
+     *
+     * Parce que ce sont deux décisions de nature différente, prises à
+     * des moments différents. `update()` répond à « quel est son rôle,
+     * et son compte est-il ouvert ? » — c'est-à-dire CE QU'IL A LE
+     * DROIT DE FAIRE. Celle-ci répond à « où travaille-t-il ? ».
+     *
+     * Les mélanger obligerait le formulaire d'affectation à renvoyer
+     * le rôle à chaque enregistrement — et un jour, à le renvoyer
+     * faux : il suffirait qu'un écran ait chargé la fiche avant un
+     * changement de rôle pour le réécrire à l'ancienne valeur en
+     * déplaçant simplement quelqu'un d'une station à l'autre.
+     */
+    public function stations(Request $request, string $id): void
+    {
+        $userId = (int) $id;
+        $team   = new TeamRepository();
+        $member = $team->findMember($userId);
+
+        if ($member === null) {
+            Response::notFound('Cette personne ne fait pas partie de votre équipe.');
+        }
+
+        $submitted = $request->input('station_ids');
+
+        if (!is_array($submitted)) {
+            Response::validationFailed(['station_ids' => 'La liste des stations est attendue.']);
+        }
+
+        // On normalise avant de valider : le navigateur envoie
+        // volontiers des chaînes (« 3 ») là où on attend des entiers,
+        // et un doublon dans la liste ferait échouer l'insertion sur
+        // la contrainte d'unicité au lieu de produire un message
+        // compréhensible.
+        $stationIds = array_values(array_unique(array_map(
+            static fn (mixed $value): int => (int) $value,
+            array_filter($submitted, static fn (mixed $value): bool => is_int($value)
+                || (is_string($value) && $value !== '')),
+        )));
+
+        // UNE PERSONNE SANS STATION N'A AUCUN RÔLE, DONC AUCUN DROIT.
+        // Elle pourrait se connecter et ne rien pouvoir faire — un
+        // état pire que ne pas exister, parce qu'il ressemble à une
+        // panne. Le compte se désactive (`update()`), il ne se vide
+        // pas.
+        if ($stationIds === []) {
+            Response::validationFailed([
+                'station_ids' => 'Choisissez au moins une station. Pour retirer l\'accès à '
+                    . 'quelqu\'un, désactivez son compte.',
+            ]);
+        }
+
+        $repository = new StationRepository();
+        $current    = $team->stationIdsFor($userId);
+
+        foreach ($stationIds as $stationId) {
+            $station = $repository->find($stationId);
+
+            // `find()` filtre par organisation : la station d'un
+            // concurrent est indistinguable d'une station inexistante,
+            // et c'est exactement ce qu'on veut répondre.
+            if ($station === null) {
+                Response::validationFailed(['station_ids' => "Cette station n'existe pas."]);
+            }
+
+            // On refuse d'AJOUTER quelqu'un sur une station fermée,
+            // mais on n'oblige pas à retirer ceux qui y étaient déjà :
+            // sinon, fermer une station rendrait impossible le moindre
+            // enregistrement de la fiche des personnes qui y
+            // travaillaient.
+            if ($station['status'] !== 'ACTIVE' && !in_array($stationId, $current, true)) {
+                Response::validationFailed([
+                    'station_ids' => "« {$station['name']} » est fermée. Rouvrez-la avant d'y "
+                        . 'affecter quelqu\'un.',
+                ]);
+            }
+        }
+
+        $team->setStations($userId, $stationIds, (string) $member['role']);
+
+        AuditLogger::record(
+            action: 'team.member_stations_changed',
+            organizationId: AuthContext::current()->organizationId,
+            userId: AuthContext::current()->userId,
+            entityType: 'user',
+            entityId: $userId,
+            metadata: ['from' => $current, 'to' => $stationIds],
+        );
+
+        Response::success(
+            ['id' => $userId, 'station_ids' => $stationIds],
+            count($stationIds) === 1
+                ? 'Affectation enregistrée.'
+                : count($stationIds) . ' stations affectées.'
         );
     }
 

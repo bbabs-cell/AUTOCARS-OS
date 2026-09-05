@@ -23,18 +23,6 @@
         <input id="an-to" type="date" class="form-control" formControlName="to" />
       </div>
 
-      @if (stations().length > 1) {
-        <div class="col-12 col-md-3">
-          <label for="an-station" class="form-label">Station</label>
-          <select id="an-station" class="form-select" formControlName="station_id">
-            <option [value]="0">Toutes les stations</option>
-            @for (station of stations(); track station.id) {
-              <option [value]="station.id">{{ station.name }}</option>
-            }
-          </select>
-        </div>
-      }
-
       <div class="col-12 col-md-3">
         <button type="submit" class="btn btn-primary w-100">Afficher</button>
       </div>

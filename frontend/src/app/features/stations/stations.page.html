@@ -1,0 +1,253 @@
+<ac-page-header
+  title="Stations"
+  [subtitle]="openCount() + ' ouverte(s) sur ' + stations().length"
+>
+  @if (canManage()) {
+    <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <i class="bi bi-plus-lg"></i> Ouvrir une station
+    </button>
+  }
+</ac-page-header>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--info mb-4">
+    <i class="bi bi-info-circle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+<!-- ÉTAT 1 : chargement -->
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 70%"></div>
+    </div>
+  </div>
+}
+
+<!-- ÉTAT 2 : rien à montrer. En pratique impossible — l'inscription
+     crée toujours une station — mais l'écran ne présume de rien. -->
+@if (!isLoading() && stations().length === 0) {
+  <div class="ac-card">
+    <ac-empty-state
+      icon="bi-geo-alt"
+      title="Aucune station"
+      text="Ouvrez votre premier point de service pour commencer à enregistrer des véhicules."
+      [actionLabel]="canManage() ? 'Ouvrir une station' : ''"
+      (action)="openCreate()"
+    />
+  </div>
+}
+
+<!-- ÉTAT 3 : la liste -->
+@if (!isLoading() && stations().length > 0) {
+  <div class="ac-card">
+    <div class="ac-table-wrapper">
+      <table class="ac-table">
+        <thead>
+          <tr>
+            <th>Station</th>
+            <th>Code</th>
+            <th>Horaires</th>
+            <th class="ac-table__amount">Sur place</th>
+            <th>État</th>
+            @if (canManage()) { <th class="ac-table__actions">Actions</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (station of stations(); track station.id) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ station.name }}</div>
+                @if (station.city || station.address) {
+                  <div class="ac-caption">
+                    {{ station.address || '' }}{{ station.address && station.city ? ', ' : '' }}{{ station.city || '' }}
+                  </div>
+                }
+              </td>
+
+              <!--
+                Le code apparaît sur les références remises au client
+                (« DKP-2608-0042 ») : on l'affiche tel qu'il y figure.
+              -->
+              <td><span class="ac-station-code">{{ station.code }}</span></td>
+
+              <td class="ac-text-secondary">{{ hoursLabel(station) }}</td>
+
+              <!--
+                Le chiffre qui explique le bouton de la ligne suivante.
+                Il est là AVANT le clic : un refus qu'on voit venir ne
+                ressemble pas à une panne.
+              -->
+              <td class="ac-table__amount ac-numeric">
+                @if (station.vehicles_on_site) {
+                  {{ station.vehicles_on_site }}
+                } @else {
+                  <span class="ac-text-muted">—</span>
+                }
+              </td>
+
+              <td>
+                <span
+                  class="ac-badge"
+                  [class.ac-badge--success]="station.status === 'ACTIVE'"
+                  [class.ac-badge--neutral]="station.status !== 'ACTIVE'"
+                >
+                  <span class="ac-badge__dot"></span>
+                  {{ station.status === 'ACTIVE' ? 'Ouverte' : 'Fermée' }}
+                </span>
+              </td>
+
+              @if (canManage()) {
+                <td class="ac-table__actions">
+                  <button type="button" class="ac-btn-icon" (click)="openEdit(station)"
+                          [attr.aria-label]="'Modifier ' + station.name">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+
+                  <!--
+                    Le bouton se désactive DE LUI-MÊME dans les deux cas
+                    que le serveur refuse : des véhicules sur place, ou
+                    la dernière station ouverte. Le titre dit pourquoi —
+                    un bouton grisé sans explication est une impasse.
+                  -->
+                  <button
+                    type="button"
+                    class="ac-btn-icon"
+                    [disabled]="!canToggle(station)"
+                    [attr.title]="toggleHint(station)"
+                    [attr.aria-label]="(station.status === 'ACTIVE' ? 'Fermer ' : 'Rouvrir ') + station.name"
+                    (click)="toggleStatus(station)"
+                  >
+                    <i class="bi" [class.bi-toggle-on]="station.status === 'ACTIVE'"
+                       [class.bi-toggle-off]="station.status !== 'ACTIVE'"></i>
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="ac-caption mt-3">
+    Une station ne se supprime pas : elle se ferme. Elle figure sur les dossiers,
+    les encaissements et les heures de travail déjà enregistrés — son historique
+    reste consultable, et ses chiffres comptent toujours dans vos statistiques.
+    Une station fermée n'accueille simplement plus de nouveau véhicule.
+  </p>
+}
+
+<!-- Formulaire de création / modification -->
+@if (isFormOpen()) {
+  <div class="ac-modal-backdrop" (click)="closeForm()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="station-form-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="station-form-title">
+        {{ editing() ? 'Modifier la station' : 'Ouvrir une station' }}
+      </h2>
+      <button type="button" class="ac-btn-icon" (click)="closeForm()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="ac-modal__body">
+        <div class="row g-3 mb-4">
+          <div class="col-sm-8">
+            <label for="st-name" class="form-label">Nom</label>
+            <input id="st-name" type="text" class="form-control" formControlName="name"
+                   placeholder="Station Thiès"
+                   [class.is-invalid]="fieldErrors()['name']" />
+            @if (fieldErrors()['name']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+
+          <div class="col-sm-4">
+            <label for="st-code" class="form-label">Code</label>
+            <input id="st-code" type="text" class="form-control text-uppercase"
+                   formControlName="code" placeholder="THS" maxlength="10"
+                   [class.is-invalid]="fieldErrors()['code']" />
+            @if (fieldErrors()['code']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            } @else {
+              <div class="ac-caption mt-1">
+                Il apparaît sur les références remises au client : THS-2608-0042.
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <label for="st-city" class="form-label">
+              Ville <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <input id="st-city" type="text" class="form-control" formControlName="city"
+                   placeholder="Thiès" />
+          </div>
+          <div class="col-sm-6">
+            <label for="st-phone" class="form-label">
+              Téléphone <span class="ac-text-muted fw-normal">(facultatif)</span>
+            </label>
+            <input id="st-phone" type="tel" class="form-control" formControlName="phone"
+                   placeholder="77 000 00 00"
+                   [class.is-invalid]="fieldErrors()['phone']" />
+            @if (fieldErrors()['phone']; as error) {
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            }
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="st-address" class="form-label">
+            Adresse <span class="ac-text-muted fw-normal">(facultatif)</span>
+          </label>
+          <input id="st-address" type="text" class="form-control" formControlName="address"
+                 placeholder="Route de Dakar, face à la station Total" />
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label for="st-opens" class="form-label">Ouverture</label>
+            <input id="st-opens" type="time" class="form-control" formControlName="opens_at" />
+          </div>
+          <div class="col-sm-6">
+            <label for="st-closes" class="form-label">Fermeture</label>
+            <input id="st-closes" type="time" class="form-control" formControlName="closes_at" />
+          </div>
+        </div>
+
+        <p class="ac-caption mt-3 mb-0">
+          Les horaires servent au carnet de rendez-vous. Ils ne bloquent rien :
+          une station peut toujours accueillir un client en dehors.
+        </p>
+      </div>
+
+      <div class="ac-modal__footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeForm()">
+          Annuler
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+          } @else {
+            {{ editing() ? 'Enregistrer' : 'Ouvrir la station' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

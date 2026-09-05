@@ -166,6 +166,19 @@ final class OperationController
             Response::forbidden("Vous n'êtes pas rattaché à cette station.");
         }
 
+        // UNE STATION FERMÉE N'ACCUEILLE PLUS DE VÉHICULE (lot 17).
+        //
+        // Sans ce refus, « fermer une station » ne serait qu'une
+        // étiquette : le travail continuerait d'y être enregistré, et
+        // le gérant découvrirait des dossiers ouverts sur un site
+        // qu'il croyait clos. Le passé de la station reste consultable
+        // — c'est l'avenir qu'on ferme.
+        if (($station['status'] ?? 'ACTIVE') !== 'ACTIVE') {
+            Response::validationFailed([
+                'station_id' => 'Cette station est fermée. Choisissez-en une autre.',
+            ]);
+        }
+
         $repository = new OperationRepository();
         $open       = $repository->openOperationFor($vehicleId);
 

@@ -124,7 +124,7 @@ suivant.
 - [x] **Lot 14** — Fidélité : une carte à tampons, une récompense est une remise et jamais de la recette, 61 tests de plus
 - [x] **Lot 15** — Abonnements : des lavages payés d'avance, l'argent dans la caisse le jour de la vente, la dette rendue visible, 62 tests de plus
 - [x] **Lot 16** — Statistiques : aucune table ajoutée, l'identité comptable du produit vérifiée à l'écran, une faille de contrôle d'accès refermée, 49 tests de plus
-- [ ] Lot 17 — Multi-stations et paramètres
+- [x] **Lot 17** — Multi-stations et paramètres : la station se choisit une fois dans l'en-tête, on ferme une station sans l'effacer, la devise n'est pas un réglage, 70 tests de plus
 - [ ] Lot 18 — Aide et pages d'erreur
 
 **Phase D — Industrialisation** · Lots 19 à 22
@@ -142,7 +142,7 @@ restitution :
 et le tableau de bord qui dit, le lendemain matin, ce qui demande une
 action.
 
-**739 tests** (697 backend, 42 frontend) tiennent l'ensemble.
+**809 tests** (758 backend, 51 frontend) tiennent l'ensemble.
 
 C'est le moment prévu au plan pour un **test terrain** dans une vraie
 station : les modules restants gagneront à être conçus sur ce qu'un

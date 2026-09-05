@@ -1,0 +1,197 @@
+<ac-page-header
+  title="Paramètres"
+  subtitle="Les informations de votre entreprise"
+/>
+
+@if (errorMessage(); as message) {
+  <div class="ac-alert ac-alert--danger mb-4">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (noticeMessage(); as message) {
+  <div class="ac-alert ac-alert--info mb-4">
+    <i class="bi bi-info-circle-fill"></i>
+    <div>{{ message }}</div>
+  </div>
+}
+
+@if (isLoading()) {
+  <div class="ac-card">
+    <div class="ac-card__body">
+      <div class="ac-skeleton ac-skeleton--title"></div>
+      <div class="ac-skeleton ac-skeleton--text"></div>
+      <div class="ac-skeleton ac-skeleton--text" style="width: 60%"></div>
+    </div>
+  </div>
+}
+
+@if (!isLoading() && organization(); as company) {
+  <div class="row g-4">
+
+    <!-- ================================================== -->
+    <!-- CE QUI SE MODIFIE                                   -->
+    <!-- ================================================== -->
+    <div class="col-12 col-lg-7">
+      <div class="ac-card">
+        <div class="ac-card__header">
+          <h2 class="h6 mb-0">Identité</h2>
+        </div>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="ac-card__body">
+            <div class="mb-4">
+              <label for="org-name" class="form-label">Raison sociale</label>
+              <input id="org-name" type="text" class="form-control" formControlName="name"
+                     [class.is-invalid]="fieldErrors()['name']" />
+              @if (fieldErrors()['name']; as error) {
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              } @else {
+                <div class="ac-caption mt-1">
+                  Le nom de votre entreprise, tel qu'il apparaît dans l'application.
+                </div>
+              }
+            </div>
+
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <label for="org-phone" class="form-label">
+                  Téléphone <span class="ac-text-muted fw-normal">(facultatif)</span>
+                </label>
+                <input id="org-phone" type="tel" class="form-control" formControlName="phone"
+                       placeholder="77 000 00 00"
+                       [class.is-invalid]="fieldErrors()['phone']" />
+                @if (fieldErrors()['phone']; as error) {
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                }
+              </div>
+
+              <div class="col-sm-6">
+                <label for="org-email" class="form-label">
+                  E-mail <span class="ac-text-muted fw-normal">(facultatif)</span>
+                </label>
+                <input id="org-email" type="email" class="form-control" formControlName="email"
+                       placeholder="contact@ma-station.sn"
+                       [class.is-invalid]="fieldErrors()['email']" />
+                @if (fieldErrors()['email']; as error) {
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="ac-card__footer d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+              @if (isSaving()) {
+                <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+              } @else {
+                Enregistrer
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ================================================== -->
+      <!-- CE QUI NE SE MODIFIE PAS, ET POURQUOI               -->
+      <!-- ================================================== -->
+      <div class="ac-card mt-4">
+        <div class="ac-card__header">
+          <h2 class="h6 mb-0">Réglages régionaux</h2>
+        </div>
+
+        <div class="ac-card__body">
+          <!--
+            AFFICHÉS, PAS MODIFIABLES — et chacun dit pourquoi.
+            Un champ grisé sans explication ressemble à un défaut ;
+            avec sa raison, c'est une décision.
+          -->
+          <div class="ac-readonly-row">
+            <span class="ac-readonly-row__label">Devise</span>
+            <span class="ac-readonly-row__value">{{ currencyLabel(company.currency_code) }}</span>
+            <span class="ac-readonly-row__why">
+              Tous vos montants sont enregistrés en francs entiers. Changer de devise
+              ne les convertirait pas : ce serait diviser votre chiffre d'affaires par
+              cent d'un seul clic. Une conversion se prépare, elle ne se coche pas.
+            </span>
+          </div>
+
+          <div class="ac-readonly-row">
+            <span class="ac-readonly-row__label">Pays</span>
+            <span class="ac-readonly-row__value">{{ countryLabel(company.country_code) }}</span>
+            <span class="ac-readonly-row__why">
+              Défini à la création de votre compte.
+            </span>
+          </div>
+
+          <div class="ac-readonly-row">
+            <span class="ac-readonly-row__label">Fuseau horaire</span>
+            <span class="ac-readonly-row__value">{{ company.timezone }}</span>
+            <span class="ac-readonly-row__why">
+              Les journées sont calculées sur ce fuseau, qui couvre le Sénégal, la Gambie,
+              la Guinée et le Mali. Le champ s'ouvrira le jour où le produit servira une
+              station dans un fuseau différent — un réglage qui n'agit sur rien serait
+              pire qu'un réglage absent.
+            </span>
+          </div>
+
+          <div class="ac-readonly-row">
+            <span class="ac-readonly-row__label">Identifiant</span>
+            <span class="ac-readonly-row__value ac-numeric">{{ company.slug }}</span>
+            <span class="ac-readonly-row__why">
+              Il figure dans vos liens déjà partagés : le modifier les casserait.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================== -->
+    <!-- OÙ ALLER ENSUITE                                    -->
+    <!-- ================================================== -->
+    <div class="col-12 col-lg-5">
+      <div class="ac-card">
+        <div class="ac-card__header">
+          <h2 class="h6 mb-0">Votre entreprise</h2>
+        </div>
+
+        <div class="ac-card__body">
+          <!--
+            Deux chiffres et deux liens. Les paramètres ne dupliquent
+            PAS la gestion des stations ni celle de l'équipe : ils
+            disent où elle se trouve.
+          -->
+          <div class="ac-readonly-row">
+            <span class="ac-readonly-row__label">Stations</span>
+            <span class="ac-readonly-row__value ac-numeric">{{ company.station_count }}</span>
+            <span class="ac-readonly-row__why">
+              <a routerLink="/stations">Ouvrir, modifier ou fermer une station</a>
+            </span>
+          </div>
+
+          <div class="ac-readonly-row">
+            <span class="ac-readonly-row__label">Équipe</span>
+            <span class="ac-readonly-row__value ac-numeric">{{ company.member_count }}</span>
+            <span class="ac-readonly-row__why">
+              <a routerLink="/team">Comptes, rôles et affectations</a>
+            </span>
+          </div>
+
+          @if (company.created_at) {
+            <div class="ac-readonly-row">
+              <span class="ac-readonly-row__label">Compte créé le</span>
+              <span class="ac-readonly-row__value">{{ company.created_at.slice(0, 10) }}</span>
+              <span class="ac-readonly-row__why"></span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <p class="ac-caption mt-3">
+        Les horaires d'ouverture ne sont pas ici : ils appartiennent à chaque station,
+        et se règlent sur sa fiche.
+      </p>
+    </div>
+  </div>
+}

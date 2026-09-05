@@ -1,0 +1,46 @@
+// =====================================================================
+// Les paramètres de l'entreprise
+// =====================================================================
+
+// Une valeur qu'on affiche mais qu'on ne modifie pas.
+//
+// Elle ne prend PAS la forme d'un champ désactivé : un <input> grisé
+// invite à cliquer, puis ne réagit pas. Une ligne de texte dit la même
+// chose sans rien promettre.
+.ac-readonly-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ac-space-2) var(--ac-space-4);
+  padding: var(--ac-space-3) 0;
+
+  & + & {
+    border-top: 1px solid var(--ac-border);
+  }
+}
+
+.ac-readonly-row__label {
+  flex: 0 0 9rem;
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-secondary);
+}
+
+.ac-readonly-row__value {
+  flex: 0 0 12rem;
+  font-weight: var(--ac-weight-medium);
+}
+
+// La raison du verrouillage, en petit, à droite de la valeur. C'est
+// elle qui transforme un champ figé en décision assumée.
+.ac-readonly-row__why {
+  flex: 1 1 16rem;
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-muted);
+}
+
+@media (max-width: 575.98px) {
+  .ac-readonly-row__label,
+  .ac-readonly-row__value {
+    flex: 1 0 100%;
+  }
+}

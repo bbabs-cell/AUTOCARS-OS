@@ -18,6 +18,55 @@ export interface Station {
   opens_at: string | null;
   closes_at: string | null;
   status: 'ACTIVE' | 'INACTIVE';
+  /**
+   * Combien de véhicules sont sur place en ce moment.
+   *
+   * Envoyé par la liste des stations, pas par le détail : l'écran
+   * s'en sert pour annoncer un refus de fermeture AVANT le clic —
+   * un refus prévisible vaut mieux qu'un refus expliqué après coup.
+   */
+  vehicles_on_site?: number;
+}
+
+/** Ce qu'on envoie pour créer ou modifier une station. */
+export interface StationPayload {
+  name: string;
+  code: string;
+  address?: string | null;
+  city?: string | null;
+  phone?: string | null;
+  opens_at?: string | null;
+  closes_at?: string | null;
+}
+
+/**
+ * Les paramètres de l'entreprise.
+ *
+ * TROIS CHAMPS SONT EN LECTURE SEULE, et ce n'est pas un oubli
+ * d'implémentation : `currency_code` ne peut pas changer sans une
+ * conversion de tous les montants déjà écrits, et `country_code` et
+ * `timezone` ne sont encore lus par aucun calcul. Voir
+ * OrganizationController côté serveur.
+ */
+export interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  phone: string | null;
+  email: string | null;
+  country_code: string;
+  currency_code: string;
+  timezone: string;
+  created_at: string | null;
+  onboarding_completed_at: string | null;
+  station_count: number;
+  member_count: number;
+}
+
+export interface OrganizationPayload {
+  name: string;
+  phone?: string | null;
+  email?: string | null;
 }
 
 export interface Service {
@@ -60,6 +109,8 @@ export interface TeamMember {
    */
   station_names?: string;
   station_count?: number;
+  /** Les identifiants, pour cocher les cases du formulaire d'affectation. */
+  station_ids?: number[];
   station_name: string;
   last_login_at: string | null;
 }

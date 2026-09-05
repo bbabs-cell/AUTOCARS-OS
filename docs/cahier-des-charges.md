@@ -103,7 +103,7 @@ dit pas non n'est pas un périmètre.
 | **Gestion de stock** (produits, consommables) | Réel, mais pas dans la chaîne de traçabilité du véhicule. Candidat pour une version ultérieure. |
 | **Intégration de paiement en ligne** | **Aucune intégration ne sera codée tant qu'un compte marchand réel n'existe pas.** Voir §7.4 — c'est une exigence, pas un retard. |
 | **Envoi de SMS / WhatsApp / e-mail au client** | Aucun envoi sortant tant que le canal, son coût et son consentement ne sont pas décidés. Le produit n'envoie rien aujourd'hui. |
-| **Application mobile native** | L'application web responsive couvre le besoin. Une application native se justifierait par le mode hors-ligne (§7.5), pas avant. |
+| **Application mobile native** | L'application web responsive couvre le besoin. Une application native se justifierait par le mode hors-ligne (§7.6), pas avant. |
 | **Marketplace / réservation par le client final** | Le rendez-vous est pris par la station, pas par le client. Ouvrir la prise de rendez-vous au public est un autre produit. |
 
 ---
@@ -295,14 +295,24 @@ où elle a été livrée (ou est prévue).
 | EF-58 | Ce qu'un forfait ne couvre pas (autre prestation, forfait périmé, solde épuisé), le serveur le refuse | 15 | [FAIT] |
 | EF-59 | **Aucun remboursement automatique** à l'annulation d'un forfait : c'est une décision humaine | 15 | [FAIT] |
 
-### 4.11 Multi-stations et paramètres — [PRÉVU]
+### 4.11 Multi-stations et paramètres
 
 | ID | Exigence | Lot | Statut |
 |---|---|:---:|:---:|
-| EF-60 | Une entreprise gère plusieurs stations ; chaque écran d'exploitation se filtre par station | 17 | [PRÉVU] |
-| EF-61 | Un utilisateur est rattaché à une ou plusieurs stations ; il ne voit que les siennes | 4, 17 | [FAIT] (base) / [PRÉVU] (écran) |
-| EF-62 | Paramètres de l'entreprise : raison sociale, coordonnées, horaires, devise d'affichage | 17 | [PRÉVU] |
+| EF-60 | Une entreprise gère plusieurs stations ; le filtre se choisit **une fois**, dans l'en-tête, et vaut pour tous les écrans de consultation | 17 | [FAIT] |
+| EF-61 | Un utilisateur est rattaché à une ou plusieurs stations ; il ne voit que les siennes | 4, 17 | [FAIT] |
+| EF-62 | Paramètres de l'entreprise : raison sociale et coordonnées | 17 | [FAIT] |
 | EF-63 | Un administrateur voit l'ensemble de ses stations ; **jamais celles d'une autre entreprise** | 16 | [FAIT] |
+| EF-67 | **On ferme une station, on ne l'efface pas** : elle refuse le nouveau travail, son passé reste consultable et compté | 17 | [FAIT] |
+| EF-68 | La dernière station ouverte ne se ferme pas, et une station qui a des véhicules sur place non plus | 17 | [FAIT] |
+| EF-69 | Personne ne reste sans station : sans rattachement, aucun rôle, donc aucun droit | 17 | [FAIT] |
+| EF-70 | **La devise n'est pas un réglage** : les montants sont des entiers de francs, en changer est une migration de données | 17 | [FAIT] |
+
+> **EF-62 s'est rétréci en chemin, et c'est délibéré.** Le cahier
+> annonçait « raison sociale, coordonnées, horaires, devise
+> d'affichage ». Les horaires appartiennent à chaque station, pas à
+> l'entreprise : ils se règlent sur sa fiche. Et la devise est devenue
+> EF-70, c'est-à-dire l'inverse d'un réglage — voir §7.5.
 
 ### 4.12 Aide et robustesse d'usage — [PRÉVU]
 
@@ -464,7 +474,30 @@ Une intégration simulée donne la double illusion que le produit sait
 encaisser en ligne et que le travail est fait. Les deux sont fausses,
 et la seconde coûte plus cher que la première.
 
-### 7.5 Le mode hors-ligne, et pourquoi il n'est pas là
+### 7.5 La devise n'est pas un réglage
+
+Ajouté au lot 17, après avoir failli être livré comme un champ de
+formulaire.
+
+Tous les montants du produit sont des **entiers dans la plus petite
+unité de la devise**. En franc CFA, cette unité est le franc lui-même :
+`5000` se lit « 5 000 F ». Passer la devise à l'euro ne convertirait
+rien — les `5000` déjà en base deviendraient « 50,00 € », et le
+chiffre d'affaires de la station serait divisé par cent, en silence,
+d'un seul clic.
+
+Changer de devise demande de convertir chaque montant, chaque prix du
+catalogue, chaque forfait vendu et chaque écriture de caisse, et de
+décider à quel taux. **C'est une migration de données, pas un
+réglage.** Le champ est affiché, verrouillé, et porte sa raison à
+côté de sa valeur.
+
+Le fuseau horaire est verrouillé pour une autre raison : aucun calcul
+ne le lit encore. Un réglage qui n'agit sur rien est pire qu'un
+réglage absent — le gérant croirait avoir réglé son fuseau, et la
+recette continuerait de basculer à minuit UTC.
+
+### 7.6 Le mode hors-ligne, et pourquoi il n'est pas là
 
 Une station peut perdre le réseau. C'est le risque le plus sérieux du
 produit sur le terrain visé.
@@ -549,11 +582,11 @@ déjà.
 |---|---|---|---|
 | **A — Fondations** | 1–3 | Projet, design system, base de données | ✅ |
 | **B — Cœur du MVP** | 4–10 | Authentification, installation, clients, opérations, file, argent, tableau de bord | ✅ **MVP utilisable** |
-| **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | 16/18 |
+| **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | 17/18 |
 | **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | À venir |
 
-**739 tests** (697 backend, 42 frontend) tiennent l'ensemble au
-lot 16.
+**809 tests** (758 backend, 51 frontend) tiennent l'ensemble au
+lot 17.
 
 ### Le test terrain — la tâche la plus importante qui reste
 
@@ -566,7 +599,7 @@ Trois questions au moins n'ont pas de réponse crédible sans lui :
 
 1. Un gérant lit-il « livré » et « encaissé » comme deux chiffres
    distincts, ou en choisit-il un et ignore l'autre ?
-2. Quels écrans doivent survivre à une coupure réseau (§7.5) ?
+2. Quels écrans doivent survivre à une coupure réseau (§7.6) ?
 3. Les seuils d'alerte de la file d'attente, posés « au bon sens » au
    lot 8, correspondent-ils à la réalité ? *(Les premières mesures du
    lot 16 disent déjà qu'un lavage standard annoncé à 30 minutes en
@@ -578,7 +611,7 @@ Trois questions au moins n'ont pas de réponse crédible sans lui :
 
 | Risque | Impact | Traitement |
 |---|---|---|
-| **Coupure réseau en station** | Le comptoir s'arrête | Non traité en v1 (§7.5). Le test terrain doit dire quels écrans en ont besoin |
+| **Coupure réseau en station** | Le comptoir s'arrête | Non traité en v1 (§7.6). Le test terrain doit dire quels écrans en ont besoin |
 | **Le produit est conçu à distance du terrain** | Des écrans justes et inutiles | Test terrain avant les lots 17–18 |
 | **Absence d'intégration de paiement** | Saisie manuelle des encaissements | Assumé (§7.4) : rien ne sera simulé |
 | **Référencement de la page publique** | Un robot qui n'exécute pas le JavaScript voit une page vide | Décision au lot 22, avec l'hébergement. Le partage de lien sur WhatsApp — canal principal de la zone — fonctionne déjà |

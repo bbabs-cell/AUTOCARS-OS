@@ -714,6 +714,99 @@ n'a pas de sens sur un axe des heures.
 
 ---
 
+## Le multi-stations (lot 17)
+
+### Le choix se fait une fois, en haut, et vaut partout
+
+Avant ce lot, chaque écran qui savait filtrer par station portait son
+propre menu déroulant : un dans les statistiques, un dans les
+rendez-vous, et **rien du tout** dans la file d'attente ou le tableau
+de bord. Un gérant de deux stations répétait donc le même choix sur
+chaque page, et devait se souvenir de ce qu'il regardait.
+
+Le choix vit désormais dans l'en-tête, à l'endroit qui affichait déjà
+le nom de la station. Il est mémorisé, et il vaut pour le tableau de
+bord, la file, le carnet et les statistiques à la fois.
+
+### Un filtre de consultation n'est pas un choix de saisie
+
+C'est la distinction qui décide de tout, et elle mérite d'être écrite
+parce que les deux se ressemblent à l'écran : ce sont deux menus
+déroulants avec les mêmes noms dedans.
+
+| | Question | Où il vit |
+|---|---|---|
+| **Filtrer** | « montre-moi les rendez-vous de Thiès » | L'en-tête, une fois pour toutes |
+| **Saisir** | « ce véhicule est accueilli à Thiès » | Le formulaire concerné, à côté du client et de la prestation |
+
+Les confondre produirait la pire catégorie de bug : un dossier
+enregistré sur la mauvaise station parce que quelqu'un avait changé un
+menu en haut de l'écran une heure plus tôt.
+
+Conséquence visible : les formulaires de **prise de rendez-vous** et de
+**vente de forfait** gardent leur champ « Station ». Il est
+pré-rempli sur celle qu'on regarde — un pré-remplissage, pas une
+contrainte — et il ne propose que les stations **ouvertes**.
+
+### Un sélecteur ne s'affiche que s'il y a un choix
+
+Sur une entreprise à station unique — la majorité — l'en-tête affiche
+le nom, comme avant, sans menu. Offrir un choix qui n'en est pas un
+ajoute un clic pour rien.
+
+Une station **fermée** disparaît du menu, sauf si c'est celle qu'on
+regarde déjà : un sélecteur qui affiche une valeur absente de sa
+propre liste est un bug visible.
+
+### Un refus se voit venir
+
+Sur l'écran des stations, la colonne « sur place » annonce combien de
+véhicules ont un dossier ouvert, et le bouton de fermeture se
+désactive de lui-même quand il y en a — ou quand c'est la dernière
+station ouverte. Le titre du bouton dit laquelle des deux raisons
+s'applique.
+
+**Un bouton grisé sans explication est une impasse** : l'utilisateur
+conclut à une panne et cherche ailleurs. Un refus qu'on voit venir,
+lui, ne ressemble pas à un défaut.
+
+### Afficher ce qu'on ne peut pas changer, avec sa raison
+
+Les réglages régionaux — devise, pays, fuseau, identifiant — sont
+affichés en **lignes de texte**, pas en champs désactivés. Un `input`
+grisé invite à cliquer puis ne réagit pas ; une ligne de texte dit la
+même chose sans rien promettre.
+
+Chacune porte sa raison à côté de sa valeur. « Pourquoi ne puis-je pas
+changer ma devise ? » a une réponse, et elle est écrite là où la
+question se pose.
+
+### Ce qu'un ajout dans l'en-tête a coûté
+
+Ajouter le sélecteur a fait **déborder la barre sur téléphone** :
+l'avatar sortait de l'écran à 390 pixels. Il a fallu arbitrer, et
+l'arbitrage a désigné le champ de **recherche**, masqué sur mobile.
+
+Il est désactivé depuis le lot 2 et l'est toujours. Un champ mort qui
+pousse un bouton vivant hors de l'écran est le pire des deux mondes.
+Il reviendra le jour où il cherchera vraiment quelque chose — et il
+faudra alors lui trouver sa place, probablement en plein écran comme
+le font les applications mobiles.
+
+### Un détail de CSS qui efface une intention
+
+La ligne du choix courant, dans le menu, ne s'affichait pas : sa règle
+`--active` avait été écrite **avant** `.ac-topbar__menu-item`, qui
+pose `background: none`. À spécificité égale, c'est la dernière règle
+qui gagne — le fond était donc silencieusement effacé, et le menu
+s'ouvrait sans jamais montrer où l'on se trouvait.
+
+Aucune erreur, aucun avertissement : seulement une intention qui ne
+s'applique pas. C'est ce que la capture d'écran de fin de lot sert à
+attraper, et que la compilation ne verra jamais.
+
+---
+
 ## Typographie française : l'espace avant `? ! : ;`
 
 En français, ces signes sont précédés d'une espace — contrairement à

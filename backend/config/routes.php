@@ -40,6 +40,7 @@ use Autocare\Http\Controllers\OnboardingController;
 use Autocare\Http\Controllers\CashController;
 use Autocare\Http\Controllers\DashboardController;
 use Autocare\Http\Controllers\OperationController;
+use Autocare\Http\Controllers\OrganizationController;
 use Autocare\Http\Controllers\PaymentController;
 use Autocare\Http\Controllers\QueueController;
 use Autocare\Http\Controllers\ServiceController;
@@ -80,6 +81,24 @@ return static function (Router $router): void {
     $router->put('/api/stations/{id}', [StationController::class, 'update'],
         ['auth' => true, 'permission' => 'stations.update']);
 
+    // Ouvrir un point de service et le fermer sont des décisions de
+    // propriétaire : `stations.create` et `stations.update` ne sont
+    // accordés qu'à ADMIN (voir config/permissions.php, où MANAGER
+    // n'a que `stations.view`).
+    $router->post('/api/stations', [StationController::class, 'store'],
+        ['auth' => true, 'permission' => 'stations.create']);
+    $router->put('/api/stations/{id}/status', [StationController::class, 'setStatus'],
+        ['auth' => true, 'permission' => 'stations.update']);
+
+    // --- Paramètres de l'entreprise -------------------------------------
+    // Ni MANAGER ni EMPLOYEE ne reçoivent ces droits : la raison
+    // sociale et les coordonnées de l'entreprise appartiennent au
+    // propriétaire, pas à l'exploitation quotidienne.
+    $router->get('/api/organization', [OrganizationController::class, 'show'],
+        ['auth' => true, 'permission' => 'organization.view']);
+    $router->put('/api/organization', [OrganizationController::class, 'update'],
+        ['auth' => true, 'permission' => 'organization.update']);
+
     // --- Prestations --------------------------------------------------
     // Un employé peut LIRE le catalogue (il doit savoir ce qu'il fait
     // sur un véhicule) mais pas le modifier.
@@ -109,6 +128,12 @@ return static function (Router $router): void {
     // l'accès aux données de l'entreprise. C'est une décision de
     // propriétaire, pas de responsable de station.
     $router->put('/api/team/{id}', [TeamController::class, 'update'],
+        ['auth' => true, 'permission' => 'employees.update']);
+
+    // Où travaille cette personne. Route distincte de la précédente :
+    // le rôle et l'affectation sont deux décisions différentes, prises
+    // à des moments différents (voir TeamController::stations()).
+    $router->put('/api/team/{id}/stations', [TeamController::class, 'stations'],
         ['auth' => true, 'permission' => 'employees.update']);
 
     // --- Pointage -------------------------------------------------------

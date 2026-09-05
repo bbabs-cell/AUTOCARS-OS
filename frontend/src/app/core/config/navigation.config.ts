@@ -71,7 +71,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
   {
     label: 'Pilotage',
     items: [
-      { label: 'Stations',  icon: 'geo-alt',  route: null, lot: 17 },
     ],
   },
 ];
@@ -81,7 +80,6 @@ export const NAVIGATION: readonly NavigationGroup[] = [
  * Ce sont des outils, pas des modules métier.
  */
 export const NAVIGATION_FOOTER: readonly NavigationItem[] = [
-  { label: 'Paramètres', icon: 'gear',            route: null, lot: 17 },
   { label: 'Aide',       icon: 'question-circle', route: null, lot: 18 },
 ];
 
@@ -124,6 +122,16 @@ export const NAVIGATION_AVAILABLE: readonly NavigationItem[] = [
   { label: 'Véhicules',     icon: 'car-front', route: '/vehicles',  lot: 6 },
   { label: 'Clients',       icon: 'people',    route: '/customers', lot: 6 },
   { label: 'Prestations',   icon: 'droplet',  route: '/services',   lot: 5 },
+  // Les stations sont juste après le catalogue : les deux décrivent
+  // ce que l'entreprise EST, pas ce qu'elle fait aujourd'hui. Un
+  // manager les voit — il change de site à longueur de journée ; un
+  // employé n'a pas `stations.view` et n'a donc pas cette entrée.
+  { label: 'Stations',      icon: 'geo-alt',  route: '/stations',   lot: 17,
+    permission: 'stations.view' },
+  // Les paramètres restent en bas, avec l'aide : ce sont des outils,
+  // pas des modules métier. Réservés au propriétaire.
+  { label: 'Paramètres',    icon: 'gear',     route: '/settings',   lot: 17,
+    permission: 'organization.view' },
   { label: 'Design system', icon: 'palette',  route: '/styleguide', lot: 2 },
   { label: 'Diagnostic',    icon: 'activity', route: '/health',     lot: 1 },
 ];

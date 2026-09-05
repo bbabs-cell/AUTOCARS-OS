@@ -29,11 +29,81 @@
 
   <div class="ac-topbar__actions">
 
-    <!-- Station courante : essentiel dès qu'un client gère plusieurs sites -->
-    @if (stationName()) {
+    <!--
+      LA STATION QU'ON REGARDE.
+
+      Un simple libellé quand l'entreprise n'a qu'une station : offrir
+      un menu à un seul choix ajoute un clic pour rien. Il devient un
+      sélecteur dès la deuxième, et ce choix vaut alors pour TOUS les
+      écrans de consultation — tableau de bord, file, rendez-vous,
+      statistiques.
+    -->
+    @if (stationContext.hasChoice()) {
+      <div class="ac-topbar__station-picker">
+        <!--
+          VISIBLE AUSSI SUR TÉLÉPHONE, contrairement au libellé qu'il
+          remplace. Tant que c'était un affichage, le masquer sur
+          mobile ne coûtait rien ; c'est maintenant une commande, et
+          une commande absente sur l'écran où l'on travaille le plus
+          n'existe pas. Le nom est tronqué plutôt que caché : savoir
+          QUELLE station on regarde est la moitié de l'information.
+        -->
+        <button
+          type="button"
+          class="ac-topbar__station ac-topbar__station--button"
+          (click)="toggleStationMenu()"
+          [attr.aria-expanded]="isStationMenuOpen()"
+          aria-haspopup="menu"
+        >
+          <i class="bi bi-geo-alt" aria-hidden="true"></i>
+          {{ stationLabel() }}
+          <i class="bi bi-chevron-down ac-text-muted small" aria-hidden="true"></i>
+        </button>
+
+        @if (isStationMenuOpen()) {
+          <div class="ac-overlay-invisible" (click)="closeStationMenu()"></div>
+
+          <div class="ac-topbar__menu ac-topbar__menu--stations" role="menu">
+            <!--
+              « Toutes les stations » est un choix légitime, pas un
+              état vide : c'est ce qu'un propriétaire veut quand il
+              compare ses sites.
+            -->
+            <button
+              class="ac-topbar__menu-item"
+              role="menuitem"
+              [class.ac-topbar__menu-item--active]="stationContext.selectedId() === 0"
+              (click)="chooseStation(0)"
+            >
+              <i class="bi bi-collection" aria-hidden="true"></i> Toutes les stations
+            </button>
+
+            <hr class="my-1" />
+
+            @for (station of stationContext.selectable(); track station.id) {
+              <button
+                class="ac-topbar__menu-item"
+                role="menuitem"
+                [class.ac-topbar__menu-item--active]="stationContext.selectedId() === station.id"
+                (click)="chooseStation(station.id)"
+              >
+                <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                {{ station.name }}
+
+                <!-- Une station fermée reste sélectionnable si c'est
+                     celle qu'on regarde : elle est simplement dite. -->
+                @if (station.status !== 'ACTIVE') {
+                  <span class="ac-caption ac-text-muted">fermée</span>
+                }
+              </button>
+            }
+          </div>
+        }
+      </div>
+    } @else if (stationContext.stations().length === 1) {
       <span class="ac-topbar__station d-none d-md-inline-flex">
         <i class="bi bi-geo-alt" aria-hidden="true"></i>
-        {{ stationName() }}
+        {{ stationContext.stations()[0].name }}
       </span>
     }
 
@@ -105,9 +175,16 @@
           <button class="ac-topbar__menu-item" role="menuitem" disabled>
             <i class="bi bi-person" aria-hidden="true"></i> Mon profil
           </button>
-          <button class="ac-topbar__menu-item" role="menuitem" disabled>
-            <i class="bi bi-gear" aria-hidden="true"></i> Paramètres
-          </button>
+          @if (canSeeSettings()) {
+            <a
+              class="ac-topbar__menu-item"
+              role="menuitem"
+              routerLink="/settings"
+              (click)="closeProfileMenu()"
+            >
+              <i class="bi bi-gear" aria-hidden="true"></i> Paramètres
+            </a>
+          }
           <hr class="my-1" />
           <button
             class="ac-topbar__menu-item ac-topbar__menu-item--danger"

@@ -104,17 +104,6 @@
         <input id="b-day" type="date" class="form-control" formControlName="day" />
       </div>
 
-      @if (stations().length > 1) {
-        <div class="col-12 col-md-4">
-          <label for="b-station" class="form-label">Station</label>
-          <select id="b-station" class="form-select" formControlName="station_id">
-            @for (station of stations(); track station.id) {
-              <option [value]="station.id">{{ station.name }}</option>
-            }
-          </select>
-        </div>
-      }
-
       <div class="col-12 col-md-3">
         <button type="submit" class="btn btn-primary w-100">Afficher</button>
       </div>
@@ -441,7 +430,19 @@
           }
         </div>
 
-        @if (stations().length > 1) {
+        <!--
+          LA STATION NE SE CHOISIT QU'À LA CRÉATION.
+
+          Le serveur n'a jamais accepté de la changer sur un rendez-vous
+          existant : déplacer un client d'un site à l'autre, c'est un
+          autre rendez-vous, pas une correction. Le champ était pourtant
+          affiché à la modification, où il ne servait à rien — et il
+          serait resté vide le jour où la station d'origine aurait
+          fermé, puisque la liste ne propose que les stations ouvertes.
+
+          On n'affiche donc plus un choix qui n'en est pas un.
+        -->
+        @if (!editing() && stations().length > 1) {
           <div class="mb-4">
             <label for="b-form-station" class="form-label">Station</label>
             <select id="b-form-station" class="form-select" formControlName="station_id">

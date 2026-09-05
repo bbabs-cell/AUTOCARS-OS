@@ -330,6 +330,27 @@ check("EMPLOYE ne clôture PAS la caisse",
 check("EMPLOYE ne voit PAS les statistiques",  !Permissions::allows('EMPLOYEE', 'reports.view'));
 check("EMPLOYE ne supprime PAS un véhicule",   !Permissions::allows('EMPLOYEE', 'vehicles.delete'));
 
+// ------------------------------------------------------------------
+// OUVRIR ET FERMER UNE STATION (lot 17)
+// ------------------------------------------------------------------
+// Un manager change de station à longueur de journée et filtre ses
+// écrans avec — d'où `stations.view`. Mais ouvrir un point de service
+// engage un bail, du matériel et des salaires, et le fermer coupe la
+// station de tout nouveau travail : ce sont des décisions de
+// propriétaire, pas d'exploitation quotidienne.
+check("MANAGER voit les stations",
+    Permissions::allows('MANAGER', 'stations.view'));
+check("MANAGER n'OUVRE pas de station",
+    !Permissions::allows('MANAGER', 'stations.create'));
+check("MANAGER ne FERME pas de station",
+    !Permissions::allows('MANAGER', 'stations.update'));
+check("MANAGER ne lit pas les paramètres de l'entreprise",
+    !Permissions::allows('MANAGER', 'organization.view'));
+check("MANAGER ne modifie pas les paramètres de l'entreprise",
+    !Permissions::allows('MANAGER', 'organization.update'));
+check("EMPLOYE ne voit même pas la liste des stations",
+    !Permissions::allows('EMPLOYEE', 'stations.view'));
+
 $unknownRole = Permissions::allows('SUPER_ADMIN_INVENTE', 'vehicles.view');
 check("un rôle inconnu n'a aucun droit",       !$unknownRole);
 

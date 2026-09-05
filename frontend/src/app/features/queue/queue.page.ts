@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 
@@ -7,6 +7,7 @@ import { DurationPipe, formatDuration } from '../../shared/pipes/duration.pipe';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { StationContextService } from '../../core/services/station-context.service';
 import { OperationService } from '../../core/services/operation.service';
 import {
   OPERATION_STATUS_LABELS,
@@ -57,6 +58,7 @@ import { Operation, QueueBoard, QueueColumn } from '../../core/models/operation.
 export class QueuePage {
   private readonly operations = inject(OperationService);
   private readonly catalog = inject(CatalogService);
+  private readonly stationContext = inject(StationContextService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -97,7 +99,13 @@ export class QueuePage {
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    this.load();
+    // La file suit la station choisie dans l'en-tête. L'effet couvre
+    // aussi le premier chargement : une seule façon de déclencher une
+    // lecture, donc une seule à maintenir.
+    effect(() => {
+      this.stationContext.selectedId();
+      this.load();
+    });
 
     this.timer = setInterval(() => {
       // document.hidden est vrai quand l'onglet est en arrière-plan.
@@ -125,7 +133,7 @@ export class QueuePage {
       this.isLoading.set(true);
     }
 
-    this.operations.queue().subscribe({
+    this.operations.queue(this.stationContext.queryId() ?? undefined).subscribe({
       next: (board) => {
         this.board.set(board);
         this.refreshedAt.set(board.generated_at);

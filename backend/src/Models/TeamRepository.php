@@ -69,6 +69,7 @@ final class TeamRepository
                     u.last_login_at,
                     MIN(FIELD(su.role, 'ADMIN', 'MANAGER', 'EMPLOYEE')) AS role_rank,
                     MIN(su.station_id) AS station_id,
+                    GROUP_CONCAT(DISTINCT su.station_id ORDER BY su.station_id) AS station_ids,
                     GROUP_CONCAT(DISTINCT s.name ORDER BY s.name SEPARATOR ', ') AS station_names,
                     COUNT(DISTINCT su.station_id) AS station_count
                FROM users u
@@ -92,6 +93,16 @@ final class TeamRepository
                 // n'en attendent qu'une ; `station_names` porte la
                 // liste complète.
                 $row['station_name'] = explode(', ', (string) $row['station_names'])[0] ?? '';
+
+                // La liste des identifiants, pour l'écran de
+                // rattachement. GROUP_CONCAT rend une chaîne
+                // « 3,7,12 » : on la retransforme en entiers ici
+                // plutôt que dans le contrôleur, pour que tous les
+                // appelants reçoivent la même chose.
+                $row['station_ids'] = array_map(
+                    static fn (string $id): int => (int) $id,
+                    array_filter(explode(',', (string) $row['station_ids'])),
+                );
 
                 return $row;
             },
@@ -188,8 +199,15 @@ final class TeamRepository
      * C'est une simplification assumée : personne n'a demandé des
      * rôles par station, et une permission qui change selon l'endroit
      * où l'on se trouve est très difficile à expliquer à un
-     * utilisateur. La question se reposera au lot 17, avec le
-     * multi-stations.
+     * utilisateur.
+     *
+     * LA QUESTION S'EST REPOSÉE AU LOT 17, et la réponse n'a pas
+     * changé. Une personne peut désormais être rattachée à trois
+     * stations ; elle y porte le MÊME rôle. « Manager à Dakar,
+     * employé à Thiès » est possible dans la table depuis le lot 4 et
+     * reste impossible dans le produit : il faudrait afficher un rôle
+     * différent selon l'écran consulté, et personne ne saurait
+     * répondre à la question « ai-je le droit de faire ceci ? ».
      */
     public function updateRole(int $userId, string $role): bool
     {
@@ -271,6 +289,102 @@ final class TeamRepository
         $statement->execute(['organization_id' => AuthContext::current()->organizationId]);
 
         return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * Les stations où cette personne est rattachée.
+     *
+     * @return list<int>
+     */
+    public function stationIdsFor(int $userId): array
+    {
+        $statement = $this->db->prepare(
+            'SELECT station_id
+               FROM station_users
+              WHERE user_id = :user_id
+                AND organization_id = :organization_id
+              ORDER BY station_id'
+        );
+
+        $statement->execute([
+            'user_id'         => $userId,
+            'organization_id' => AuthContext::current()->organizationId,
+        ]);
+
+        return array_map(
+            static fn (mixed $id): int => (int) $id,
+            $statement->fetchAll(PDO::FETCH_COLUMN),
+        );
+    }
+
+    /**
+     * Fixe la liste des stations d'une personne.
+     *
+     * ON N'ÉCRASE PAS TOUT POUR TOUT RÉÉCRIRE.
+     *
+     * La méthode évidente serait « DELETE puis INSERT ». Elle donne
+     * le bon résultat final, mais elle détruit et recrée les lignes
+     * de rattachement qui n'ont pas bougé : leur `created_at` — la
+     * date à laquelle quelqu'un a rejoint une station — serait remis
+     * à aujourd'hui à chaque enregistrement du formulaire, même sans
+     * modification. On ne touche donc qu'à la différence.
+     *
+     * Le rôle est celui que la personne porte déjà : ce sont les
+     * stations qui changent ici, pas les droits. Deux formulaires,
+     * deux décisions.
+     *
+     * @param list<int> $stationIds
+     */
+    public function setStations(int $userId, array $stationIds, string $role): void
+    {
+        $organizationId = AuthContext::current()->organizationId;
+        $current        = $this->stationIdsFor($userId);
+
+        $toAdd    = array_diff($stationIds, $current);
+        $toRemove = array_diff($current, $stationIds);
+
+        if ($toAdd === [] && $toRemove === []) {
+            return;
+        }
+
+        $this->db->beginTransaction();
+
+        try {
+            $insert = $this->db->prepare(
+                'INSERT INTO station_users (organization_id, station_id, user_id, role)
+                 VALUES (:organization_id, :station_id, :user_id, :role)'
+            );
+
+            foreach ($toAdd as $stationId) {
+                $insert->execute([
+                    'organization_id' => $organizationId,
+                    'station_id'      => $stationId,
+                    'user_id'         => $userId,
+                    'role'            => $role,
+                ]);
+            }
+
+            $delete = $this->db->prepare(
+                'DELETE FROM station_users
+                  WHERE user_id = :user_id
+                    AND station_id = :station_id
+                    AND organization_id = :organization_id'
+            );
+
+            foreach ($toRemove as $stationId) {
+                $delete->execute([
+                    'user_id'         => $userId,
+                    'station_id'      => $stationId,
+                    'organization_id' => $organizationId,
+                ]);
+            }
+
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            $this->db->rollBack();
+
+            throw $exception;
+        }
     }
 
     /**

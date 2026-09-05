@@ -248,4 +248,84 @@ export class TeamPage {
   protected closeForm(): void {
     this.isFormOpen.set(false);
   }
+
+  // --- Affecter à des stations (lot 17) --------------------------------
+
+  /**
+   * DEUX FORMULAIRES, PAS UN SEUL AVEC UN CHAMP DE PLUS.
+   *
+   * « Quel est son rôle, et son compte est-il ouvert ? » et « où
+   * travaille-t-il ? » sont deux décisions différentes, prises à des
+   * moments différents et par des gestes différents. Les fondre dans
+   * une même fenêtre obligerait à renvoyer le rôle chaque fois qu'on
+   * déplace quelqu'un d'une station à l'autre — et un jour, à le
+   * renvoyer périmé.
+   *
+   * L'API a la même séparation : deux routes, deux décisions.
+   */
+  protected readonly assigning = signal<TeamMember | null>(null);
+  protected readonly selectedStations = signal<number[]>([]);
+
+  /** Le bouton n'apparaît que s'il y a réellement un choix à faire. */
+  protected readonly hasSeveralStations = computed(() => this.stations().length > 1);
+
+  protected openAssign(member: TeamMember): void {
+    this.errorMessage.set(null);
+    this.selectedStations.set([...(member.station_ids ?? [])]);
+    this.assigning.set(member);
+  }
+
+  protected closeAssign(): void {
+    this.assigning.set(null);
+  }
+
+  protected isAssignedTo(stationId: number): boolean {
+    return this.selectedStations().includes(stationId);
+  }
+
+  protected toggleStation(stationId: number): void {
+    this.selectedStations.update((ids) =>
+      ids.includes(stationId) ? ids.filter((id) => id !== stationId) : [...ids, stationId],
+    );
+  }
+
+  /**
+   * Une station fermée reste cochable SI la personne y est déjà :
+   * sinon, fermer une station rendrait impossible le moindre
+   * enregistrement de la fiche de ceux qui y travaillaient. Le
+   * serveur applique exactement la même règle.
+   */
+  protected canAssignTo(station: Station): boolean {
+    return station.status === 'ACTIVE' || this.isAssignedTo(station.id);
+  }
+
+  protected submitStations(): void {
+    const member = this.assigning();
+
+    if (!member || this.isSaving()) {
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.errorMessage.set(null);
+
+    this.catalog.setMemberStations(member.id, this.selectedStations()).subscribe({
+      next: () => {
+        this.isSaving.set(false);
+        this.assigning.set(null);
+        this.noticeMessage.set(`Affectation de ${member.full_name} enregistrée.`);
+        this.load();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isSaving.set(false);
+        // Le serveur refuse une liste vide en expliquant quoi faire à
+        // la place (« désactivez son compte ») : on montre sa phrase.
+        this.errorMessage.set(
+          error.error?.errors?.station_ids
+            ?? error.error?.message
+            ?? "L'affectation a échoué.",
+        );
+      },
+    });
+  }
 }

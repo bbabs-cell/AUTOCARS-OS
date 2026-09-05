@@ -6,9 +6,12 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
   OnboardingStatus,
+  Organization,
+  OrganizationPayload,
   Service,
   ServicePayload,
   Station,
+  StationPayload,
   TeamMember,
   TeamMemberPayload,
 } from '../models/catalog.model';
@@ -54,6 +57,33 @@ export class CatalogService {
 
   updateStation(id: number, station: Partial<Station>): Observable<Station> {
     return this.unwrap(this.http.put<ApiResponse<Station>>(`${this.api}/stations/${id}`, station));
+  }
+
+  createStation(payload: StationPayload): Observable<Station> {
+    return this.unwrap(this.http.post<ApiResponse<Station>>(`${this.api}/stations`, payload));
+  }
+
+  /**
+   * Ouvre ou ferme une station. IL N'Y A PAS DE SUPPRESSION — comme
+   * pour les prestations et les comptes : une station fermée figure
+   * sur des milliers de dossiers passés.
+   */
+  setStationStatus(id: number, status: 'ACTIVE' | 'INACTIVE'): Observable<Station> {
+    return this.unwrap(
+      this.http.put<ApiResponse<Station>>(`${this.api}/stations/${id}/status`, { status }),
+    );
+  }
+
+  // --- Paramètres de l'entreprise -------------------------------------
+
+  organization(): Observable<Organization> {
+    return this.unwrap(this.http.get<ApiResponse<Organization>>(`${this.api}/organization`));
+  }
+
+  updateOrganization(payload: OrganizationPayload): Observable<Organization> {
+    return this.unwrap(
+      this.http.put<ApiResponse<Organization>>(`${this.api}/organization`, payload),
+    );
   }
 
   // --- Prestations ---------------------------------------------------
@@ -114,6 +144,25 @@ export class CatalogService {
     const query = from ? `?from=${from}` : '';
 
     return this.unwrap(this.http.get<ApiResponse<never>>(`${this.api}/team/activity${query}`));
+  }
+
+  /**
+   * Où travaille cette personne.
+   *
+   * Route distincte de `updateMember` : le rôle et l'affectation sont
+   * deux décisions différentes, et les mélanger ferait renvoyer le
+   * rôle — parfois périmé — à chaque déplacement d'une personne d'une
+   * station à l'autre.
+   */
+  setMemberStations(
+    id: number,
+    stationIds: number[],
+  ): Observable<{ id: number; station_ids: number[] }> {
+    return this.unwrap(
+      this.http.put<ApiResponse<never>>(`${this.api}/team/${id}/stations`, {
+        station_ids: stationIds,
+      }),
+    );
   }
 
   /** Change le rôle ou l'état d'un membre. */

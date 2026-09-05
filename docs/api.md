@@ -315,11 +315,99 @@ catalogue, le gérant arriverait sur un produit où rien ne fonctionne.
 |---|---|
 | `GET /api/stations` | `stations.view` |
 | `GET /api/stations/{id}` | `stations.view` |
+| `POST /api/stations` | `stations.create` |
 | `PUT /api/stations/{id}` | `stations.update` |
+| `PUT /api/stations/{id}/status` | `stations.update` |
 
 Le `code` doit contenir 2 à 10 lettres ou chiffres, sans espace : il
 apparaît dans les références remises aux clients (`DKP-2608-0042`).
 Les horaires sont acceptés et renvoyés au format `HH:MM`.
+
+L'unicité du code porte sur **l'entreprise**, pas sur la table : deux
+entreprises différentes ont chacune le droit d'avoir une station
+`DKR`.
+
+#### `GET /api/stations` — les fermées comprises
+
+La liste renvoie **toutes** les stations, avec leur `status`. Les
+masquer donnerait un écran de gestion où l'on ne peut pas rouvrir ce
+qu'on a fermé. C'est à l'appelant d'écarter les inactives quand il
+propose un choix de saisie.
+
+Chaque ligne porte en plus `vehicles_on_site` — combien de véhicules
+sont **actuellement** sur place, c'est-à-dire ont un dossier ouvert à
+n'importe quelle étape entre l'accueil et la restitution :
+
+```json
+{
+  "id": 3, "name": "Station Thiès", "code": "THS",
+  "opens_at": "08:00", "closes_at": "19:00",
+  "status": "ACTIVE", "vehicles_on_site": 4
+}
+```
+
+Ce chiffre existe pour que l'écran annonce un refus de fermeture
+**avant** le clic.
+
+#### `PUT /api/stations/{id}/status` — ouvrir, fermer
+
+```json
+{ "status": "INACTIVE" }
+```
+
+**Il n'existe aucune route qui SUPPRIME une station.** `DELETE`
+répond `405`, comme pour les prestations et les comptes : une station
+figure sur des milliers de dossiers passés, et effacer la ligne
+trouerait l'historique.
+
+Deux refus, tous deux en `409` avec une phrase qui dit quoi faire :
+
+| Situation | Message |
+|---|---|
+| C'est la dernière station ouverte | « Ouvrez-en une autre avant de fermer celle-ci. » |
+| Des véhicules sont encore sur place | « 3 véhicules sont encore sur place. Terminez leurs dossiers… » |
+
+Une station fermée :
+
+- **refuse le nouveau travail** — `POST /api/operations` et
+  `POST /api/bookings` répondent `422` sur son identifiant ;
+- **garde tout son passé** — ses dossiers restent consultables, ses
+  chiffres comptent toujours dans les statistiques, et elle reste
+  dans la liste avec son état.
+
+Les rendez-vous **déjà pris** ne sont pas annulés d'office : c'est au
+gérant de rappeler ses clients, pas au logiciel de décider pour lui.
+
+### Paramètres de l'entreprise
+
+| Route | Permission |
+|---|---|
+| `GET /api/organization` | `organization.view` |
+| `PUT /api/organization` | `organization.update` |
+
+Ni `MANAGER` ni `EMPLOYEE` ne reçoivent ces droits : la raison sociale
+et les coordonnées appartiennent au propriétaire.
+
+```json
+{
+  "id": 1, "name": "Groupe Diallo Auto", "slug": "diallo-auto",
+  "phone": "+221338211234", "email": "contact@dialloauto.sn",
+  "country_code": "SN", "currency_code": "XOF", "timezone": "Africa/Dakar",
+  "station_count": 4, "member_count": 4
+}
+```
+
+**Trois champs sont renvoyés pour être affichés, jamais repris.**
+`PUT` ne lit que `name`, `phone` et `email` ; tout le reste est ignoré
+en silence — y compris `slug` et `status`, qu'un formulaire modifié
+tenterait de passer.
+
+| Champ figé | Pourquoi |
+|---|---|
+| `currency_code` | Tous les montants sont des **entiers dans la plus petite unité de la devise**. En franc CFA, c'est le franc. Passer à l'euro ne convertirait rien : les `5000` déjà en base deviendraient « 50,00 € ». **Changer de devise est une migration de données, pas un réglage.** |
+| `timezone` | Aucun calcul ne le lit encore : « aujourd'hui » est en UTC, ce qui est exact pour le Sénégal, la Gambie, la Guinée et le Mali. Un réglage qui n'agit sur rien est pire qu'un réglage absent. |
+| `country_code` | Défini à l'inscription. |
+| `slug` | Il figure dans des liens déjà partagés. |
 
 ### Prestations
 
@@ -938,6 +1026,33 @@ Deux refus qui n'ont rien d'un détail :
 > jeton déjà émis cesse d'être accepté (`401`) au premier appel.
 
 ---
+
+### `PUT /api/team/{id}/stations` — où travaille cette personne
+
+```json
+{ "station_ids": [1, 3] }
+```
+
+Route **distincte** de `PUT /api/team/{id}`, et ce n'est pas une
+coquetterie REST : le rôle répond à « qu'a-t-il le droit de faire ? »,
+l'affectation à « où travaille-t-il ? ». Fondues dans un même appel,
+elles obligeraient à renvoyer le rôle chaque fois qu'on déplace
+quelqu'un — et un jour, à le renvoyer périmé, parce que l'écran l'aura
+chargé avant un changement fait ailleurs.
+
+| Refus | Code | Raison |
+|---|---|---|
+| Liste vide | `422` | Sans rattachement, la personne n'a aucun rôle donc **aucun droit** : elle pourrait se connecter sans rien pouvoir faire. Pour lui retirer l'accès, on désactive son compte. |
+| Station d'une autre entreprise | `422` | Indistinguable d'une station inexistante — c'est voulu. |
+| Ajout sur une station fermée | `422` | On n'affecte personne à un site fermé. En revanche on n'oblige pas à retirer ceux qui y étaient déjà : sinon fermer une station rendrait leur fiche impossible à enregistrer. |
+
+Le rôle est **conservé** sur les nouveaux rattachements, et les lignes
+inchangées ne sont pas réécrites : leur `created_at` — la date à
+laquelle quelqu'un a rejoint une station — resterait sinon remis à
+aujourd'hui à chaque enregistrement du formulaire.
+
+`GET /api/team` renvoie en conséquence `station_ids` à côté de
+`station_names` et `station_count`.
 
 ### `GET /api/team/activity?from=&to=` — l'activité de chacun
 
@@ -2053,9 +2168,9 @@ Deux garde-fous :
 
 ## À venir
 
-Tous les endpoints prévus au plan existent. Les lots 17 à 22 portent
-sur le paramétrage, l'aide, et l'industrialisation — pas sur de
-nouvelles ressources métier.
+Tous les endpoints prévus au plan existent. Les lots 18 à 22 portent
+sur l'aide et l'industrialisation — pas sur de nouvelles ressources
+métier.
 
 ---
 

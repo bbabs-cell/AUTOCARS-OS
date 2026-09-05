@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, effect} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 
 import { AmountPipe } from '../../shared/pipes/amount.pipe';
@@ -8,9 +8,8 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { SplitBarComponent, SplitSegment } from '../../shared/ui/split-bar.component';
 import { AnalyticsService } from '../../core/services/analytics.service';
-import { CatalogService } from '../../core/services/catalog.service';
+import { StationContextService } from '../../core/services/station-context.service';
 import { Analytics } from '../../core/models/analytics.model';
-import { Station } from '../../core/models/catalog.model';
 
 /**
  * Les statistiques
@@ -74,17 +73,17 @@ import { Station } from '../../core/models/catalog.model';
 export class AnalyticsPage {
   private readonly formBuilder = inject(FormBuilder);
   private readonly analytics = inject(AnalyticsService);
-  private readonly catalog = inject(CatalogService);
+  private readonly stationContext = inject(StationContextService);
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly data = signal<Analytics | null>(null);
-  protected readonly stations = signal<Station[]>([]);
 
+  // La station a quitté ce formulaire au lot 17 : elle se choisit
+  // dans l'en-tête, et le choix vaut pour tous les écrans à la fois.
   protected readonly filterForm = this.formBuilder.nonNullable.group({
     from: [this.daysAgo(29)],
     to: [this.today()],
-    station_id: [0],
   });
 
   protected readonly period = computed(() => this.data()?.period ?? null);
@@ -203,21 +202,21 @@ export class AnalyticsPage {
   );
 
   constructor() {
-    this.catalog.stations().subscribe({
-      next: (stations) => this.stations.set(stations),
-      error: () => this.stations.set([]),
+    // Les statistiques suivent la station de l'en-tête. L'effet couvre
+    // le premier affichage comme les changements suivants.
+    effect(() => {
+      this.stationContext.selectedId();
+      this.load();
     });
-
-    this.load();
   }
 
   protected load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    const { from, to, station_id } = this.filterForm.getRawValue();
+    const { from, to } = this.filterForm.getRawValue();
 
-    this.analytics.load(from, to, station_id || null).subscribe({
+    this.analytics.load(from, to, this.stationContext.queryId()).subscribe({
       next: (data) => {
         this.data.set(data);
         this.isLoading.set(false);

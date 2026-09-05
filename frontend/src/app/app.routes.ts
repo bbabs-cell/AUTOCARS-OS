@@ -185,6 +185,26 @@ export const routes: Routes = [
           import('./features/services/services.page').then((m) => m.ServicesPage),
       },
       {
+        path: 'stations',
+        title: 'Stations — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/stations/stations.page').then((m) => m.StationsPage),
+      },
+      {
+        // AUCUNE GARDE DE RÔLE SUR CETTE ROUTE, ni sur la précédente.
+        //
+        // La protection est côté serveur : `organization.view` n'est
+        // accordé qu'à l'ADMIN, et l'API répond 403 à tout le reste.
+        // Ajouter une garde ici n'ajouterait aucune sécurité — elle
+        // afficherait seulement un écran vide au lieu d'un message.
+        // Une deuxième copie de la règle des droits, côté navigateur,
+        // finirait par diverger de la vraie.
+        path: 'settings',
+        title: 'Paramètres — AUTOCARE OS',
+        loadComponent: () =>
+          import('./features/settings/settings.page').then((m) => m.SettingsPage),
+      },
+      {
         path: 'styleguide',
         title: 'Design system — AUTOCARE OS',
         loadComponent: () =>

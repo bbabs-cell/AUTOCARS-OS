@@ -36,6 +36,7 @@ $tests = [
     'api_loyalty_test.php'    => 'API — fidélité',
     'api_subscription_test.php' => 'API — abonnements',
     'api_analytics_test.php'  => 'API — statistiques',
+    'api_settings_test.php'   => 'API — multi-stations et paramètres',
 ];
 
 $directory = __DIR__;

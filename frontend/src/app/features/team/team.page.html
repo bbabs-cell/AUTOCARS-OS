@@ -107,6 +107,24 @@
                   >
                     <i class="bi bi-pencil"></i>
                   </button>
+
+                  <!--
+                    Affecter à des stations. Le bouton n'apparaît que
+                    s'il y a plusieurs stations : sur une entreprise à
+                    site unique, ce serait une fenêtre à une seule case
+                    déjà cochée.
+                  -->
+                  @if (hasSeveralStations()) {
+                    <button
+                      type="button"
+                      class="ac-btn-icon"
+                      [attr.aria-label]="'Affecter ' + member.full_name + ' à des stations'"
+                      [attr.title]="'Où travaille ' + member.first_name + ' ?'"
+                      (click)="openAssign(member)"
+                    >
+                      <i class="bi bi-geo-alt"></i>
+                    </button>
+                  }
                 </td>
               }
             </tr>
@@ -281,5 +299,70 @@
         </div>
       </form>
     }
+  </div>
+}
+
+<!-- ==================================================================
+     AFFECTATION AUX STATIONS (lot 17)
+     ==================================================================
+     Une fenêtre à part de celle du rôle : deux décisions différentes,
+     deux formulaires, deux routes côté serveur. -->
+@if (assigning(); as member) {
+  <div class="ac-modal-backdrop" (click)="closeAssign()"></div>
+
+  <div class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+    <div class="ac-modal__header">
+      <h2 class="mb-0 h5" id="assign-title">Où travaille {{ member.first_name }} ?</h2>
+      <button type="button" class="ac-btn-icon" (click)="closeAssign()" aria-label="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="ac-modal__body">
+      @for (station of stations(); track station.id) {
+        <div class="form-check mb-3">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            [id]="'assign-' + station.id"
+            [checked]="isAssignedTo(station.id)"
+            [disabled]="!canAssignTo(station)"
+            (change)="toggleStation(station.id)"
+          />
+          <label class="form-check-label" [attr.for]="'assign-' + station.id">
+            {{ station.name }}
+
+            @if (station.status !== 'ACTIVE') {
+              <span class="ac-badge ac-badge--neutral ms-2">Fermée</span>
+            }
+          </label>
+        </div>
+      }
+
+      <p class="ac-caption mb-0">
+        Une personne doit rester rattachée à au moins une station : sans
+        rattachement, elle n'a aucun rôle, donc aucun droit — elle pourrait se
+        connecter sans rien pouvoir faire. Pour lui retirer l'accès, désactivez
+        son compte.
+      </p>
+    </div>
+
+    <div class="ac-modal__footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeAssign()">
+        Annuler
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="isSaving() || selectedStations().length === 0"
+        (click)="submitStations()"
+      >
+        @if (isSaving()) {
+          <span class="spinner-border spinner-border-sm"></span> Enregistrement…
+        } @else {
+          Enregistrer
+        }
+      </button>
+    </div>
   </div>
 }

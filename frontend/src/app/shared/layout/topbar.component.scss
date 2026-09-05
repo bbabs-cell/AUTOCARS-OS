@@ -65,6 +65,73 @@
   color: var(--ac-text-secondary);
 }
 
+// Le même bloc, devenu cliquable au lot 17 : c'est un choix, pas
+// seulement un libellé. Il garde exactement l'apparence de la version
+// non cliquable — une station unique et une station choisie se
+// ressemblent, parce que ce sont la même information.
+.ac-topbar__station--button {
+  display: inline-flex;
+  border: 0;
+  cursor: pointer;
+
+  &:hover { background-color: var(--ac-gray-100); }
+}
+
+.ac-topbar__station-picker {
+  position: relative;
+}
+
+// Sur téléphone, le nom se tronque au lieu de pousser le reste de
+// l'en-tête hors de l'écran.
+@media (max-width: 767.98px) {
+  .ac-topbar__station--button {
+    max-width: 11rem;
+    padding-inline: var(--ac-space-2);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  // ====================================================================
+  // LE CHAMP DE RECHERCHE DISPARAÎT SUR TÉLÉPHONE (lot 17).
+  // ====================================================================
+  // Il n'y avait pas la place pour les deux : à 390 pixels, le menu,
+  // la recherche, la station, le pointage, les notifications et le
+  // profil débordaient — l'avatar sortait de l'écran.
+  //
+  // On garde la commande, on retire le champ. Ce n'est pas un
+  // arbitrage difficile : cette recherche est DÉSACTIVÉE depuis le
+  // lot 2 et l'est toujours. Un champ mort qui pousse un bouton vivant
+  // hors de l'écran est le pire des deux mondes.
+  //
+  // Elle reviendra ici le jour où elle cherchera vraiment quelque
+  // chose — et il faudra alors lui trouver sa place, probablement en
+  // plein écran comme le font les applications mobiles.
+  .ac-topbar__search {
+    display: none;
+  }
+
+  // Le menu s'ancre à gauche du bouton et ne dépasse pas de l'écran.
+  .ac-topbar__menu--stations {
+    min-width: 14rem;
+  }
+}
+
+// Le menu des stations s'ancre à GAUCHE de son bouton : il est au
+// milieu de l'en-tête, pas au bord droit comme celui du profil.
+.ac-topbar__menu--stations {
+  right: auto;
+  left: 0;
+  // Assez large pour « Station Dakar Plateau » sur une seule ligne :
+  // un nom de station coupé en deux se lit deux fois moins vite dans
+  // une liste qu'on parcourt du regard.
+  min-width: 17rem;
+
+  .ac-topbar__menu-item {
+    white-space: nowrap;
+  }
+}
+
 // Pastille de notifications non lues
 .ac-topbar__badge {
   position: absolute;
@@ -137,9 +204,27 @@
   color: var(--ac-text);
   text-align: left;
 
+  // `<a>` autant que `<button>` : l'entrée « Paramètres » est un
+  // lien de navigation, les autres sont des actions.
+  text-decoration: none;
+
   &:hover:not(:disabled) { background-color: var(--ac-gray-100); }
   &:disabled { color: var(--ac-text-muted); cursor: not-allowed; }
   &--danger:not(:disabled) { color: var(--ac-danger-700); }
+
+  // La ligne du choix courant. Fond discret plutôt qu'une coche :
+  // elle se lit d'un coup d'œil sans ajouter d'icône à une ligne qui
+  // en porte déjà une.
+  //
+  // ELLE EST DÉCLARÉE ICI, APRÈS `background: none`, et pas plus haut
+  // dans le fichier : à spécificité égale, c'est la dernière règle qui
+  // gagne. Écrite avant, elle était silencieusement effacée — le menu
+  // s'ouvrait sans jamais montrer où l'on se trouvait.
+  &--active {
+    background-color: var(--ac-primary-50);
+    color: var(--ac-primary-700);
+    font-weight: var(--ac-weight-medium);
+  }
 }
 
 // Couche invisible qui capte le clic extérieur au menu

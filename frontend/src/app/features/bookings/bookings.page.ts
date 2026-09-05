@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, effect} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
@@ -7,6 +7,7 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { BookingService } from '../../core/services/booking.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { StationContextService } from '../../core/services/station-context.service';
 import { CrmService } from '../../core/services/crm.service';
 import { Booking, BookingDay, BookingStatus } from '../../core/models/booking.model';
 import { Service, Station } from '../../core/models/catalog.model';
@@ -68,6 +69,7 @@ export class BookingsPage {
   private readonly formBuilder = inject(FormBuilder);
   private readonly bookings = inject(BookingService);
   private readonly catalog = inject(CatalogService);
+  private readonly stationContext = inject(StationContextService);
   private readonly crm = inject(CrmService);
 
   protected readonly isLoading = signal(true);
@@ -88,6 +90,14 @@ export class BookingsPage {
 
   protected readonly data = signal<BookingDay | null>(null);
   protected readonly services = signal<Service[]>([]);
+  /**
+   * Les stations OÙ L'ON PEUT PRENDRE RENDEZ-VOUS.
+   *
+   * Ce n'est pas la même liste que le filtre de l'en-tête : ici on
+   * écrit une donnée dans un dossier, et on n'écrit pas sur une
+   * station fermée. Le service de contexte porte le filtre de
+   * consultation, ce signal porte le choix de saisie.
+   */
   protected readonly stations = signal<Station[]>([]);
 
   /** Le rendez-vous ouvert dans une fenêtre, et pour quoi faire. */
@@ -181,9 +191,15 @@ export class BookingsPage {
     return label.charAt(0).toUpperCase() + label.slice(1);
   });
 
+  // LA STATION N'EST PLUS DANS CE FORMULAIRE (lot 17).
+  //
+  // Elle se choisit une fois pour toutes dans l'en-tête, et vaut pour
+  // tous les écrans de consultation. Le carnet de rendez-vous en avait
+  // son propre menu, les statistiques aussi, et le tableau de bord
+  // n'en avait pas du tout : trois écrans, trois comportements, pour
+  // une seule question.
   protected readonly filterForm = this.formBuilder.nonNullable.group({
     day: [this.today()],
-    station_id: [0],
   });
 
   protected readonly bookingForm = this.formBuilder.nonNullable.group({
@@ -207,19 +223,23 @@ export class BookingsPage {
 
   constructor() {
     // Un employé n'a pas le droit de lister les stations : l'appel
-    // échouerait avec un 403. On affiche alors simplement la station
-    // par défaut, plutôt que de laisser une erreur en console.
+    // échouerait avec un 403. On garde alors une liste vide, et le
+    // formulaire de prise de rendez-vous n'affiche pas de choix — le
+    // serveur sait déjà à quelle station il est rattaché.
+    //
+    // On ne garde QUE les stations ouvertes : proposer d'inscrire un
+    // client sur un site fermé serait lui promettre que quelqu'un
+    // l'attendra.
     this.catalog.stations().subscribe({
-      next: (stations) => {
-        this.stations.set(stations);
+      next: (stations) => this.stations.set(stations.filter((s) => s.status === 'ACTIVE')),
+      error: () => this.stations.set([]),
+    });
 
-        if (stations[0]) {
-          this.filterForm.patchValue({ station_id: stations[0].id });
-        }
-
-        this.load_();
-      },
-      error: () => this.load_(),
+    // Le carnet suit la station de l'en-tête, et se recharge quand
+    // elle change. L'effet couvre aussi le premier affichage.
+    effect(() => {
+      this.stationContext.selectedId();
+      this.load_();
     });
 
     this.catalog.services().subscribe({
@@ -238,9 +258,9 @@ export class BookingsPage {
   protected load_(): void {
     this.isLoading.set(true);
 
-    const { day, station_id } = this.filterForm.getRawValue();
+    const { day } = this.filterForm.getRawValue();
 
-    this.bookings.day(day, day, station_id || null).subscribe({
+    this.bookings.day(day, day, this.stationContext.queryId()).subscribe({
       next: (data) => {
         this.data.set(data);
         this.isLoading.set(false);
@@ -273,14 +293,17 @@ export class BookingsPage {
     this.warnings.set([]);
     this.fieldErrors.set({});
 
-    const { day, station_id } = this.filterForm.getRawValue();
+    const { day } = this.filterForm.getRawValue();
 
     this.bookingForm.reset({
       customer_name: '',
       customer_phone: '',
       plate_number: '',
       service_id: this.services()[0]?.id ?? 0,
-      station_id: station_id || (this.stations()[0]?.id ?? 0),
+      // Pré-rempli sur la station qu'on regarde — un pré-remplissage,
+      // pas une contrainte : le champ reste modifiable, et vaut la
+      // première station ouverte quand on regarde « toutes ».
+      station_id: this.stationContext.queryId() ?? (this.stations()[0]?.id ?? 0),
       // Pré-rempli sur le jour affiché : on note presque toujours un
       // rendez-vous pour la journée qu'on est en train de regarder.
       scheduled_at: `${day}T09:00`,

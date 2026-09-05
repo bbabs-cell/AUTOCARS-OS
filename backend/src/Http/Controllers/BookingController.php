@@ -210,6 +210,17 @@ final class BookingController
             Response::forbidden("Vous n'êtes pas rattaché à cette station.");
         }
 
+        // On ne prend pas rendez-vous dans une station fermée (lot 17) :
+        // ce serait promettre au client de l'attendre quelque part où
+        // personne ne travaillera. Les rendez-vous DÉJÀ pris, eux, ne
+        // sont pas annulés d'office — c'est au gérant de rappeler ses
+        // clients et de décider, pas au logiciel.
+        if (($station['status'] ?? 'ACTIVE') !== 'ACTIVE') {
+            Response::validationFailed([
+                'station_id' => 'Cette station est fermée. Choisissez-en une autre.',
+            ]);
+        }
+
         $service = (new ServiceRepository())->find($serviceId);
 
         if ($service === null) {
