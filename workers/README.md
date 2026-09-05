@@ -19,7 +19,7 @@ jeton, la relecture du rôle en base, le contrôle de permission côté
 serveur, une jointure, une recherche, et le cloisonnement entre
 clients. Si ces deux-là sont justes, l'architecture tient.
 
-**Réponse : oui, la pile tient.** 165 tests le vérifient dans le vrai
+**Réponse : oui, la pile tient.** 197 tests le vérifient dans le vrai
 runtime Workers, et l'application Angular existante fonctionne contre
 cette API **sans une ligne modifiée**.
 
@@ -68,7 +68,7 @@ npm install --legacy-peer-deps   # voir la note plus bas
 cp .dev.vars.example .dev.vars   # puis remplir JWT_SECRET
 npm run types                    # engendre worker-configuration.d.ts
 
-npm test                         # 165 tests, dans le runtime Workers
+npm test                         # 197 tests, dans le runtime Workers
 npm run typecheck                # les deux tsconfig
 npm run dev                      # API locale sur :8787
 ```
@@ -241,6 +241,45 @@ Deux distinctions que la migration a préservées :
   session de caisse n'est pas un tiroir mais une vacation au comptoir ;
   confondre les deux ferait apparaître un écart énorme tous les soirs.
 
+### Le tableau de bord — la sécurité par ce qu'on n'envoie pas
+
+Tous les rôles peuvent l'ouvrir ; le **contenu** dépend des droits, et
+c'est une décision de sécurité, pas d'ergonomie.
+
+**Les blocs financiers ne sont pas masqués : ils ne sont pas envoyés.**
+Masquer un bloc dans Angular ne protégerait rien — l'onglet réseau du
+navigateur montre la réponse brute, et n'importe qui peut appeler
+l'API directement.
+
+Un test le vérifie de la façon la plus bête et la plus sûre : le
+montant encaissé **ne doit apparaître nulle part dans le corps de la
+réponse** d'un employé, sous aucune forme. Même les prestations les
+plus demandées lui parviennent sans leur total.
+
+Les alertes suivent la même règle qu'en PHP : **une alerte qu'on ne
+peut pas faire disparaître n'est pas une alerte**, c'est une
+décoration qu'on cesse de regarder au bout d'une semaine. Chacune a
+son test d'extinction — l'impayé disparaît quand on encaisse, l'alerte
+de caisse quand on ouvre la vacation.
+
+### Les clients — le téléphone comme clé
+
+Le téléphone est **obligatoire** : c'est le seul moyen fiable de
+rappeler quelqu'un dont la voiture est prête. Un client sans numéro
+est un véhicule qu'on ne peut pas rendre.
+
+Il est aussi **unique par organisation** : deux fiches pour un même
+numéro, ce sont deux historiques pour une seule personne — et une
+fidélité coupée en deux. Le refus dit à qui appartient le numéro.
+
+`total_spent` ne compte que les paiements **réellement encaissés** :
+un dossier créé mais impayé ne fait pas d'un client un bon client.
+
+La modification passe par une **liste blanche de colonnes**. Sans
+elle, un corps de requête portant `organization_id` déplacerait un
+client chez un concurrent — le genre de défaut qu'on ne trouve jamais
+par hasard. Un test l'essaie.
+
 ### Encore un contrat deviné plutôt que lu
 
 Même défaut qu'avec les opérations, en plus petit : mon `/api/cash/open`
@@ -270,10 +309,12 @@ frontend avant d'écrire le contrôleur.**
 
 | Fait | Pas encore |
 |---|---|
-| `login`, `register`, `refresh`, `logout`, `me` | Les 71 autres routes |
+| `login`, `register`, `refresh`, `logout`, `me` | Les 65 autres routes |
 | `vehicles`, `queue`, `stations`, changement de statut | Photos, sauvegardes, contrôle d'avant-vol |
-| **Encaissements, remboursements, journal** | |
-| **Caisse : ouverture, clôture, écart, historique** | |
+| Encaissements, remboursements, journal | |
+| Caisse : ouverture, clôture, écart, historique | |
+| **Tableau de bord, alertes** | |
+| **Clients : liste, fiche, création, modification** | |
 | Cloisonnement multi-clients, avec son garde-fou | Les index de performance (à re-mesurer, pas à recopier) |
 | Matrice des droits, portée à l'identique | |
 | Les 21 tables, leurs contraintes et leurs déclencheurs | |

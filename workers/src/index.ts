@@ -23,6 +23,8 @@ import { changeStatut, file } from './controllers/operations';
 import { liste as listeStations } from './controllers/stations';
 import { encaisse, journal, pourDossier, rembourse } from './controllers/payments';
 import { courante, ferme, historique, ouvre } from './controllers/cash';
+import { tableau } from './controllers/dashboard';
+import { cree, fiche, liste as listeClients, modifie } from './controllers/customers';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -60,6 +62,7 @@ export default {
       const statut = /^\/api\/operations\/(\d+)\/status$/.exec(chemin);
       const paiements = /^\/api\/operations\/(\d+)\/payments$/.exec(chemin);
       const remboursement = /^\/api\/payments\/(\d+)\/refund$/.exec(chemin);
+      const client = /^\/api\/customers\/(\d+)$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -74,6 +77,9 @@ export default {
         (chemin === '/api/cash/sessions' && G) ||
         (chemin === '/api/cash/open' && P) ||
         (chemin === '/api/cash/close' && P) ||
+        (chemin === '/api/dashboard' && G) ||
+        (chemin === '/api/customers' && (G || P)) ||
+        (client !== null && (G || request.method === 'PUT')) ||
         (statut !== null && request.method === 'PUT') ||
         (paiements !== null && (G || P)) ||
         (remboursement !== null && P);
@@ -94,6 +100,20 @@ export default {
         if (chemin === '/api/cash/sessions') return await historique(request, env, utilisateur);
         if (chemin === '/api/cash/open') return await ouvre(request, env, utilisateur);
         if (chemin === '/api/cash/close') return await ferme(request, env, utilisateur);
+        if (chemin === '/api/dashboard') return await tableau(request, env, utilisateur);
+
+        if (chemin === '/api/customers') {
+          return P
+            ? await cree(request, env, utilisateur)
+            : await listeClients(request, env, utilisateur);
+        }
+
+        if (client !== null) {
+          return G
+            ? await fiche(env, utilisateur, client[1])
+            : await modifie(request, env, utilisateur, client[1]);
+        }
+
         if (statut !== null) return await changeStatut(request, env, utilisateur, statut[1]);
 
         if (paiements !== null) {
