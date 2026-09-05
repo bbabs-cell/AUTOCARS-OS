@@ -433,29 +433,141 @@ Pensez aussi à changer `MAIL_FROM` dans `.env` : il vaut
 
 ---
 
-## 13. Les sauvegardes automatiques
+## 13. Les sauvegardes — locales, puis chez Cloudflare R2
 
 Une sauvegarde qui dépend de quelqu'un qui y pense n'est pas une
-sauvegarde.
+sauvegarde. Et **une sauvegarde qui vit sur la machine qu'elle protège
+n'en est pas une non plus : c'est une copie.**
+
+`tools/backup.php` écrit dans `storage/backups`, sur le VPS. Cela
+protège d'une fausse manœuvre dans la base. Cela ne protège pas d'un
+disque perdu, d'un VPS résilié par erreur ou d'un accès administrateur
+compromis : dans ces trois cas, la base et ses sauvegardes
+disparaissent ensemble.
+
+D'où la seconde moitié : chaque archive part chez **Cloudflare R2**.
+
+> **Ce que contiennent ces archives.** Le vidage complet de la base —
+> noms de clients, téléphones, plaques, montants — **et les photos
+> d'inspection**, qui sont vos pièces en cas de litige. Ce n'est pas
+> une copie technique anodine : c'est l'intégralité des données de vos
+> clients qui part chez un tiers. R2 les chiffre au repos et le jeton
+> ci-dessous est limité à un seul seau. Si vous voulez qu'elles soient
+> en plus chiffrées **avant** de quitter le VPS, dites-le : c'est un
+> `rclone crypt` à ajouter, avec la contrepartie qu'une phrase de passe
+> perdue rend les sauvegardes définitivement illisibles.
+
+### 13.1 Créer le seau et le jeton, chez Cloudflare
+
+1. **dash.cloudflare.com → R2 → Create bucket**, nommé
+   `autocare-sauvegardes`.
+2. **R2 → Manage R2 API Tokens → Create API Token** :
+   - Permissions : **Object Read & Write**
+   - Portée : **Apply to specific buckets** → `autocare-sauvegardes`
+
+   > Un jeton limité à ce seul seau. Si le VPS est un jour compromis,
+   > l'attaquant obtient de quoi écrire dans un seau de sauvegardes —
+   > pas de quoi toucher au reste de votre compte Cloudflare, DNS
+   > compris.
+3. Notez les valeurs affichées **une seule fois** : `Access Key ID`,
+   `Secret Access Key`, et l'endpoint de la forme
+   `https://⟨account-id⟩.r2.cloudflarestorage.com`.
+
+### 13.2 Configurer rclone sur le VPS
+
+```bash
+sudo apt install -y rclone
+mkdir -p ~/.config/rclone
+nano ~/.config/rclone/rclone.conf
+```
+
+```ini
+[r2]
+type = s3
+provider = Cloudflare
+access_key_id = ⟨Access Key ID⟩
+secret_access_key = ⟨Secret Access Key⟩
+endpoint = https://⟨account-id⟩.r2.cloudflarestorage.com
+region = auto
+acl = private
+```
+
+**Ce fichier contient des identifiants** — mêmes précautions que
+`.env` :
+
+```bash
+chmod 600 ~/.config/rclone/rclone.conf
+rclone lsd r2:
+```
+
+> Si vous obtenez une erreur de permission alors que les clés sont
+> bonnes, ajoutez `no_check_bucket = true` : un jeton limité à un seul
+> seau n'a pas toujours le droit d'en lister les métadonnées.
+
+### 13.3 Le premier envoi, à la main
+
+```bash
+cd /var/www/autocare
+php backend/tools/backup.php
+./deploy/backup-offsite.sh
+```
+
+Le script **vérifie** ce qu'il a envoyé et s'arrête en erreur si ce qui
+est arrivé ne correspond pas à ce qui est parti — un envoi non vérifié
+serait une croyance, pas une sauvegarde.
+
+Il ne supprime **jamais** à distance pendant l'envoi (`copy`, et non
+`sync`) : la rétention locale de 14 jours ne doit pas effacer chez
+Cloudflare une archive que le VPS a déjà oubliée. La rétention distante
+est séparée, par âge, et vaut 90 jours (`AUTOCARE_R2_KEEP_DAYS`).
+
+### 13.4 L'automatiser
 
 ```bash
 crontab -e
 ```
 
-Ajoutez :
-
 ```cron
-# Sauvegarde de la base, tous les jours à 2 h du matin.
-0 2 * * * cd /var/www/autocare/backend && /usr/bin/php tools/backup.php >> storage/logs/backup.log 2>&1
+# Sauvegarde locale, puis envoi chez Cloudflare R2, tous les jours a 2 h.
+# Le && est important : on n'envoie rien si la sauvegarde a echoue.
+0 2 * * * cd /var/www/autocare && /usr/bin/php backend/tools/backup.php >> backend/storage/logs/backup.log 2>&1 && ./deploy/backup-offsite.sh >> backend/storage/logs/backup.log 2>&1
 ```
 
-**Puis testez une restauration une fois**, avant d'en avoir besoin :
-la procédure est au §7 de [`deploiement.md`](deploiement.md). Une
-sauvegarde jamais restaurée n'est pas une sauvegarde — c'est le sens
-des 18 tests de `backup_test.php`.
+Relisez ce journal une fois par mois :
 
-Pensez aussi à emporter les archives **hors du VPS** (un disque perdu
-emporte la base et ses sauvegardes en même temps).
+```bash
+tail -30 /var/www/autocare/backend/storage/logs/backup.log
+```
+
+### 13.5 Restaurer depuis R2 — à essayer AVANT d'en avoir besoin
+
+C'est la moitié que tout le monde oublie. Une sauvegarde jamais
+restaurée n'est pas une sauvegarde : c'est le sens des 18 tests de
+`backup_test.php`, qui sauvegardent, détruisent une donnée témoin,
+restaurent, et vérifient qu'elle est revenue.
+
+```bash
+# 1. Voir ce qui existe chez Cloudflare
+rclone lsf r2:autocare-sauvegardes
+
+# 2. Rapatrier les trois fichiers d'un meme horodatage
+rclone copy r2:autocare-sauvegardes \
+  /var/www/autocare/backend/storage/backups \
+  --include 'autocare-2026-01-15_020000*'
+
+# 3. Restaurer
+cd /var/www/autocare/backend
+php tools/restore.php --list
+php tools/restore.php autocare-2026-01-15_020000
+```
+
+`restore.php` vérifie l'empreinte SHA-256 **avant** d'écraser quoi que
+ce soit, et refuse une base de production sans
+`--je-sais-ce-que-je-fais`.
+
+**Faites cet essai une fois, maintenant, pendant que rien ne presse.**
+Le jour où vous en aurez besoin ne sera pas le jour pour découvrir la
+procédure.
 
 ---
 

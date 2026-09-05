@@ -98,6 +98,7 @@ AUTOCARS-OS/
 | [docs/audit-securite.md](docs/audit-securite.md) | Audit du lot 21 : méthode, défauts trouvés, risques acceptés |
 | [docs/deploiement.md](docs/deploiement.md) | Mise en production, sauvegarde, restauration |
 | [docs/installation-vps-ovh.md](docs/installation-vps-ovh.md) | **Installation pas à pas** d'un VPS OVH pour `api.magyapro.com` |
+| [deploy/backup-offsite.sh](deploy/backup-offsite.sh) | Envoi vérifié des sauvegardes vers Cloudflare R2 |
 | [docs/deploiement-vercel.md](docs/deploiement-vercel.md) | Mise en ligne sur Vercel : l'application d'un côté, l'API de l'autre |
 | [docs/performance.md](docs/performance.md) | Mesures à l'échelle, budgets par écran, ce qui a été trouvé |
 | [docs/grille-observation-terrain.md](docs/grille-observation-terrain.md) | **À imprimer** : comment observer une vraie station, et quoi en conclure |

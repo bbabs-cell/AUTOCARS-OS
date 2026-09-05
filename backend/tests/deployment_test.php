@@ -88,6 +88,7 @@ $entetes  = (string) @file_get_contents($projet . '/deploy/security-headers.conf
 $deploy   = (string) @file_get_contents($projet . '/deploy/deploy.sh');
 $nginxApi = (string) @file_get_contents($projet . '/deploy/nginx-api.conf.example');
 $rollback = (string) @file_get_contents($projet . '/deploy/rollback.sh');
+$horsSite = (string) @file_get_contents($projet . '/deploy/backup-offsite.sh');
 $doc      = (string) @file_get_contents($projet . '/docs/deploiement.md');
 $env      = (string) @file_get_contents($projet . '/frontend/src/environments/environment.ts');
 $angular  = (string) @file_get_contents($projet . '/frontend/angular.json');
@@ -378,7 +379,67 @@ if (str_contains($photo, 'finfo_open')) {
     check('ext-fileinfo est déclarée dans composer.json', in_array('ext-fileinfo', $requis, true));
 }
 
-echo "\n13. deploy.sh refuse de publier un dossier vide\n";
+echo "\n13. L'envoi des sauvegardes hors site (Cloudflare R2)\n";
+// Une sauvegarde qui vit sur la machine qu'elle protège n'en est pas
+// une : c'est une copie. Ce script est ce qui l'en fait sortir.
+check('deploy/backup-offsite.sh existe', $horsSite !== '');
+
+if ($horsSite !== '') {
+    // `sync` refléterait la rétention locale de 14 jours et
+    // supprimerait chez Cloudflare tout ce que le VPS a déjà oublié.
+    check(
+        'il envoie avec `copy`, jamais avec `sync`',
+        str_contains($horsSite, 'rclone copy') && !str_contains($horsSite, 'rclone sync'),
+        'sync propagerait la rétention locale et détruirait les archives anciennes',
+    );
+    check(
+        'il vérifie ce qui est arrivé (`rclone check`)',
+        str_contains($horsSite, 'rclone check'),
+        'un envoi non vérifié est une croyance, pas une sauvegarde',
+    );
+    // Le piège : `rclone check ... | tail` ne remonte l'erreur que si
+    // `pipefail` est actif. Une vérification de sauvegarde ne doit pas
+    // dépendre d'une option posée quarante lignes plus haut.
+    check(
+        'la vérification ne passe pas par un tuyau',
+        (bool) preg_match('/if rclone check[^|]*> "\$JOURNAL"/s', $horsSite),
+        'un tuyau renverrait le code de sortie de `tail`, jamais celui de rclone',
+    );
+    check(
+        'un écart de vérification arrête le script',
+        (bool) preg_match('/ECHEC\] ce qui est arrive.*?exit 1/s', $horsSite),
+    );
+    check(
+        'il refuse de « réussir » sur un dossier vide',
+        (bool) preg_match('/aucune archive dans.*?exit 1/s', $horsSite),
+        'réussir en ne faisant rien est le pire résultat possible ici',
+    );
+    check(
+        'la rétention distante se fait par âge',
+        str_contains($horsSite, '--min-age'),
+    );
+    check(
+        'la rétention distante est plus longue que la locale',
+        (int) (preg_match('/AUTOCARE_R2_KEEP_DAYS:-(\d+)/', $horsSite, $mk) ? $mk[1] : 0)
+            > (int) (preg_match('/^BACKUP_KEEP=(\d+)/m',
+                (string) @file_get_contents($racine . '/.env.example'), $mb) ? $mb[1] : 0),
+        'le stockage objet coûte peu, et une erreur se découvre parfois des semaines après',
+    );
+    check(
+        'la procédure R2 est documentée',
+        str_contains((string) @file_get_contents($projet . '/docs/installation-vps-ovh.md'),
+                     'backup-offsite.sh'),
+    );
+    // Une sauvegarde qu'on ne sait pas rapatrier ne sert à rien.
+    check(
+        'la restauration DEPUIS R2 est documentée',
+        str_contains((string) @file_get_contents($projet . '/docs/installation-vps-ovh.md'),
+                     'rclone copy r2:'),
+        'la moitié que tout le monde oublie',
+    );
+}
+
+echo "\n14. deploy.sh refuse de publier un dossier vide\n";
 check(
     'deploy.sh vérifie la présence d\'index.html avant de publier',
     str_contains($deploy, 'index.html'),
