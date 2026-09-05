@@ -102,12 +102,19 @@ Vérifiez que l'API répond avant d'aller plus loin :
 curl -i https://api.magyapro.com/api/health
 ```
 
-### 3.2 Les deux enregistrements DNS
+### 3.2 Les deux enregistrements DNS — chez Cloudflare
 
-| Nom | Type | Valeur |
-|---|---|---|
-| `api` | `A` | l'adresse IP de votre hébergeur PHP |
-| `app` | `CNAME` | `cname.vercel-dns.com` (Vercel vous donnera la valeur exacte) |
+Le DNS de `magyapro.com` est géré par **Cloudflare**. Les deux
+enregistrements doivent être en **DNS only (nuage gris)**, jamais en
+proxy orange : sur `app`, le proxy entre en conflit avec le certificat
+que Vercel pose lui-même. Le détail et les autres pièges sont au §1 de
+[`installation-vps-ovh.md`](installation-vps-ovh.md).
+
+
+| Type | Nom | Contenu | Proxy |
+|---|---|---|---|
+| `A` | `api` | l'IPv4 du VPS OVH | **DNS only** |
+| `CNAME` | `app` | `cname.vercel-dns.com` (Vercel confirme la valeur exacte) | **DNS only** |
 
 ---
 

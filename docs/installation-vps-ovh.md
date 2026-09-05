@@ -13,6 +13,9 @@
 | `https://app.magyapro.com` | L'application (Angular) | Vercel |
 | `https://api.magyapro.com` | L'API, la base, les photos, les sauvegardes | Votre VPS OVH |
 
+Trois fournisseurs, trois rôles à ne pas confondre : **Cloudflare** tient
+le DNS, **OVH** loue la machine, **Vercel** sert l'application.
+
 `magyapro.com` lui-même n'est pas touché : si quelque chose y est déjà
 en ligne, rien ne bouge.
 
@@ -25,7 +28,7 @@ en ligne, rien ne bouge.
 - Un VPS OVH, **Ubuntu 24.04**, 2 Go de RAM minimum (le plus petit
   suffit largement pour une station ; la mesure du lot 20 tient
   76 000 dossiers).
-- L'accès à la zone DNS de `magyapro.com`.
+- L'accès au tableau de bord **Cloudflare** de `magyapro.com` (c'est là qu'est la zone DNS ; OVH ne fournit que la machine).
 - Un compte Vercel relié à votre dépôt GitHub.
 
 **Comptez une heure.** Les étapes 1 à 3 peuvent se faire pendant que le
@@ -33,25 +36,55 @@ DNS se propage.
 
 ---
 
-## 1. Les deux enregistrements DNS
+## 1. Les deux enregistrements DNS — chez Cloudflare
 
-Dans l'espace client OVH, *Domaines → magyapro.com → Zone DNS* :
+`magyapro.com` est géré par **Cloudflare**, pas par OVH. OVH ne fournit
+que la machine ; toute la zone DNS se règle sur
+**dash.cloudflare.com → magyapro.com → DNS → Records**.
 
-| Sous-domaine | Type | Cible |
-|---|---|---|
-| `api` | `A` | ⟨l'IPv4 de votre VPS⟩ |
-| `app` | `CNAME` | `cname.vercel-dns.com.` |
+| Type | Nom | Contenu | Proxy |
+|---|---|---|---|
+| `A` | `api` | ⟨l'IPv4 de votre VPS⟩ | **DNS only** (nuage gris) |
+| `CNAME` | `app` | `cname.vercel-dns.com` | **DNS only** (nuage gris) |
 
-Faites-les **maintenant** : la propagation prend de quelques minutes à
-quelques heures, et le certificat HTTPS de l'étape 8 ne peut pas être
-délivré avant.
+### Le nuage doit être GRIS, et c'est le point le plus important de cette page
 
-Vérifiez depuis votre machine :
+Cloudflare met le nuage sur **orange** par défaut. Orange signifie que
+Cloudflare s'interpose : il termine le HTTPS à sa place et relaie vers
+votre serveur. Sur cette installation, cela casse trois choses, et
+aucune ne donne un message d'erreur compréhensible.
+
+| Ce qui casse | Ce que vous verriez |
+|---|---|
+| **Le certificat de l'étape 9** | Certbot doit prouver qu'il contrôle `api.magyapro.com` en répondant sur le port 80. Derrière le proxy orange, c'est Cloudflare qui répond, pas vous : la demande échoue sans dire pourquoi |
+| **Le domaine Vercel** | Vercel vérifie `app.magyapro.com` et pose son propre certificat. Avec le proxy orange devant, on obtient au mieux une erreur SSL, au pire une boucle de redirection infinie |
+| **Le mode SSL « Flexible »** | C'est le réglage par défaut de Cloudflare sur certains comptes. Il parle en **HTTP** à votre serveur, alors que la configuration Nginx redirige tout HTTP vers HTTPS : la page tourne en rond jusqu'à l'erreur « trop de redirections » |
+
+**Mettez les deux enregistrements en *DNS only*.** Vous ne perdez rien
+d'essentiel : Vercel apporte déjà un réseau de diffusion mondial pour
+l'application, et l'API n'a pas vocation à être mise en cache.
+
+> **Si vous voulez le proxy Cloudflare plus tard** — pour la protection
+> contre les attaques, par exemple — c'est possible, mais **seulement sur
+> `api`, seulement après que le certificat de l'étape 9 est délivré**,
+> et il faut alors régler *SSL/TLS → Overview* sur **Full (strict)**.
+> Jamais « Flexible ». Laissez `app` en gris dans tous les cas : c'est
+> ce que Vercel demande.
+
+### Vérifier
 
 ```bash
 dig +short api.magyapro.com
 dig +short app.magyapro.com
 ```
+
+`api` doit renvoyer **l'IP de votre VPS**. Si vous voyez une adresse en
+`104.x` ou `172.67.x`, c'est une IP de Cloudflare : le nuage est resté
+orange, repassez-le en gris avant de continuer.
+
+Faites ces enregistrements **maintenant** : la propagation prend de
+quelques minutes à quelques heures, et le certificat de l'étape 9 ne
+peut pas être délivré avant.
 
 ---
 
@@ -262,6 +295,19 @@ sudo systemctl reload nginx
 sudo certbot renew --dry-run
 ```
 
+**Si cette commande échoue**, la cause la plus probable est le nuage
+Cloudflare resté orange sur `api` : Certbot prouve qu'il contrôle le
+domaine en répondant sur le port 80, et derrière le proxy c'est
+Cloudflare qui répond. Repassez l'enregistrement en *DNS only*
+(étape 1), relancez, puis remettez le proxy si vous y tenez.
+
+> **Le piège différé.** Si vous activez le proxy orange après avoir
+> obtenu le certificat, tout marchera — pendant **quatre-vingt-dix
+> jours**. Puis le renouvellement automatique échouera exactement pour
+> la même raison, un matin, sans prévenir. Soit vous laissez `api` en
+> gris, soit vous basculez Certbot sur une validation par DNS. Ne
+> laissez pas ce choix à un futur vous qui aura oublié cette page.
+
 Les dossiers d'écriture appartiennent au serveur web :
 
 ```bash
@@ -415,7 +461,7 @@ que le serveur renvoie réellement.
 
 | # | Commande | Attendu |
 |---|---|---|
-| 1 | `dig +short api.magyapro.com` | l'IP du VPS |
+| 1 | `dig +short api.magyapro.com` | **l'IP du VPS** — une adresse en `104.x` ou `172.67.x` signifie que le proxy Cloudflare est resté allumé |
 | 2 | `sudo ufw status` | 22, 80, 443 — rien d'autre |
 | 3 | `curl -i https://api.magyapro.com/api/health` | 200 |
 | 4 | `curl -o /dev/null -w '%{http_code}' https://api.magyapro.com/` | 404 |
