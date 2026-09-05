@@ -191,7 +191,7 @@ précédentes.
 | # | Étape | Ce qui la termine |
 |---|---|---|
 | 1 | ~~**Une tranche verticale d'abord** : connexion + liste des véhicules~~ **— FAITE** | ✅ 45 tests dans le runtime Workers ; l'application Angular affiche ses véhicules sans avoir été modifiée. Voir [`workers/README.md`](../workers/README.md) |
-| 2 | Le schéma D1 complet et ses contraintes `CHECK` | Les 22 tables, avec les garde-fous que `UNSIGNED` assurait |
+| 2 | ~~Le schéma D1 complet et ses contraintes `CHECK`~~ **— FAITE** | ✅ 21 tables, 289 colonnes, aucun écart avec MySQL. Clés étrangères vérifiées appliquées par D1 |
 | 3 | Le socle : multi-tenance, permissions, jetons | Les tests d'isolation repassent, réécrits |
 | 4 | Les dépôts et contrôleurs, par domaine métier | Domaine par domaine, avec ses tests |
 | 5 | Photos et envois | Après votre décision du §4.4 |

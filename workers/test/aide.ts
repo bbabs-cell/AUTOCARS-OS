@@ -20,11 +20,19 @@ export async function prepareBase(): Promise<void> {
   // harnais. Un jeu d'essai qui dépend de ce qu'un autre test a laissé
   // derrière lui produit des échecs qui changent selon l'ordre
   // d'exécution — les pires à diagnostiquer.
-  await env.DB.batch(
-    ['vehicles', 'customers', 'station_users', 'stations', 'users', 'organizations'].map(
-      (table) => env.DB.prepare(`DELETE FROM ${table}`),
-    ),
-  );
+  // L'ORDRE COMPTE, ET C'EST UNE DÉCOUVERTE DE L'ÉTAPE 2 :
+  // D1 applique réellement les clés étrangères. Vider les tables dans
+  // le désordre échoue avec « FOREIGN KEY constraint failed ». On part
+  // donc des feuilles pour remonter vers les racines.
+  const ordre = [
+    'inspection_photos', 'inspections', 'payments', 'operations',
+    'loyalty_entries', 'loyalty_programs', 'subscriptions', 'subscription_plans',
+    'bookings', 'time_entries', 'cash_sessions', 'audit_logs',
+    'refresh_tokens', 'password_resets', 'services',
+    'vehicles', 'customers', 'station_users', 'stations', 'users', 'organizations',
+  ];
+
+  await env.DB.batch(ordre.map((table) => env.DB.prepare(`DELETE FROM ${table}`)));
 
   const empreinte = await hachePassword(MOT_DE_PASSE);
 
@@ -40,7 +48,8 @@ export async function prepareBase(): Promise<void> {
       `INSERT INTO users (id, organization_id, first_name, last_name, email, password_hash, status) VALUES
         (1, 1, 'Mamadou', 'Diallo', 'mamadou@diallo.sn',  ?1, 'ACTIVE'),
         (2, 1, 'Aliou',   'Sow',    'aliou@diallo.sn',    ?1, 'ACTIVE'),
-        (3, 1, 'Ancien',  'Employe','ancien@diallo.sn',   ?1, 'SUSPENDED'),
+        (3, 1, 'Ancien',  'Employe','ancien@diallo.sn',   ?1, 'DISABLED'),
+        (5, 1, 'Invite',  'PasEncore','invite@diallo.sn', ?1, 'INVITED'),
         (4, 2, 'Fatou',   'Ndiaye', 'fatou@concurrent.sn',?1, 'ACTIVE')`,
     ).bind(empreinte),
     env.DB.prepare(
@@ -48,6 +57,7 @@ export async function prepareBase(): Promise<void> {
         (1, 1, 1, 'ADMIN'), (1, 2, 1, 'ADMIN'),
         (1, 1, 2, 'EMPLOYEE'),
         (1, 1, 3, 'EMPLOYEE'),
+        (1, 1, 5, 'EMPLOYEE'),
         (2, 3, 4, 'ADMIN')`,
     ),
     env.DB.prepare(

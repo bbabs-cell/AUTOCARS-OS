@@ -57,7 +57,7 @@ describe('connexion', () => {
    * chez un client. Les trois cas ci-dessous doivent être
    * indistinguables de l'extérieur.
    */
-  it('compte inconnu, mot de passe faux et compte suspendu répondent la même chose', async () => {
+  it('compte inconnu, mot de passe faux et compte désactivé répondent la même chose', async () => {
     const reponses = await Promise.all([
       connecte('personne@nulle-part.sn', MOT_DE_PASSE),
       connecte('mamadou@diallo.sn', 'PasLeBon2026!'),
@@ -72,8 +72,20 @@ describe('connexion', () => {
     expect(new Set(corps.map((c) => c.message)).size).toBe(1);
   });
 
-  it('un compte suspendu ne peut pas se connecter', async () => {
+  it('un compte désactivé ne peut pas se connecter', async () => {
     const res = await connecte('ancien@diallo.sn', MOT_DE_PASSE);
+    expect(res.status).toBe(401);
+  });
+
+  /**
+   * L'état INVITED existe dans le schéma MySQL et manquait à l'étape 1 :
+   * un compte créé mais dont la personne n'a pas encore choisi son mot
+   * de passe. Il ne doit pas pouvoir se connecter — et le fait que le
+   * contrôle porte sur « différent d'ACTIVE » le couvre sans rien
+   * ajouter.
+   */
+  it('un compte seulement invité ne peut pas se connecter', async () => {
+    const res = await connecte('invite@diallo.sn', MOT_DE_PASSE);
     expect(res.status).toBe(401);
   });
 

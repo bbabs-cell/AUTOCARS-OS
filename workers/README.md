@@ -1,9 +1,8 @@
 # API AUTOCARE OS sur Cloudflare Workers
 
-> **Étape 1 de la migration : la tranche verticale.**
-> Deux routes, mais de bout en bout. Le backend PHP reste la
-> référence en service dans `../backend/` tant que la migration n'est
-> pas terminée.
+> **Étapes 1 et 2 faites.** La tranche verticale, puis le schéma
+> complet. Le backend PHP reste la référence en service dans
+> `../backend/` tant que la migration n'est pas terminée.
 
 ---
 
@@ -18,7 +17,7 @@ jeton, la relecture du rôle en base, le contrôle de permission côté
 serveur, une jointure, une recherche, et le cloisonnement entre
 clients. Si ces deux-là sont justes, l'architecture tient.
 
-**Réponse : oui, la pile tient.** 45 tests le vérifient dans le vrai
+**Réponse : oui, la pile tient.** 61 tests le vérifient dans le vrai
 runtime Workers, et l'application Angular existante fonctionne contre
 cette API **sans une ligne modifiée**.
 
@@ -67,7 +66,7 @@ npm install --legacy-peer-deps   # voir la note plus bas
 cp .dev.vars.example .dev.vars   # puis remplir JWT_SECRET
 npm run types                    # engendre worker-configuration.d.ts
 
-npm test                         # 45 tests, dans le runtime Workers
+npm test                         # 61 tests, dans le runtime Workers
 npm run typecheck                # les deux tsconfig
 npm run dev                      # API locale sur :8787
 ```
@@ -80,15 +79,55 @@ npm run dev                      # API locale sur :8787
 
 ---
 
+## Étape 2 — le schéma complet
+
+**21 tables, 289 colonnes, portées à l'identique.** La comparaison
+colonne par colonne avec MySQL ne montre aucun écart.
+
+La conversion a été faite par un script, puis **relue** — et la
+relecture a payé trois fois :
+
+| Trouvé | Ce que ça aurait donné |
+|---|---|
+| Le script écrivait les valeurs d'`ENUM` en minuscules (`'open'`) alors que le défaut est `'OPEN'` | **Aucune ligne n'aurait pu être insérée** dans onze tables |
+| Dix-sept colonnes manquaient aux tables de l'étape 1, écrites à la main et minimales | Une erreur au premier écran qui les lit |
+| `users.status` acceptait `('ACTIVE','SUSPENDED')` là où MySQL déclare `('ACTIVE','INVITED','DISABLED')` | Un compte invité refusé par la base |
+
+Le troisième est le plus instructif : une énumération recopiée de
+mémoire plutôt que du schéma, invisible tant que rien n'y touchait.
+Les deux migrations ont donc été **régénérées** depuis MySQL par le
+même script — possible sans danger uniquement parce que rien n'est
+déployé.
+
+### Ce que D1 fait, vérifié et non supposé
+
+| Question | Réponse |
+|---|---|
+| **Les clés étrangères sont-elles appliquées ?** | **Oui.** SQLite ne les applique historiquement que si un `PRAGMA` l'active ; D1 le fait. Trois tests le prouvent — un dossier ne peut pas désigner un véhicule inexistant |
+| Les `CHECK` refusent-ils vraiment ? | Oui : prix négatif, statut inventé, type de véhicule inconnu, JSON invalide — chacun a son test |
+| Une colonne unique accepte-t-elle plusieurs `NULL` ? | Oui, comme MySQL. C'est ce qui fait tenir la règle « une seule caisse ouverte par station » sans code |
+| Les déclencheurs remplacent-ils `ON UPDATE` ? | Oui. Un test vérifie la règle — toute table avec `updated_at` a le sien — plutôt que de compter |
+
+### L'exception qui prouve la fidélité du port
+
+`cash_sessions.difference` est le **seul entier signé** du schéma : il
+n'a pas de `CHECK (>= 0)`, parce que c'est l'écart de caisse et qu'une
+caisse peut manquer. Lui coller la contrainte par réflexe aurait rendu
+impossible d'enregistrer un manque — exactement ce que le lot 12
+voulait rendre visible. La conversion l'a préservé parce que MySQL ne
+le déclarait pas `unsigned`.
+
+---
+
 ## Ce qui est là, et ce qui ne l'est pas
 
 | Fait | Pas encore |
 |---|---|
 | `POST /api/auth/login` | Le rafraîchissement par cookie tournant (lot 21) |
 | `GET /api/vehicles` | Les 86 autres routes |
-| Cloisonnement multi-clients, avec son garde-fou | 17 des 22 tables |
-| Matrice des droits, portée à l'identique | Photos, sauvegardes, contrôle d'avant-vol |
-| 5 tables, contraintes `CHECK`, déclencheurs `updated_at` | Les index de performance (à re-mesurer, pas à recopier) |
+| Cloisonnement multi-clients, avec son garde-fou | Photos, sauvegardes, contrôle d'avant-vol |
+| Matrice des droits, portée à l'identique | Les index de performance (à re-mesurer, pas à recopier) |
+| **Les 21 tables**, leurs contraintes et leurs déclencheurs | |
 
 L'application Angular se connecte et affiche ses véhicules. Elle ne
 peut pas rester connectée au-delà : `/api/auth/refresh` n'existe pas

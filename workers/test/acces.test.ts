@@ -42,11 +42,11 @@ describe('contrôle d’accès', () => {
    * rôle était recopié dedans, un employé renvoyé continuerait de
    * travailler pendant tout ce temps. Ici la base tranche.
    */
-  it('un compte suspendu après émission du jeton perd l’accès immédiatement', async () => {
+  it('un compte désactivé après émission du jeton perd l’accès immédiatement', async () => {
     const jeton = await jetonPour('aliou@diallo.sn');
     expect((await vehicules({ Authorization: `Bearer ${jeton}` })).status).toBe(200);
 
-    await env.DB.prepare("UPDATE users SET status = 'SUSPENDED' WHERE id = 2").run();
+    await env.DB.prepare("UPDATE users SET status = 'DISABLED' WHERE id = 2").run();
 
     expect((await vehicules({ Authorization: `Bearer ${jeton}` })).status).toBe(401);
   });
