@@ -240,7 +240,70 @@ foreach ($variables as $v) {
     check("{$v} est documentée dans docs/deploiement.md", str_contains($doc, $v));
 }
 
-echo "\n9. deploy.sh refuse de publier un dossier vide\n";
+echo "\n9. Vercel : la même application, servie autrement\n";
+// Vercel ne fait tourner ni PHP ni MySQL. Le frontend y vit, l'API
+// reste ailleurs, et une réécriture /api la ramène sur la MÊME
+// origine — ce qui préserve exactement ce qui a été validé sous
+// Nginx : pas de CORS, cookie SameSite=Strict, CSP connect-src 'self'.
+$vercelBrut = (string) @file_get_contents($projet . '/vercel.json');
+$vercel     = json_decode($vercelBrut, true);
+check('vercel.json existe et est un JSON valide', is_array($vercel));
+
+if (is_array($vercel)) {
+    // Le dossier publié doit suivre angular.json. Sans outputPath
+    // épinglé, ce chemin dépendait d'une valeur par défaut d'Angular
+    // que personne ne contrôle.
+    $confAngular = json_decode($angular, true);
+    $sortieNg = $confAngular['projects']['frontend']['architect']['build']['options']['outputPath'] ?? '';
+    check(
+        'angular.json épingle outputPath',
+        $sortieNg !== '',
+        'sinon le chemin de sortie dépend d\'un défaut d\'Angular, et trois fichiers en dépendent',
+    );
+    check(
+        'outputDirectory de Vercel suit angular.json',
+        ($vercel['outputDirectory'] ?? '') === 'frontend/' . $sortieNg . '/browser',
+        "vercel publie « " . ($vercel['outputDirectory'] ?? '') . " », angular produit « frontend/{$sortieNg}/browser »",
+    );
+
+    $reecritures = $vercel['rewrites'] ?? [];
+    $sources = array_column($reecritures, 'source');
+    check('une réécriture /api existe', ($sources[0] ?? '') === '/api/:chemin*');
+    check(
+        'la réécriture /api passe AVANT le repli de l\'application',
+        count($sources) >= 2 && $sources[0] !== '/(.*)' && in_array('/(.*)', $sources, true),
+        'inversées, toutes les routes de l\'API recevraient index.html',
+    );
+    $cible = $reecritures[0]['destination'] ?? '';
+    check(
+        'la réécriture conserve le préfixe /api attendu par le routeur PHP',
+        str_contains($cible, '/api/:chemin*'),
+        'src/Core/Request.php lit REQUEST_URI tel quel : le préfixe doit arriver intact',
+    );
+
+    // Les mêmes six en-têtes que sous Nginx, sinon le niveau de
+    // sécurité dépend de l'hébergeur choisi ce jour-là.
+    $posesVercel = [];
+    foreach ($vercel['headers'] ?? [] as $regle) {
+        foreach ($regle['headers'] ?? [] as $h) {
+            $posesVercel[$h['key']] = $h['value'];
+        }
+    }
+    foreach ($attendus as $e) {
+        check("vercel.json pose {$e}", isset($posesVercel[$e]));
+    }
+
+    // La CSP ne doit pas diverger entre les deux hébergements : une
+    // CSP plus permissive sur Vercel serait une régression invisible.
+    preg_match('/add_header Content-Security-Policy "([^"]+)"/', $entetes, $mc);
+    check(
+        'la CSP de Vercel est identique à celle de Nginx',
+        isset($mc[1]) && ($posesVercel['Content-Security-Policy'] ?? '') === $mc[1],
+        'deux CSP qui divergent = un niveau de sécurité qui dépend de l\'hébergeur',
+    );
+}
+
+echo "\n10. deploy.sh refuse de publier un dossier vide\n";
 check(
     'deploy.sh vérifie la présence d\'index.html avant de publier',
     str_contains($deploy, 'index.html'),

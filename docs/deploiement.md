@@ -7,6 +7,13 @@
 
 ---
 
+> **Vous déployez sur Vercel ?** Vercel n'exécute ni PHP ni MySQL :
+> l'application y vit, l'API doit vivre ailleurs. La procédure est
+> dans [`deploiement-vercel.md`](deploiement-vercel.md) ; ce
+> document-ci reste celui de l'API.
+
+---
+
 ## 0. Pourquoi ce choix par défaut
 
 Il fallait bien en supposer un pour écrire une procédure vérifiable.
