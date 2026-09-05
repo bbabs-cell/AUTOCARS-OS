@@ -1,0 +1,10 @@
+# Modèle des secrets de développement local.
+#   cp .dev.vars.example .dev.vars   puis remplir
+#
+# .dev.vars n'est JAMAIS suivi par Git. En production, le secret se
+# pose avec :  wrangler secret put JWT_SECRET
+#
+# `npm run types` lit ce fichier pour engendrer le typage : sans lui,
+# JWT_SECRET manquerait à l'interface Env et la vérification de types
+# échouerait sur un dépôt fraîchement cloné.
+JWT_SECRET=remplacez-moi-par-64-caracteres-aleatoires-en-local-uniquement

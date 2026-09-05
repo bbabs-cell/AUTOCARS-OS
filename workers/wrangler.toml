@@ -1,0 +1,16 @@
+name = "autocare-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-15"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "autocare"
+database_id = "a-remplacer-au-premier-deploiement"
+migrations_dir = "migrations"
+
+# Les tests ont besoin du secret et du chemin des migrations. En
+# production, JWT_SECRET est un secret Wrangler, jamais une variable
+# de ce fichier — qui est suivi par Git.
+[vars]
+JWT_ACCESS_TTL_MINUTES = "30"

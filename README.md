@@ -99,6 +99,7 @@ AUTOCARS-OS/
 | [docs/deploiement.md](docs/deploiement.md) | Mise en production, sauvegarde, restauration |
 | [docs/installation-vps-ovh.md](docs/installation-vps-ovh.md) | **Installation pas à pas** d'un VPS OVH pour `api.magyapro.com` |
 | [docs/migration-cloudflare-workers.md](docs/migration-cloudflare-workers.md) | **Chiffrage mesuré** d'une réécriture du backend vers Workers + D1 |
+| [workers/README.md](workers/README.md) | **Étape 1 faite** : la tranche verticale sur Workers + D1, et ce qu'elle a mesuré |
 | [deploy/backup-offsite.sh](deploy/backup-offsite.sh) | Envoi vérifié des sauvegardes vers Cloudflare R2 |
 | [docs/deploiement-vercel.md](docs/deploiement-vercel.md) | Mise en ligne sur Vercel : l'application d'un côté, l'API de l'autre |
 | [docs/performance.md](docs/performance.md) | Mesures à l'échelle, budgets par écran, ce qui a été trouvé |

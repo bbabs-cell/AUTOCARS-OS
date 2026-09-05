@@ -190,7 +190,7 @@ précédentes.
 
 | # | Étape | Ce qui la termine |
 |---|---|---|
-| 1 | **Une tranche verticale d'abord** : connexion + liste des véhicules, de bout en bout sur Workers + D1 | Un employé peut se connecter et voir ses véhicules, servi par Cloudflare |
+| 1 | ~~**Une tranche verticale d'abord** : connexion + liste des véhicules~~ **— FAITE** | ✅ 45 tests dans le runtime Workers ; l'application Angular affiche ses véhicules sans avoir été modifiée. Voir [`workers/README.md`](../workers/README.md) |
 | 2 | Le schéma D1 complet et ses contraintes `CHECK` | Les 22 tables, avec les garde-fous que `UNSIGNED` assurait |
 | 3 | Le socle : multi-tenance, permissions, jetons | Les tests d'isolation repassent, réécrits |
 | 4 | Les dépôts et contrôleurs, par domaine métier | Domaine par domaine, avec ses tests |
@@ -206,6 +206,28 @@ en une étape qu'en seize.
 
 ---
 
+## 6 bis. Ce que l'étape 1 a appris — et qui change une ligne du tableau
+
+**La pile tient.** Les deux routes fonctionnent de bout en bout, le
+cloisonnement multi-clients est vérifié, et le frontend n'a pas bougé
+d'une ligne.
+
+Un constat, en revanche, n'était pas dans le chiffrage initial :
+
+> **Le plan gratuit de Cloudflare ne peut pas héberger la connexion.**
+>
+> Il limite chaque requête à 10 ms de temps de calcul. Le hachage du
+> mot de passe en coûte 92 ms à la valeur recommandée — et déjà 8 ms
+> à 50 000 itérations, en dessous de toute recommandation sérieuse.
+> Un plan payant (5 $/mois) est nécessaire, et suffit largement.
+
+Cela ne remet pas la migration en cause, mais cela corrige le tableau
+du §7 : l'hébergement Cloudflare n'est pas gratuit pour cet usage.
+C'est précisément le genre de contrainte que la tranche verticale
+devait faire apparaître en une étape plutôt qu'en seize.
+
+---
+
 ## 7. Ce que je dois dire une fois, puis plus
 
 Vous avez tranché en connaissance de cause, et ce document sert à
@@ -216,7 +238,7 @@ pour qu'il soit écrit quelque part :
 |---|---|---|
 | Développement | 0 lot | ≈ 16 lots |
 | Test terrain | possible dès l'hébergement en place | repoussé d'autant |
-| Hébergement | 2 à 5 €/mois (mutualisé) ou 5 à 10 € (VPS) | inclus dans Cloudflare |
+| Hébergement | 2 à 5 €/mois (mutualisé) ou 5 à 10 € (VPS) | ~~inclus~~ **5 $/mois minimum** — le plan gratuit ne peut pas hacher un mot de passe (mesuré à l'étape 1) |
 | Serveur à administrer | aucun en mutualisé | aucun |
 | Ré-encodage des images | gratuit, déjà là | payant ou perdu |
 
