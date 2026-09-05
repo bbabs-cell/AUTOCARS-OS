@@ -71,3 +71,71 @@ describe('cloisonnement entre organisations', () => {
     expect(r.results.map((v) => v.plate_number)).toEqual(['RF1111ZZ']);
   });
 });
+
+/**
+ * ==================================================================
+ * LE PARAMÈTRE D'ORGANISATION SE PLACE OÙ IL FAUT
+ * ==================================================================
+ * La première version de `select()` liait toujours l'organisation en
+ * PREMIER. Cela marchait pour un SELECT, où `{ORG}` précède tout
+ * autre `?`. Dans une écriture, non :
+ *
+ *     UPDATE operations SET status = ? WHERE {ORG} AND id = ?
+ *
+ * le `?` de `SET status` vient avant. L'organisation partait donc
+ * dans la colonne `status`, et la mise à jour ne touchait AUCUNE
+ * ligne — sans lever la moindre erreur.
+ *
+ * Un défaut muet dans le mécanisme qui protège les données de chaque
+ * client mérite son test.
+ */
+describe('la position du filtre d’organisation', () => {
+  beforeEach(prepareBase);
+
+  /**
+   * On vérifie la DONNÉE, pas le compteur `meta.changes`.
+   *
+   * Ce compteur inclut les lignes modifiées par les déclencheurs :
+   * une écriture sur `vehicles` en renvoie 2, parce que le
+   * déclencheur `updated_at` en compte une de plus. Un test qui
+   * s'appuierait dessus casserait à chaque ajout de déclencheur, et
+   * il mesurerait de toute façon la mauvaise chose.
+   */
+  it('une écriture avec un paramètre AVANT le marqueur fonctionne', async () => {
+    const base = TenantDb.pour(env.DB, 1);
+
+    await base.select("UPDATE vehicles SET color = ? WHERE {ORG} AND id = ?", 'Bleu', 1).run();
+
+    const v = await env.DB.prepare('SELECT color FROM vehicles WHERE id = 1')
+      .first<{ color: string }>();
+    expect(v?.color).toBe('Bleu');
+  });
+
+  it('et elle reste cloisonnée : le véhicule du concurrent est intouchable', async () => {
+    const base = TenantDb.pour(env.DB, 1);
+
+    await base.select("UPDATE vehicles SET color = ? WHERE {ORG} AND id = ?", 'Bleu', 3).run();
+
+    // Le véhicule 3 appartient à l'organisation 2 : il ne bouge pas.
+    const v = await env.DB.prepare('SELECT color FROM vehicles WHERE id = 3')
+      .first<{ color: string | null }>();
+    expect(v?.color).toBeNull();
+  });
+
+  it('plusieurs paramètres de part et d’autre du marqueur', async () => {
+    const base = TenantDb.pour(env.DB, 1);
+
+    await base
+      .select(
+        "UPDATE vehicles SET color = ?, notes = ? WHERE {ORG} AND id = ? AND brand = ?",
+        'Vert', 'Repeint', 1, 'Renault',
+      )
+      .run();
+
+    const v = await env.DB.prepare('SELECT color, notes FROM vehicles WHERE id = 1')
+      .first<{ color: string; notes: string }>();
+
+    expect(v?.color).toBe('Vert');
+    expect(v?.notes).toBe('Repeint');
+  });
+});

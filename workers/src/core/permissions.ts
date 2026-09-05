@@ -1,5 +1,5 @@
 /**
- * Matrice des droits — portée telle quelle depuis config/permissions.php
+ * Matrice des droits — ENGENDRÉE depuis config/permissions.php
  * ==================================================================
  * Les droits n'ont PAS été repensés à l'occasion de la migration. Ils
  * sont recopiés à l'identique, et un test compare cette table à celle
@@ -9,12 +9,29 @@
  *
  * Ce qui doit changer changera ensuite, délibérément, dans son propre
  * lot.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI « ENGENDRÉE » ET NON « RECOPIÉE »
+ *
+ * À l'étape 1, cette table avait été recopiée à la main depuis une
+ * sortie de terminal TRONQUÉE. Dix droits manquaient à l'employé —
+ * dont operations.create, operations.update_status et
+ * attendance.clock. Autrement dit : un employé n'aurait pas pu
+ * accueillir un véhicule, faire avancer un dossier, ni pointer son
+ * arrivée. Tout son travail était bloqué, et rien ne le signalait
+ * tant qu'aucune route ne le vérifiait.
+ *
+ * Le défaut n'est apparu qu'en écrivant les opérations, à l'étape 4.
+ * La table est désormais produite par un script à partir du fichier
+ * PHP, et un test compare les effectifs des trois rôles.
  */
 
 export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
 
 export const MATRICE: Record<Role, readonly string[]> = {
-  ADMIN: ['*'],
+  ADMIN: [
+    '*',
+  ],
   MANAGER: [
     'dashboard.view',
     'vehicles.*',
@@ -51,6 +68,16 @@ export const MATRICE: Record<Role, readonly string[]> = {
     'loyalty.view',
     'loyalty.redeem',
     'subscriptions.view',
+    'subscriptions.sell',
+    'subscriptions.use',
+    'attendance.clock',
+    'operations.create',
+    'operations.view',
+    'operations.update_status',
+    'operations.release',
+    'inspections.view',
+    'inspections.create',
+    'services.view',
   ],
 };
 

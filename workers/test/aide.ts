@@ -71,6 +71,18 @@ export async function prepareBase(): Promise<void> {
         (2, 1, 1, 'DK5678BC', 'Hyundai', 'Tucson', 'SUV'),
         (3, 2, 2, 'RF1111ZZ', 'Toyota',  'Hilux',  'PICKUP')`,
     ),
+    env.DB.prepare(
+      `INSERT INTO services (id, organization_id, name, category, price, duration_minutes) VALUES
+        (1, 1, 'Lavage standard', 'LAVAGE', 5000, 30),
+        (2, 2, 'Lavage rival',    'LAVAGE', 4000, 30)`,
+    ),
+    env.DB.prepare(
+      `INSERT INTO operations (id, organization_id, station_id, vehicle_id, customer_id,
+                               service_id, reference, status, price, created_by_user_id) VALUES
+        (1, 1, 1, 1, 1, 1, 'OP-0001', 'WAITING',  5000, 1),
+        (2, 1, 1, 2, 1, 1, 'OP-0002', 'READY',    5000, 1),
+        (3, 2, 3, 3, 2, 2, 'OP-9001', 'WAITING',  4000, 4)`,
+    ),
   ]);
 }
 

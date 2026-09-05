@@ -19,6 +19,8 @@
 
 import { connexion, deconnexion, inscription, moi, rafraichis } from './controllers/auth';
 import { liste } from './controllers/vehicles';
+import { changeStatut, file } from './controllers/operations';
+import { liste as listeStations } from './controllers/stations';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -45,20 +47,35 @@ export default {
         if (chemin === '/api/auth/logout')   return await deconnexion(request, env);
       }
 
-      if (chemin === '/api/auth/me' && request.method === 'GET') {
-        const utilisateur = await identifie(request, env.DB, env.JWT_SECRET);
+      // --------------------------------------------------------------
+      // Les routes protégées.
+      //
+      // On identifie la ROUTE avant d'identifier l'appelant, comme le
+      // faisait le routeur PHP. L'inverse renverrait 401 sur une
+      // adresse qui n'existe pas, ce qui est un mensonge : le
+      // problème n'est pas le jeton, c'est l'adresse.
+      // --------------------------------------------------------------
+      const statut = /^\/api\/operations\/(\d+)\/status$/.exec(chemin);
 
-        return utilisateur === null ? nonAuthentifie() : moi(utilisateur);
-      }
+      const protegee =
+        (chemin === '/api/auth/me' && request.method === 'GET') ||
+        (chemin === '/api/vehicles' && request.method === 'GET') ||
+        (chemin === '/api/queue' && request.method === 'GET') ||
+        (chemin === '/api/stations' && request.method === 'GET') ||
+        (statut !== null && request.method === 'PUT');
 
-      if (chemin === '/api/vehicles' && request.method === 'GET') {
+      if (protegee) {
         const utilisateur = await identifie(request, env.DB, env.JWT_SECRET);
 
         if (utilisateur === null) {
           return nonAuthentifie();
         }
 
-        return await liste(request, env, utilisateur);
+        if (chemin === '/api/auth/me') return moi(utilisateur);
+        if (chemin === '/api/vehicles') return await liste(request, env, utilisateur);
+        if (chemin === '/api/queue') return await file(request, env, utilisateur);
+        if (chemin === '/api/stations') return await listeStations(request, env, utilisateur);
+        if (statut !== null) return await changeStatut(request, env, utilisateur, statut[1]);
       }
 
       return introuvable("Cette adresse n'existe pas.");

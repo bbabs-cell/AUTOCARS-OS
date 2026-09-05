@@ -67,11 +67,26 @@ export class TenantDb {
       );
     }
 
-    // Le filtre est le PREMIER paramètre lié : l'appelant place ses
-    // propres paramètres après, dans leur ordre naturel.
-    return this.db
-      .prepare(sql.replaceAll('{ORG}', 'organization_id = ?'))
-      .bind(this.organizationId, ...parametres);
+    // ON INSÈRE L'ORGANISATION À SA VRAIE POSITION.
+    //
+    // La première version liait toujours l'organisation en PREMIER.
+    // Cela fonctionnait pour un SELECT, où le marqueur {ORG} précède
+    // tout autre `?`. Mais dans
+    //
+    //     UPDATE operations SET status = ? WHERE {ORG} AND id = ?
+    //
+    // le `?` de `SET status` vient AVANT : l'organisation partait
+    // dans la colonne `status`, et la mise à jour ne touchait aucune
+    // ligne. Sans erreur — juste une opération qui ne bougeait pas.
+    //
+    // Le défaut n'est apparu qu'à la première écriture, à l'étape 4.
+    // On compte donc les paramètres qui précèdent le marqueur et on
+    // glisse l'organisation à cet endroit précis.
+    const avant = (sql.split('{ORG}')[0].match(/\?/g) ?? []).length;
+    const lies = [...parametres];
+    lies.splice(avant, 0, this.organizationId);
+
+    return this.db.prepare(sql.replaceAll('{ORG}', 'organization_id = ?')).bind(...lies);
   }
 
   /**

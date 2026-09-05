@@ -1,9 +1,10 @@
 # API AUTOCARE OS sur Cloudflare Workers
 
-> **Étapes 1 à 3 faites.** La tranche verticale, le schéma complet,
-> puis le socle d'authentification. Le backend PHP reste la référence
-> en service dans `../backend/` tant que la migration n'est pas
-> terminée.
+> **Étapes 1 à 3 faites, étape 4 commencée.** La tranche verticale, le
+> schéma complet, le socle d'authentification, puis le cœur métier :
+> les opérations et la file d'attente. Le backend PHP reste la
+> référence en service dans `../backend/` tant que la migration n'est
+> pas terminée.
 
 ---
 
@@ -18,7 +19,7 @@ jeton, la relecture du rôle en base, le contrôle de permission côté
 serveur, une jointure, une recherche, et le cloisonnement entre
 clients. Si ces deux-là sont justes, l'architecture tient.
 
-**Réponse : oui, la pile tient.** 89 tests le vérifient dans le vrai
+**Réponse : oui, la pile tient.** 125 tests le vérifient dans le vrai
 runtime Workers, et l'application Angular existante fonctionne contre
 cette API **sans une ligne modifiée**.
 
@@ -67,7 +68,7 @@ npm install --legacy-peer-deps   # voir la note plus bas
 cp .dev.vars.example .dev.vars   # puis remplir JWT_SECRET
 npm run types                    # engendre worker-configuration.d.ts
 
-npm test                         # 89 tests, dans le runtime Workers
+npm test                         # 125 tests, dans le runtime Workers
 npm run typecheck                # les deux tsconfig
 npm run dev                      # API locale sur :8787
 ```
@@ -180,12 +181,63 @@ vérifie qu'il n'apparaît dans aucun en-tête `Set-Cookie`.
 
 ---
 
+## Étape 4 (en cours) — le cœur métier
+
+**La file d'attente fonctionne**, avec ses cinq colonnes, ses cartes
+et ses alertes de dépassement. La machine à états et ses refus sont
+portés à l'identique.
+
+### Le défaut qui a coûté le plus cher à trouver
+
+L'API répondait 200. La file affichait **une** carte, puis plus rien :
+quatre colonnes vides, aucune erreur en console, et le sous-titre
+figé sur « Chargement… ».
+
+La cause : sur les trente-six champs du modèle `Operation`, la
+première version n'en envoyait qu'une quinzaine. Le gabarit Angular
+lisait `operation.is_overdue`, absent — et le rendu s'arrêtait là, en
+silence.
+
+**Le symptôme ne désignait pas la cause.** On cherche du côté du
+chargement, du cache, des colonnes ; le problème est un champ manquant
+dans une carte. Trois vérifications successives ont été nécessaires
+pour l'établir : `curl` (correct), une requête authentifiée depuis la
+page (correcte), puis l'inspection du DOM — cinq colonnes présentes,
+quatre sans titre.
+
+Un test fige désormais la liste des trente-six clés, **recopiée du
+modèle du frontend et non du code serveur** : un test qui recopierait
+l'implémentation ne vérifierait rien.
+
+### Ce que la construction a révélé d'autre
+
+| Trouvé | Ce que ça aurait donné |
+|---|---|
+| **Dix droits manquaient à l'employé** dans la matrice, recopiée à l'étape 1 depuis une sortie de terminal tronquée | Un employé ne pouvait ni accueillir un véhicule, ni faire avancer un dossier, ni pointer |
+| `TenantDb` liait toujours l'organisation **en premier** | Dans `UPDATE … SET x = ? WHERE {ORG}`, l'organisation partait dans la colonne `x` : la mise à jour ne touchait aucune ligne, sans erreur |
+| Le statut d'un paiement réglé est `PAID`, pas `CONFIRMED` | Le garde « véhicule impayé » aurait bloqué **toute** restitution, même payée |
+| Le droit s'appelle `operations.update_status` | Aucun employé n'aurait pu déplacer une carte |
+
+Les trois premiers étaient muets. C'est la construction du domaine
+métier qui les a fait apparaître — pas une relecture.
+
+### Les refus, tenus par le serveur
+
+| Refus | Ce qui l'exerce |
+|---|---|
+| Aucune étape ne se saute | La table de transitions, testée exhaustivement |
+| Pas de lavage sans **inspection d'entrée** | Une garde, avec un message qui explique pourquoi |
+| Pas de restitution d'un **véhicule impayé** | Une garde, code **402**, et une dérogation réservée à un responsable — tracée nominativement au journal |
+| Le contrôle qualité peut renvoyer au lavage | La table : c'est tout l'intérêt d'un contrôle que de pouvoir dire non |
+
+---
+
 ## Ce qui est là, et ce qui ne l'est pas
 
 | Fait | Pas encore |
 |---|---|
-| `login`, `register`, `refresh`, `logout`, `me` | Les 83 autres routes |
-| `GET /api/vehicles` | Photos, sauvegardes, contrôle d'avant-vol |
+| `login`, `register`, `refresh`, `logout`, `me` | Les 79 autres routes |
+| `vehicles`, `queue`, `stations`, changement de statut | Photos, sauvegardes, contrôle d'avant-vol |
 | Cloisonnement multi-clients, avec son garde-fou | Les index de performance (à re-mesurer, pas à recopier) |
 | Matrice des droits, portée à l'identique | |
 | Les 21 tables, leurs contraintes et leurs déclencheurs | |
