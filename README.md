@@ -96,6 +96,7 @@ AUTOCARS-OS/
 | [docs/database.md](docs/database.md) | Modèle de données |
 | [docs/security.md](docs/security.md) | Règles de sécurité du projet |
 | [docs/audit-securite.md](docs/audit-securite.md) | Audit du lot 21 : méthode, défauts trouvés, risques acceptés |
+| [docs/deploiement.md](docs/deploiement.md) | Mise en production, sauvegarde, restauration |
 | [docs/performance.md](docs/performance.md) | Mesures à l'échelle, budgets par écran, ce qui a été trouvé |
 
 ---
@@ -133,7 +134,7 @@ suivant.
 - [x] **Lot 19** — Qualité : le lien de mot de passe oublié part enfin, trois éléments morts retirés de l'en-tête, intégration continue, 23 tests de plus
 - [x] **Lot 20** — Performance : un banc de mesure à 76 000 opérations, cinq index posés après mesure, un total de caisse faux découvert au passage, 3 tests de plus
 - [x] **Lot 21** — Audit de sécurité : l'API attaquée pour de vrai, trois défauts trouvés et corrigés, un risque accepté et argumenté, 23 tests de plus
-- [ ] Lot 22 — Déploiement, sauvegarde et restauration
+- [x] **Lot 22** — Déploiement : un contrôle qui refuse une mise en ligne bancale, une sauvegarde dont la restauration est vérifiée par un test, 18 tests de plus
 
 > **La phase C est terminée.** Les dix-huit premiers lots couvrent le
 > produit ; les quatre derniers le préparent à tourner ailleurs que
@@ -152,10 +153,27 @@ restitution :
 et le tableau de bord qui dit, le lendemain matin, ce qui demande une
 action.
 
-**885 tests** (812 backend, 73 frontend) tiennent l'ensemble, et tournent
+**903 tests** (830 backend, 73 frontend) tiennent l'ensemble, et tournent
 à chaque poussée grâce à l'intégration continue.
 
-C'est le moment prévu au plan pour un **test terrain** dans une vraie
-station : les modules restants gagneront à être conçus sur ce qu'un
-gérant aura reproché à celui-ci, plutôt que sur ce qu'on imagine
-aujourd'hui.
+---
+
+## Les 22 lots sont faits
+
+Le plan est arrivé au bout. Le produit couvre le parcours complet d'un
+véhicule, il est mesuré, audité, et il sait se déployer, se
+sauvegarder et se restaurer.
+
+**Ce qu'il reste n'est plus du développement.**
+
+| Ce qui manque | Qui décide |
+|---|---|
+| **Le test terrain** dans une vraie station | Prévu au plan depuis le lot 10, jamais fait. C'est de loin le plus important : personne n'a encore utilisé ce produit pour travailler. |
+| Une **relecture de sécurité par un tiers** | Réclamée par l'audit du lot 21, avant les premières données réelles d'un client. |
+| L'**hébergement** | Le lot 22 suppose un VPS et dit ce qui change pour les autres. |
+| Le **fournisseur de paiement** et le **canal de notification client** | Rien ne sera codé avant qu'un compte marchand réel existe. |
+| Le **mode hors-ligne** | Hors périmètre v1 — le test terrain doit dire quels écrans en ont besoin. |
+
+Trois choses n'ont jamais changé en vingt-deux lots : la charte
+visuelle figée au lot 2, l'interdiction de simuler une intégration de
+paiement, et la règle qu'un lot n'avance qu'une fois validé.

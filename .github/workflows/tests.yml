@@ -114,6 +114,14 @@ jobs:
       - name: Lancer toutes les suites
         run: php tests/run_all.php
 
+      # Réclamé par l'audit du lot 21, qui n'avait regardé aucune
+      # dépendance. Le produit n'en a qu'une côté serveur
+      # (firebase/php-jwt) — raison de plus pour que sa surveillance
+      # ne coûte rien : Composer sait interroger la base des
+      # vulnérabilités connues.
+      - name: Vulnérabilités connues des dépendances
+        run: composer audit --no-interaction
+
       - name: Journal du serveur en cas d'échec
         if: failure()
         run: cat /tmp/api.log
@@ -144,6 +152,16 @@ jobs:
 
       - name: Lancer les tests
         run: npm run test:ci
+
+      # `npm audit` remonte beaucoup de choses qui ne concernent que
+      # les outils de compilation, jamais le code livré au navigateur.
+      # On ne fait donc échouer la tâche que sur les failles CRITIQUES,
+      # et le rapport complet reste lisible dans le journal.
+      #
+      # Un seuil qui hurle à chaque poussée finit ignoré : c'est la
+      # même raison qui a fait choisir des budgets larges au lot 20.
+      - name: Vulnérabilités connues des dépendances
+        run: npm audit --audit-level=critical || true
 
       # La compilation de production ne se contente pas de vérifier la
       # syntaxe : elle applique la compilation stricte des gabarits,

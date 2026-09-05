@@ -357,6 +357,24 @@ d'eux le dépasse. Résultats détaillés et méthode :
 
 ---
 
+## 7 quater. Mettre en production
+
+Rien de ce qui précède ne convient à un vrai serveur : `php -S` est un
+serveur de développement, et `APP_DEBUG=true` afficherait la structure
+du code à tout internet.
+
+La procédure complète — Nginx, HTTPS, migrations, publication
+atomique, sauvegarde planifiée — est dans
+**[docs/deploiement.md](deploiement.md)**.
+
+Avant toute mise en ligne :
+
+```bash
+cd backend && composer preflight
+```
+
+---
+
 ## 8. Les deux commandes du quotidien
 
 ```bash

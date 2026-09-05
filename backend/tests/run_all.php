@@ -39,6 +39,7 @@ $tests = [
     'api_settings_test.php'   => 'API — multi-stations et paramètres',
     'mail_test.php'           => 'Courrier',
     'security_audit_test.php' => "Audit de sécurité (lot 21)",
+    'backup_test.php'         => 'Sauvegarde et restauration',
 ];
 
 $directory = __DIR__;

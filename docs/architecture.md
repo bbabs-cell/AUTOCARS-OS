@@ -354,8 +354,15 @@ et déconnecté — et vérifie que chaque chaîne s'arrête.
 
 ## 14. Ce qui n'est pas encore décidé
 
-- L'hébergement de production (impacte le déploiement, Lot 22).
-- **Le rendu côté serveur (Angular SSR).** La page d'accueil est
+- L'hébergement de production **reste à arrêter par le
+  commanditaire**. Le lot 22 n'a pas attendu : il suppose un serveur
+  privé virtuel sous Ubuntu, écrit la procédure complète pour ce
+  cas-là, et dit ce qui change pour les autres
+  (`docs/deploiement.md`, §8). Les outils — contrôle d'avant-vol,
+  sauvegarde, restauration — ne dépendent d'aucun hébergeur.
+- **Le rendu côté serveur (Angular SSR).** Toujours pas tranché après
+  le lot 22 : il dépend de l'hébergement, et le besoin n'est pas
+  démontré. La page d'accueil est
   construite dans le navigateur : un robot d'indexation qui n'exécute
   pas le JavaScript ne verra qu'une page vide. Le titre et la
   description sont posés, ce qui suffit au partage d'un lien sur

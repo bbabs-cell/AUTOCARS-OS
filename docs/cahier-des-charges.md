@@ -424,8 +424,10 @@ par des tests. Les modifier, c'est changer de produit.
 |---|---|:---:|
 | ENF-21 | Les écrans de comptoir répondent en moins d'une seconde sur les volumes d'une station | [FAIT] — **mesuré** au lot 20 sur 76 000 opérations |
 | ENF-22 | Les filtres financiers sont appliqués **côté serveur** : l'API n'envoie pas ce que l'utilisateur n'a pas le droit de voir | [FAIT] |
-| ENF-23 | Sauvegarde et restauration documentées | [PRÉVU] — lot 22 |
-| ENF-24 | Journalisation d'exploitation et supervision | [PRÉVU] — lots 20–22 |
+| ENF-23 | Sauvegarde et restauration documentées **et essayées** | [FAIT] — lot 22 |
+| ENF-24 | Journalisation d'exploitation et supervision | [PARTIEL] — les journaux existent ; la supervision et leur rotation restent à brancher, voir `deploiement.md` §9 |
+| ENF-29 | **Un contrôle refuse la mise en ligne** si la configuration de production n'est pas saine | [FAIT] — lot 22 |
+| ENF-30 | Les dépendances sont surveillées à chaque poussée | [FAIT] — lot 22 |
 | ENF-25 | **Les tests tournent ailleurs que sur le poste de leur auteur** : intégration continue à chaque poussée | [FAIT] — lot 19 |
 | ENF-26 | Aucun élément d'interface **désactivé ou faux** n'est laissé en place « en attendant » | [FAIT] — lot 19 |
 | ENF-27 | **Chaque écran porte un budget de temps de réponse**, décidé d'après son usage et vérifié sur un volume réaliste | [FAIT] — lot 20 |
@@ -586,7 +588,7 @@ n'aurait pu les rattraper au moment de produire des statistiques.
 | `docs/security.md` — les règles de sécurité | [FAIT] |
 | `docs/design-system.md` — la charte | [FAIT] |
 | Ce cahier des charges | [FAIT] |
-| Procédure de déploiement et de sauvegarde | [PRÉVU] — lot 22 |
+| `docs/deploiement.md`, `deploy/nginx.conf.example`, `deploy/deploy.sh` | [FAIT] — lot 22 |
 | Rapport d'audit de sécurité (`docs/audit-securite.md`) | [FAIT] — lot 21 |
 | Intégration continue (`.github/workflows/tests.yml`) | [FAIT] — lot 19 |
 | `docs/performance.md` — mesures, budgets, méthode | [FAIT] — lot 20 |
@@ -622,10 +624,10 @@ déjà.
 | **A — Fondations** | 1–3 | Projet, design system, base de données | ✅ |
 | **B — Cœur du MVP** | 4–10 | Authentification, installation, clients, opérations, file, argent, tableau de bord | ✅ **MVP utilisable** |
 | **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | **18/18 — terminée** |
-| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | 3/4 |
+| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | **4/4 — terminée** |
 
-**885 tests** (812 backend, 73 frontend) tiennent l'ensemble au
-lot 21, et tournent à chaque poussée.
+**903 tests** (830 backend, 73 frontend) tiennent l'ensemble au
+lot 22, et tournent à chaque poussée.
 
 ### Le test terrain — la tâche la plus importante qui reste
 

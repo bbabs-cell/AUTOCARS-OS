@@ -29,6 +29,12 @@
 /backend/storage/logs/*
 !/backend/storage/logs/.gitkeep
 
+# --- Sauvegardes (lot 22) ----------------------------------
+# Une archive contient TOUTE la base en clair : identifiants
+# des clients, historique, montants. Elle n'a rien a faire
+# dans Git, ou le depot devient la fuite.
+/backend/storage/backups/
+
 # --- Systeme / editeurs ------------------------------------
 .DS_Store
 Thumbs.db

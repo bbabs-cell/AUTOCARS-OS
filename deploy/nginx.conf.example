@@ -1,0 +1,156 @@
+# ==================================================================
+# AUTOCARE OS — configuration Nginx de production
+# ==================================================================
+# À copier dans /etc/nginx/sites-available/autocare puis :
+#
+#   ln -s /etc/nginx/sites-available/autocare /etc/nginx/sites-enabled/
+#   nginx -t && systemctl reload nginx
+#
+# Remplacer PARTOUT :
+#   app.ma-station.sn   par votre domaine
+#   /var/www/autocare   par le chemin de déploiement
+#
+# ------------------------------------------------------------------
+# UN SEUL DOMAINE POUR LES DEUX
+#
+# L'application Angular et l'API vivent sous le même nom, l'API sous
+# /api. Ce n'est pas une coquetterie : deux domaines rendraient le
+# cookie de session « tiers », et les navigateurs les bloquent de plus
+# en plus. Avec un seul domaine, `SameSite=Strict` protège vraiment.
+# ==================================================================
+
+
+# ------------------------------------------------------------------
+# 1. HTTP ne sert qu'à rediriger — et à renouveler le certificat
+# ------------------------------------------------------------------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name app.ma-station.sn;
+
+    # Let's Encrypt vérifie le domaine par un fichier servi en clair.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+
+# ------------------------------------------------------------------
+# 2. Le vrai serveur
+# ------------------------------------------------------------------
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+
+    server_name app.ma-station.sn;
+
+    # ==============================================================
+    # LA RACINE EST public/, JAMAIS LE DOSSIER DU PROJET.
+    # ==============================================================
+    # C'est LA erreur de déploiement à ne pas faire. Si la racine
+    # pointait sur /var/www/autocare/backend, alors `.env` serait
+    # téléchargeable : identifiants de la base et clé de signature des
+    # jetons, en une requête. Le contrôle `php tools/preflight.php`
+    # vérifie ce point.
+    root /var/www/autocare/frontend;
+    index index.html;
+
+    ssl_certificate     /etc/letsencrypt/live/app.ma-station.sn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.ma-station.sn/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    # --------------------------------------------------------------
+    # En-têtes de sécurité
+    # --------------------------------------------------------------
+    # HSTS : le navigateur refusera de revenir en HTTP pendant un an.
+    #
+    # À N'ACTIVER QU'UNE FOIS LE CERTIFICAT EN PLACE ET VÉRIFIÉ. Un
+    # HSTS posé sur un site dont le HTTPS casse rend le site
+    # inaccessible pour tous ceux qui l'ont déjà visité — et on ne
+    # peut pas le retirer de leur navigateur.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # La politique de contenu. Elle se pose ICI et pas dans l'API :
+    # c'est ce serveur qui envoie la page, et une CSP ne protège que
+    # le document qui la porte.
+    #
+    # 'self' partout, aucun 'unsafe-inline' sur les scripts : Angular
+    # n'en a pas besoin en production. `style-src` tolère l'inline
+    # parce que le framework pose des styles calculés.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Frame-Options "DENY" always;
+
+    # Le navigateur n'a besoin d'aucune de ces permissions.
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+
+    server_tokens off;
+
+    # Les photos d'inspection font 12 Mo au maximum côté application.
+    client_max_body_size 14M;
+
+    # --------------------------------------------------------------
+    # L'API
+    # --------------------------------------------------------------
+    location /api {
+        # `alias` et non `root` : le dossier public/ de l'API n'est pas
+        # sous la racine du site.
+        alias /var/www/autocare/backend/public;
+
+        try_files $uri /index.php$is_args$args;
+
+        location ~ \.php$ {
+            include snippets/fastcgi-php.conf;
+            fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+            fastcgi_param SCRIPT_FILENAME /var/www/autocare/backend/public/index.php;
+
+            # Le temps d'une restitution avec photos sur une connexion
+            # lente. Au-delà, quelque chose ne va pas.
+            fastcgi_read_timeout 60s;
+        }
+    }
+
+    # --------------------------------------------------------------
+    # L'application Angular
+    # --------------------------------------------------------------
+    # Les fichiers compilés portent une empreinte dans leur nom
+    # (main-A1B2C3.js) : ils ne changent jamais, on peut les garder un
+    # an. `index.html`, lui, ne doit JAMAIS être mis en cache — c'est
+    # lui qui désigne la version des autres.
+    location ~* \.(?:js|css|woff2|png|jpg|svg|ico)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-store" always;
+    }
+
+    # Toute autre URL rend index.html : c'est une application à page
+    # unique, et le routeur d'Angular s'occupe du reste. C'est aussi ce
+    # qui fait fonctionner la page 404 du lot 18 — le serveur ne sait
+    # pas quelles routes existent, l'application si.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # --------------------------------------------------------------
+    # Ce qui ne doit jamais sortir
+    # --------------------------------------------------------------
+    # Ceinture et bretelles : ces chemins ne sont déjà pas servis, mais
+    # une erreur de configuration future ne doit pas les exposer.
+    location ~ /\.(?!well-known) { deny all; }
+    location ~ ^/(storage|vendor|tools|tests|database)/ { deny all; }
+
+    access_log /var/log/nginx/autocare.access.log;
+    error_log  /var/log/nginx/autocare.error.log;
+}

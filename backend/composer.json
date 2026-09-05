@@ -28,6 +28,9 @@
         "seed": "php tools/seed.php",
         "test": "php tests/run_all.php",
         "benchmark": "php tools/benchmark.php",
-        "benchmark-seed": "php tools/benchmark_seed.php"
+        "benchmark-seed": "php tools/benchmark_seed.php",
+        "preflight": "php tools/preflight.php",
+        "backup": "php tools/backup.php",
+        "restore": "php tools/restore.php"
     }
 }
