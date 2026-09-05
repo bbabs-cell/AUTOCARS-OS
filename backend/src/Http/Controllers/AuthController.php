@@ -31,6 +31,13 @@ use Throwable;
 final class AuthController
 {
     /** Nom du cookie portant le jeton de rafraîchissement. */
+    /**
+     * Demandes de réinitialisation acceptées par quart d'heure et par
+     * adresse. Trois laisse la place à un lien perdu dans les
+     * indésirables, et arrête l'inondation.
+     */
+    private const MAX_RESET_REQUESTS = 3;
+
     private const REFRESH_COOKIE = 'autocare_refresh';
 
     // ==================================================================
@@ -256,6 +263,40 @@ final class AuthController
         $stored = TokenService::readRefreshToken($token);
 
         if ($stored === null) {
+            // ==========================================================
+            // UN JETON DÉJÀ CONSOMMÉ QUI REVIENT EST UN SIGNAL.
+            // ==========================================================
+            // La rotation garantit qu'un jeton ne sert qu'une fois.
+            // S'il réapparaît, le propriétaire légitime a forcément
+            // reçu le suivant : celui qui présente celui-ci en a donc
+            // une COPIE.
+            //
+            // On ne peut pas savoir lequel des deux est l'imposteur.
+            // On ferme donc TOUTES les sessions de ce compte : le
+            // voleur perd la main, et l'utilisateur légitime est
+            // simplement invité à se reconnecter — un désagrément,
+            // contre un compte qui reste ouvert à un inconnu.
+            //
+            // CE CONTRÔLE A DEMANDÉ UNE CORRECTION AILLEURS D'ABORD.
+            // Tant que le navigateur pouvait lancer plusieurs
+            // renouvellements en parallèle (une quinzaine de requêtes
+            // qui expirent ensemble sur le tableau de bord), ce code
+            // aurait déconnecté tout le monde toutes les trente
+            // minutes. `AuthService.refresh()` ne lance plus qu'un
+            // renouvellement à la fois : c'est ce qui rend cette
+            // détection utilisable, et c'est pourquoi les deux
+            // corrections vont ensemble.
+            $known = TokenService::findAnyRefreshToken($token);
+
+            if ($known !== null && $known['revoked']) {
+                TokenService::revokeAllForUser($known['user_id']);
+
+                AuditLogger::record(
+                    action: 'auth.refresh_reuse_detected',
+                    userId: $known['user_id'],
+                );
+            }
+
             $this->clearRefreshCookie();
             Response::unauthorized('Session expirée. Reconnectez-vous.');
         }
@@ -357,7 +398,39 @@ final class AuthController
 
         $debugLink = null;
 
-        if ($user !== null && $user['status'] === 'ACTIVE') {
+        // ==============================================================
+        // LIMITATION DE DÉBIT — TROUVÉE PAR L'AUDIT DU LOT 21.
+        // ==============================================================
+        // La connexion était limitée depuis le lot 4 ; cette route ne
+        // l'était pas. Six appels de suite fabriquaient six jetons de
+        // réinitialisation VALIDES et envoyaient six messages.
+        //
+        // Trois conséquences, de la plus visible à la plus grave :
+        //   - on inonde la boîte de quelqu'un dont on connaît
+        //     l'adresse, sans même avoir de compte ;
+        //   - `password_resets` grossit sans limite ;
+        //   - surtout, chaque appel crée un jeton valable une heure.
+        //     Multiplier les jetons vivants multiplie les occasions
+        //     qu'un seul fuite.
+        //
+        // LE REFUS EST SILENCIEUX, ET C'EST ESSENTIEL. Répondre
+        // « trop de demandes » distinguerait une adresse connue d'une
+        // adresse inconnue — exactement l'énumération que la réponse
+        // unique de cette route existe pour empêcher. On ne fait donc
+        // rien de plus : même code, même phrase.
+        $throttled = $user !== null
+            && AuditLogger::countRecent('auth.password_reset_requested', $email, 15)
+               >= self::MAX_RESET_REQUESTS;
+
+        if ($throttled) {
+            AuditLogger::record(
+                action: 'auth.password_reset_throttled',
+                organizationId: (int) $user['organization_id'],
+                userId: (int) $user['id'],
+            );
+        }
+
+        if (!$throttled && $user !== null && $user['status'] === 'ACTIVE') {
             $token = bin2hex(random_bytes(32));
 
             Database::connection()->prepare(
@@ -389,6 +462,19 @@ final class AuthController
                 action: 'auth.password_reset_requested',
                 organizationId: (int) $user['organization_id'],
                 userId: (int) $user['id'],
+                // L'ADRESSE EST DANS LA TRACE PARCE QUE LA LIMITATION
+                // DE DÉBIT LA CHERCHE. `countRecent()` compte les
+                // écritures du journal dont les métadonnées portent
+                // l'adresse : sans cette ligne, il compte toujours
+                // zéro et la limite ne se déclenche jamais.
+                //
+                // C'est le défaut exact qu'a eu la première version de
+                // cette limitation, écrite pendant l'audit : le code
+                // était juste, la donnée qu'il interrogeait n'existait
+                // pas. Elle passait tous les tests qu'on lui aurait
+                // écrits en lisant le code, et aucun de ceux qu'on
+                // écrit en essayant l'attaque.
+                metadata: ['email' => $email],
             );
 
             if (Env::bool('APP_DEBUG', false)) {

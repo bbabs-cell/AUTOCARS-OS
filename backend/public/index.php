@@ -89,6 +89,32 @@ header('Referrer-Policy: no-referrer');
 header_remove('X-Powered-By');
 
 // ------------------------------------------------------------------
+// AUCUNE REPONSE DE L'API NE SE MET EN CACHE (audit du lot 21)
+// ------------------------------------------------------------------
+// TROUVE PAR L'AUDIT : les reponses authentifiees ne portaient aucun
+// en-tete de cache. La liste des clients, la recette du jour, le
+// registre de pointage restaient donc dans le cache disque du
+// navigateur — sur le poste PARTAGE d'un comptoir, l'employe suivant
+// pouvait les retrouver apres deconnexion, et un mandataire
+// intermediaire avait le droit de les garder aussi.
+//
+// « no-store » est plus fort que « no-cache » : no-cache autorise a
+// garder la reponse a condition de la revalider, no-store interdit de
+// l'ecrire. Pour des donnees d'entreprise, c'est le bon choix.
+//
+// « Pragma » ne sert qu'aux mandataires HTTP/1.0, qui existent encore
+// sur les reseaux d'entreprise anciens. Il ne coute rien.
+//
+// EXCEPTION : les photos d'inspection posent leurs propres en-tetes
+// (Cache-Control: private, max-age=3600) et passent par header()
+// directement, apres celui-ci. Une image de 200 ko rechargee a chaque
+// affichage d'un dossier couterait cher sur une connexion lente, et
+// elle reste dans le navigateur de l'employe, jamais dans un cache
+// partage.
+header('Cache-Control: no-store');
+header('Pragma: no-cache');
+
+// ------------------------------------------------------------------
 // 3. CORS — autoriser le frontend Angular
 // ------------------------------------------------------------------
 //

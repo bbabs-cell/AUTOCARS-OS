@@ -731,6 +731,44 @@ quelqu'un a pris la main sur la messagerie ou sur le lien, cette
 notification est le seul signal que la victime recevra. Elle dit quoi
 faire, et elle n'est envoyée qu'**après** le changement effectif.
 
+## 7 decies. Ce que l'audit du lot 21 a changé
+
+Le rapport complet — méthode, essais, faux positifs, risques
+acceptés — est dans **[audit-securite.md](audit-securite.md)**. Trois
+règles s'ajoutent ici :
+
+### Aucune réponse de l'API ne se met en cache
+
+`Cache-Control: no-store` sur toutes les réponses. Le poste d'un
+comptoir est **partagé** : l'employé du matin se déconnecte, celui de
+l'après-midi s'assied, et sans cet en-tête la liste des clients et la
+recette du jour restaient récupérables dans le cache du navigateur.
+Aucune faille d'authentification n'était nécessaire.
+
+Les photos d'inspection font exception avec `private, max-age=3600` :
+dans le navigateur de l'employé, jamais dans un cache partagé.
+
+### « Mot de passe oublié » est limité, et le refus est muet
+
+Trois demandes par quart d'heure et par adresse. Au-delà, aucun jeton
+n'est créé et aucun message n'est envoyé — **mais la réponse ne
+change pas**. Répondre « trop de demandes » distinguerait une adresse
+connue d'une adresse inconnue, c'est-à-dire rendrait cette route
+bavarde là où elle est volontairement muette.
+
+### Un jeton de session rejoué ferme toutes les sessions
+
+La rotation garantissait déjà qu'un jeton ne sert qu'une fois. Ce qui
+manquait était la conclusion : si un jeton déjà consommé réapparaît,
+quelqu'un en a une copie. On ferme tout, on trace, l'utilisateur
+légitime se reconnecte.
+
+**Cette règle a exigé une correction préalable côté navigateur.** Les
+renouvellements simultanés — une quinzaine de requêtes qui expirent
+ensemble sur le tableau de bord — auraient déclenché la détection à
+chaque expiration de jeton. La livrer seule aurait transformé une
+protection en panne quotidienne.
+
 ## 8. En-têtes HTTP
 
 Posés par `public/index.php` sur **toutes** les réponses :
@@ -829,4 +867,7 @@ la question centrale en cas de litige sur un véhicule.
 | Un changement de mot de passe prévient son propriétaire | ✅ Lot 19 |
 | Statistiques réservées à `reports.view` | ✅ Lot 16 |
 | Incohérence comptable affichée, jamais masquée | ✅ Lot 16 |
-| Audit de sécurité complet | 🔜 Lot 21 |
+| Audit de sécurité complet | ✅ Lot 21 — voir [audit-securite.md](audit-securite.md) |
+| Réponses authentifiées non mises en cache | ✅ Lot 21 |
+| « Mot de passe oublié » limité en débit, sans oracle | ✅ Lot 21 |
+| Jeton de session rejoué : toutes les sessions fermées | ✅ Lot 21 |

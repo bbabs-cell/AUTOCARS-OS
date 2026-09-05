@@ -385,7 +385,7 @@ par des tests. Les modifier, c'est changer de produit.
 | ENF-06 | Les photos sont stockées **hors du dossier exposé au web** et servies par une route qui vérifie les droits | [FAIT] |
 | ENF-07 | Journal d'audit nominatif de toute action sensible | [FAIT] |
 | ENF-08 | Un message d'erreur ne révèle jamais l'existence d'une donnée d'une autre entreprise (403 et non 200 vide) | [FAIT] |
-| ENF-09 | Audit de sécurité complet avant mise en production | [PRÉVU] — lot 21 |
+| ENF-09 | Audit de sécurité complet avant mise en production | [FAIT] — lot 21, voir `audit-securite.md` |
 
 > **ENF-08 vient d'une faille réelle, trouvée au lot 16.** Le contrôle
 > d'accès aux stations répondait `200` avec une réponse vide au lieu de
@@ -587,7 +587,7 @@ n'aurait pu les rattraper au moment de produire des statistiques.
 | `docs/design-system.md` — la charte | [FAIT] |
 | Ce cahier des charges | [FAIT] |
 | Procédure de déploiement et de sauvegarde | [PRÉVU] — lot 22 |
-| Rapport d'audit de sécurité | [PRÉVU] — lot 21 |
+| Rapport d'audit de sécurité (`docs/audit-securite.md`) | [FAIT] — lot 21 |
 | Intégration continue (`.github/workflows/tests.yml`) | [FAIT] — lot 19 |
 | `docs/performance.md` — mesures, budgets, méthode | [FAIT] — lot 20 |
 
@@ -622,10 +622,10 @@ déjà.
 | **A — Fondations** | 1–3 | Projet, design system, base de données | ✅ |
 | **B — Cœur du MVP** | 4–10 | Authentification, installation, clients, opérations, file, argent, tableau de bord | ✅ **MVP utilisable** |
 | **C — Extension** | 11–18 | Vitrine, équipe, rendez-vous, fidélité, abonnements, statistiques, multi-stations, aide | **18/18 — terminée** |
-| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | 2/4 |
+| **D — Industrialisation** | 19–22 | Qualité, audit de sécurité, performance, déploiement | 3/4 |
 
-**860 tests** (789 backend, 71 frontend) tiennent l'ensemble au
-lot 20, et tournent à chaque poussée.
+**885 tests** (812 backend, 73 frontend) tiennent l'ensemble au
+lot 21, et tournent à chaque poussée.
 
 ### Le test terrain — la tâche la plus importante qui reste
 

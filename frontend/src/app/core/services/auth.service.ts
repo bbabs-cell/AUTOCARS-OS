@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, catchError, of, tap } from 'rxjs';
+import { Observable, catchError, finalize, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
@@ -99,12 +99,46 @@ export class AuthService {
   }
 
   /**
+   * Le renouvellement en cours, s'il y en a un.
+   *
+   * Voir `refresh()` : c'est ce champ qui garantit qu'il n'y en a
+   * jamais deux à la fois.
+   */
+  private inFlightRefresh: Observable<AuthSession | null> | null = null;
+
+  /**
    * Demande un nouveau jeton d'accès à partir du cookie httpOnly.
-   * Utilisé au démarrage de l'application et par l'intercepteur quand
-   * l'API répond 401.
+   *
+   * ==================================================================
+   * UN SEUL RENOUVELLEMENT À LA FOIS — CORRIGÉ À L'AUDIT DU LOT 21.
+   * ==================================================================
+   * Le serveur applique une ROTATION : le jeton de rafraîchissement
+   * ne sert qu'une fois, et le présenter une seconde fois échoue.
+   * C'est une bonne protection — un jeton volé ne resservira pas.
+   *
+   * Elle se retournait contre l'utilisateur. Le tableau de bord lance
+   * une quinzaine de requêtes en parallèle ; quand le jeton d'accès
+   * expire pendant cette rafale, elles répondent toutes 401 en même
+   * temps, et l'intercepteur appelait CETTE méthode autant de fois.
+   * La première rotation réussissait, les suivantes présentaient un
+   * jeton déjà consommé — et depuis le lot 18, un renouvellement
+   * échoué renvoie à l'écran de connexion.
+   *
+   * Autrement dit : toutes les trente minutes, l'utilisateur pouvait
+   * être déconnecté au milieu de son travail, d'autant plus sûrement
+   * que l'écran ouvert chargeait beaucoup de données.
+   *
+   * `shareReplay` fait que les appels simultanés PARTAGENT la même
+   * requête : une seule rotation, un seul jeton consommé, et tout le
+   * monde reçoit le même résultat. Le champ est remis à zéro à la fin
+   * pour que le renouvellement suivant reparte bien du serveur.
    */
   refresh(): Observable<AuthSession | null> {
-    return this.http
+    if (this.inFlightRefresh !== null) {
+      return this.inFlightRefresh;
+    }
+
+    this.inFlightRefresh = this.http
       .post<ApiResponse<AuthSession>>(`${this.baseUrl}/refresh`, {}, { withCredentials: true })
       .pipe(
         tap((response) => this.applySession(response.data)),
@@ -115,7 +149,20 @@ export class AuthService {
 
           return of(null);
         }),
+        // `finalize` passe aussi bien après un succès qu'après une
+        // erreur : sans lui, un échec laisserait le verrou posé et
+        // plus aucun renouvellement ne serait tenté.
+        finalize(() => {
+          this.inFlightRefresh = null;
+        }),
+        // Le renouvellement doit partir UNE fois même si plusieurs
+        // requêtes s'y abonnent, et les retardataires doivent recevoir
+        // le résultat déjà obtenu : c'est exactement ce que fait
+        // shareReplay avec un tampon de un.
+        shareReplay({ bufferSize: 1, refCount: false }),
       ) as Observable<AuthSession | null>;
+
+    return this.inFlightRefresh;
   }
 
   /**

@@ -162,6 +162,47 @@ final class TokenService
         ];
     }
 
+    /**
+     * Retrouve un jeton de rafraîchissement SANS filtrer sur son état.
+     *
+     * ==================================================================
+     * SERT À DÉTECTER UN REJEU (audit du lot 21).
+     * ==================================================================
+     * `readRefreshToken()` ignore volontairement les jetons révoqués :
+     * c'est ce qui fait qu'un jeton ne sert qu'une fois. Mais il ne
+     * distingue pas « ce jeton n'a jamais existé » de « ce jeton a
+     * déjà servi ».
+     *
+     * Or les deux ne disent pas la même chose. Un jeton inconnu est
+     * du bruit. Un jeton DÉJÀ CONSOMMÉ qui revient est un signal :
+     * quelqu'un présente une copie. Le propriétaire légitime, lui, a
+     * reçu le jeton suivant lors de la rotation.
+     *
+     * @return array{id:int, user_id:int, revoked:bool}|null
+     */
+    public static function findAnyRefreshToken(string $token): ?array
+    {
+        $statement = Database::connection()->prepare(
+            'SELECT id, user_id, revoked_at
+               FROM refresh_tokens
+              WHERE token_hash = :token_hash'
+        );
+
+        $statement->execute(['token_hash' => self::hash($token)]);
+
+        $row = $statement->fetch();
+
+        if ($row === false) {
+            return null;
+        }
+
+        return [
+            'id'      => (int) $row['id'],
+            'user_id' => (int) $row['user_id'],
+            'revoked' => $row['revoked_at'] !== null,
+        ];
+    }
+
     public static function revokeRefreshToken(int $tokenId): void
     {
         Database::connection()

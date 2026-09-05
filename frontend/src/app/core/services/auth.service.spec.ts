@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 
 import { AuthService } from './auth.service';
 import { AuthSession } from '../models/auth.model';
+import { environment } from '../../../environments/environment';
 
 /**
  * Le service d'authentification porte une règle de sécurité qu'il
@@ -104,5 +105,59 @@ describe('AuthService', () => {
     httpMock
       .expectOne((r) => r.url.endsWith('/auth/refresh'))
       .flush({ success: false, message: 'Session absente.' }, { status: 401, statusText: 'Unauthorized' });
+  });
+
+  // ==================================================================
+  // UN SEUL RENOUVELLEMENT À LA FOIS (audit du lot 21)
+  // ==================================================================
+  // Le serveur fait tourner le jeton de rafraîchissement : il ne sert
+  // qu'une fois. Le tableau de bord, lui, lance une quinzaine de
+  // requêtes en parallèle — quand le jeton d'accès expire pendant
+  // cette rafale, elles échouent toutes en même temps.
+  //
+  // Sans partage, chacune demandait son propre renouvellement : la
+  // première consommait le jeton, les autres présentaient un jeton
+  // déjà rotationné, et l'utilisateur se retrouvait à l'écran de
+  // connexion au milieu de son travail.
+  describe('renouvellement de session', () => {
+    it("ne lance qu'UNE requête même si plusieurs l'appellent ensemble", () => {
+      const resultats: (unknown | null)[] = [];
+
+      service.refresh().subscribe((r) => resultats.push(r));
+      service.refresh().subscribe((r) => resultats.push(r));
+      service.refresh().subscribe((r) => resultats.push(r));
+
+      // expectOne échoue s'il y en a zéro ou plusieurs : c'est
+      // l'assertion elle-même.
+      const requete = httpMock.expectOne(`${environment.apiUrl}/auth/refresh`);
+
+      requete.flush({
+        success: true,
+        data: {
+          access_token: 'un-jeton-neuf',
+          user: {
+            id: 1, organization_id: 1, email: 'g@station.sn', full_name: 'G',
+            role: 'ADMIN', station_ids: [1], permissions: ['*'],
+            onboarding_completed: true,
+          },
+        },
+      });
+
+      expect(resultats.length).toBe(3);
+    });
+
+    it('repart du serveur au renouvellement SUIVANT', () => {
+      service.refresh().subscribe();
+      httpMock.expectOne(`${environment.apiUrl}/auth/refresh`)
+        .flush({}, { status: 401, statusText: 'Unauthorized' });
+
+      // Le verrou doit être relâché même après un échec : sinon plus
+      // aucune session ne pourrait être renouvelée de la journée.
+      service.refresh().subscribe();
+      httpMock.expectOne(`${environment.apiUrl}/auth/refresh`)
+        .flush({}, { status: 401, statusText: 'Unauthorized' });
+
+      expect(true).toBeTrue();
+    });
   });
 });
