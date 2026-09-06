@@ -17,6 +17,13 @@ import { defineConfig } from 'vitest/config';
 const migrations = await readD1Migrations(path.join(import.meta.dirname, 'migrations'));
 
 export default defineConfig({
+  test: {
+    // `test-outils/` contient les essais des scripts en ligne de
+    // commande : ils tournent dans Node, avec leur propre
+    // configuration. Sans cette exclusion, ils seraient chargés ici
+    // aussi et échoueraient à la première lecture de fichier.
+    include: ['test/**/*.test.ts'],
+  },
   plugins: [
     cloudflareTest({
       wrangler: { configPath: './wrangler.toml' },

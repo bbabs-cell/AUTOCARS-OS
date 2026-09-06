@@ -196,7 +196,7 @@ précédentes.
 | 1 | ~~**Une tranche verticale d'abord** : connexion + liste des véhicules~~ **— FAITE** | ✅ 45 tests dans le runtime Workers ; l'application Angular affiche ses véhicules sans avoir été modifiée. Voir [`workers/README.md`](../workers/README.md) |
 | 2 | ~~Le schéma D1 complet et ses contraintes `CHECK`~~ **— FAITE** | ✅ 21 tables, 289 colonnes, aucun écart avec MySQL. Clés étrangères vérifiées appliquées par D1 |
 | 3 | ~~Le socle : multi-tenance, permissions, jetons~~ **— FAITE** | ✅ Sessions tournantes, détection de rejeu, inscription. L'application reste connectée |
-| 4 | Les dépôts et contrôleurs, par domaine métier | Domaine par domaine, avec ses tests |
+| 4 | ~~Les dépôts et contrôleurs, par domaine métier~~ **— FAITE** | ✅ 86 routes sur 88, 628 tests. Les deux manquantes sont les photos, qui relèvent de l'étape 5 |
 | 5 | Photos et envois | Après votre décision du §4.4 |
 | 6 | Sauvegarde, restauration, avant-vol | Une restauration d'essai réussie |
 | 7 | Performance | Des mesures neuves, pas des index copiés |

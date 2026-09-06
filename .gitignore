@@ -42,3 +42,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Les sauvegardes : toute la base en clair. Jamais dans Git.
+workers/storage/
