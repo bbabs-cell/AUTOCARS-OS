@@ -27,6 +27,7 @@ import { baseDe, type Utilisateur } from '../core/auth';
 import { enregistre } from '../core/audit';
 import { erreur, interdit, introuvable, succes } from '../core/response';
 import { permet, type Etat } from '../core/etats';
+import { PhotoRefusee, range } from '../core/photos';
 
 const NIVEAUX = ['EMPTY', 'QUARTER', 'HALF', 'THREE_QUARTERS', 'FULL'];
 
@@ -312,4 +313,203 @@ function presente(i: LigneInspection) {
     signature_name: i.signature_name,
     performed_at: i.performed_at,
   };
+}
+
+// ====================================================================
+// LES PHOTOS
+// ====================================================================
+
+/**
+ * Douze au maximum. Ce n'est pas une limite technique : au-delà,
+ * personne ne les regarde, et la procédure d'accueil devient si
+ * longue qu'un employé pressé la saute — une procédure abandonnée ne
+ * protège personne.
+ */
+const PHOTOS_MAX = 12;
+
+const POSITIONS = ['FRONT', 'REAR', 'LEFT', 'RIGHT', 'INTERIOR', 'DAMAGE', 'OTHER'];
+
+/**
+ * POST /api/inspections/{id}/photos
+ *
+ * UNE photo par appel. Sur une connexion qui coupe, un envoi groupé
+ * perd tout et l'employé recommence ; envoyée séparément, chaque
+ * photo est acquise dès qu'elle est passée.
+ */
+export async function ajoutePhoto(
+  request: Request,
+  env: Env,
+  utilisateur: Utilisateur,
+  inspectionId: string,
+): Promise<Response> {
+  if (!utilisateur.peut('inspections.create')) {
+    return interdit();
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+  const id = Number.parseInt(inspectionId, 10);
+
+  const inspection = await base
+    .select('SELECT id FROM inspections WHERE {ORG} AND id = ? LIMIT 1', id)
+    .first();
+
+  if (inspection === null) {
+    return introuvable("Cette inspection n'existe pas.");
+  }
+
+  const combien = await base
+    .select(
+      'SELECT COUNT(*) AS n FROM inspection_photos WHERE {ORG} AND inspection_id = ?',
+      id,
+    )
+    .first<{ n: number }>();
+
+  if ((combien?.n ?? 0) >= PHOTOS_MAX) {
+    return erreur(`Cette inspection contient déjà ${PHOTOS_MAX} photos.`, {}, 409);
+  }
+
+  let formulaire: FormData;
+
+  try {
+    formulaire = await request.formData();
+  } catch {
+    return erreur('Vérifiez les champs.', { photo: 'Aucune photo reçue.' }, 422);
+  }
+
+  const fichier = formulaire.get('photo');
+
+  // `File` n'existe pas dans les types du runtime : un champ de
+  // formulaire est soit une chaîne, soit un `Blob` — et un fichier
+  // envoyé en est un.
+  if (typeof fichier === 'string' || fichier === null) {
+    return erreur('Vérifiez les champs.', { photo: 'Aucune photo reçue.' }, 422);
+  }
+
+  let rangee;
+
+  try {
+    // Tout le traitement dangereux est dans `core/photos` : type réel
+    // lu dans les octets, garde contre les bombes de décompression,
+    // ré-encodage complet, nom généré, rangement dans un seau privé.
+    rangee = await range(env, fichier);
+  } catch (e) {
+    if (e instanceof PhotoRefusee) {
+      return erreur('Vérifiez les champs.', { photo: e.message }, 422);
+    }
+
+    throw e;
+  }
+
+  const demandee = String(formulaire.get('position') ?? 'OTHER').toUpperCase();
+  const position = POSITIONS.includes(demandee) ? demandee : 'OTHER';
+  const legende = String(formulaire.get('caption') ?? '').trim();
+
+  const r = await env.DB
+    .prepare(
+      `INSERT INTO inspection_photos (organization_id, inspection_id, position, file_path,
+                                      file_hash, mime_type, file_size, width, height,
+                                      caption, uploaded_by_user_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
+    )
+    .bind(
+      utilisateur.organizationId, id, position, rangee.chemin, rangee.empreinte,
+      rangee.type, rangee.octets, rangee.largeur, rangee.hauteur,
+      legende === '' ? null : legende.slice(0, 255), utilisateur.id,
+    )
+    .run();
+
+  const photoId = Number(r.meta.last_row_id);
+
+  await enregistre(env.DB, {
+    action: 'inspection.photo_added',
+    organizationId: utilisateur.organizationId,
+    userId: utilisateur.id,
+    entityType: 'inspection',
+    entityId: id,
+    metadata: { photo_id: photoId, position, octets: rangee.octets },
+  });
+
+  return succes(
+    {
+      photo: {
+        id: photoId,
+        position,
+        // L'URL passe par l'API : on n'expose JAMAIS le chemin dans le
+        // seau, qui ne sert à rien au navigateur et renseignerait sur
+        // l'organisation du stockage.
+        url: `/api/photos/${photoId}`,
+        caption: legende === '' ? null : legende.slice(0, 255),
+        width: rangee.largeur,
+        height: rangee.hauteur,
+        file_size: rangee.octets,
+        created_at: new Date().toISOString(),
+      },
+    },
+    'Photo enregistrée.',
+    201,
+  );
+}
+
+/**
+ * GET /api/photos/{id}
+ * SERT LE FICHIER LUI-MÊME.
+ *
+ * La seule route de l'API qui ne renvoie pas du JSON. Elle existe
+ * parce que le seau est PRIVÉ : sans elle, aucune adresse ne
+ * permettrait d'afficher une photo — et avec un seau public,
+ * n'importe qui connaissant l'adresse verrait les preuves d'une autre
+ * entreprise.
+ *
+ * Le cloisonnement est appliqué par la lecture : une photo d'une
+ * autre entreprise répond 404, exactement comme si elle n'existait
+ * pas.
+ */
+export async function servePhoto(
+  env: Env,
+  utilisateur: Utilisateur,
+  photoId: string,
+): Promise<Response> {
+  if (!utilisateur.peut('inspections.view')) {
+    return interdit();
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+
+  const photo = await base
+    .select(
+      'SELECT file_path, mime_type FROM inspection_photos WHERE {ORG} AND id = ? LIMIT 1',
+      Number.parseInt(photoId, 10),
+    )
+    .first<{ file_path: string; mime_type: string }>();
+
+  if (photo === null) {
+    return introuvable('Cette photo est introuvable.');
+  }
+
+  const objet = await env.PHOTOS.get(photo.file_path);
+
+  if (objet === null) {
+    // La ligne existe mais le fichier a disparu. C'est un incident
+    // sérieux sur des preuves : on le trace.
+    console.error('[PHOTO] Fichier manquant :', photo.file_path);
+
+    return introuvable('Le fichier de cette photo est introuvable.');
+  }
+
+  return new Response(objet.body, {
+    headers: {
+      'Content-Type': photo.mime_type,
+      // Cache PRIVÉ : l'image peut rester dans le navigateur de
+      // l'employé, jamais dans un cache partagé — ce sont les données
+      // d'une entreprise précise.
+      'Cache-Control': 'private, max-age=3600',
+      // Le navigateur ne doit pas deviner un autre type que celui
+      // annoncé : c'est ce qui empêcherait un fichier piégé de
+      // s'exécuter s'il en restait un.
+      'X-Content-Type-Options': 'nosniff',
+      // Une image servie ici ne doit jamais être interprétée comme un
+      // document : ni script, ni cadre, rien.
+      'Content-Security-Policy': "default-src 'none'; sandbox",
+    },
+  });
 }

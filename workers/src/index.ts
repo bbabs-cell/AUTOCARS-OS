@@ -41,7 +41,11 @@ import {
   cree, fiche, liste as listeClients, modifie, verifieTelephone,
 } from './controllers/customers';
 import {
-  cree as creeInspection, montre, pourVehicule,
+  ajoutePhoto,
+  cree as creeInspection,
+  montre,
+  pourVehicule,
+  servePhoto,
 } from './controllers/inspections';
 import {
   arrive, changeStatut as changeStatutRdv, cree as creeRdv,
@@ -171,6 +175,8 @@ export default {
       const etatStation = /^\/api\/stations\/(\d+)\/status$/.exec(chemin);
       const station = /^\/api\/stations\/(\d+)$/.exec(chemin);
       const vehicule = /^\/api\/vehicles\/(\d+)$/.exec(chemin);
+      const photosInspection = /^\/api\/inspections\/(\d+)\/photos$/.exec(chemin);
+      const photo = /^\/api\/photos\/(\d+)$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -197,6 +203,8 @@ export default {
         (client !== null && (G || request.method === 'PUT')) ||
         (inspections !== null && P) ||
         (inspection !== null && G) ||
+        (photosInspection !== null && P) ||
+        (photo !== null && G) ||
         (inspectionsVehicule !== null && G) ||
         (chemin === '/api/bookings/statuses' && G) ||
         (chemin === '/api/bookings' && (G || P)) ||
@@ -421,6 +429,14 @@ export default {
           return await creeInspection(request, env, utilisateur, inspections[1]);
         }
 
+        // AVANT « /api/inspections/{id} » : l'adresse des photos est
+        // plus longue, et un routeur qui teste le plus court d'abord
+        // ne l'atteindrait jamais.
+        if (photosInspection !== null) {
+          return await ajoutePhoto(request, env, utilisateur, photosInspection[1]);
+        }
+
+        if (photo !== null) return await servePhoto(env, utilisateur, photo[1]);
         if (inspection !== null) return await montre(env, utilisateur, inspection[1]);
 
         if (inspectionsVehicule !== null) {

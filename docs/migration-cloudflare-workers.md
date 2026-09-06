@@ -134,8 +134,21 @@ issues, à choisir en connaissance de cause :
 | Option | Ce qu'elle coûte |
 |---|---|
 | Faire confiance au WebP produit par le navigateur | Une protection perdue. Le client compresse déjà, mais un client n'est jamais une garantie : n'importe qui peut appeler l'API directement |
-| **Cloudflare Images** | Un service payant en plus, qui fait le ré-encodage |
+| **Cloudflare Images** ✅ **RETENUE** | Un service payant en plus, qui fait le ré-encodage |
 | Ré-encoder en WebAssembly dans le Worker | Faisable, mais coûteux en temps de calcul et en travail |
+
+**Décision prise : Cloudflare Images.** La liaison `IMAGES` décode les
+pixels et en réécrit de nouveaux — la même protection que `gd`, rendue
+par un service au lieu d'une bibliothèque. Un test envoie un PNG
+valide auquel une charge PHP est accrochée, et vérifie que le fichier
+rangé n'en contient plus la moindre trace.
+
+Elle ne remplace que le point 2. Le point 1 — le type réel lu dans les
+octets — reste écrit à la main, et **avant** l'appel au service : on ne
+fait pas décoder n'importe quoi par un service parce qu'il est robuste.
+Le SVG en particulier est refusé sur sa signature, parce qu'aucun
+ré-encodage ne le rendrait inoffensif : il n'a pas de pixels à
+réécrire.
 
 ### 4.5 Les sauvegardes · tout l'outillage
 
@@ -197,7 +210,7 @@ précédentes.
 | 2 | ~~Le schéma D1 complet et ses contraintes `CHECK`~~ **— FAITE** | ✅ 21 tables, 289 colonnes, aucun écart avec MySQL. Clés étrangères vérifiées appliquées par D1 |
 | 3 | ~~Le socle : multi-tenance, permissions, jetons~~ **— FAITE** | ✅ Sessions tournantes, détection de rejeu, inscription. L'application reste connectée |
 | 4 | ~~Les dépôts et contrôleurs, par domaine métier~~ **— FAITE** | ✅ 86 routes sur 88, 628 tests. Les deux manquantes sont les photos, qui relèvent de l'étape 5 |
-| 5 | Photos et envois | **En attente de votre décision du §4.4** — c'est la seule étape qui reste |
+| 5 | ~~Photos et envois~~ **— FAITE** | ✅ Cloudflare Images pour le ré-encodage, R2 pour le rangement. Un test prouve qu'une charge accrochée à un PNG valide ne survit pas |
 | 6 | ~~Sauvegarde, restauration, avant-vol~~ **— FAITE** | ✅ Cycle complet exécuté : témoin posé, sauvegardé, détruit, restauré, revenu. Voir [`docs/sauvegarde-restauration-d1.md`](sauvegarde-restauration-d1.md) |
 | 7 | ~~Performance~~ **— FAITE** | ✅ Sept index mesurés sur 30 000 dossiers, un seul repris de MySQL. Plus aucune requête au-dessus de 10 ms |
 
@@ -282,7 +295,8 @@ D1 que `mysqldump` n'avait pas — et les index ont été choisis sur des
 mesures neuves, dont l'une a montré qu'un index ne suffisait pas : la
 requête des clients fidèles a dû être réécrite (168 ms → 5 ms).
 
-**Il ne reste que l'étape 5**, qui attend votre décision du §4.4.
+**Les sept étapes sont faites.** Les 88 routes du PHP répondent, et un
+test les interroge une par une pour que ce chiffre reste vrai.
 
 **Un ajustement de périmètre, à noter :** l'envoi de courriel n'existe
 pas sur Workers. La réinitialisation de mot de passe est portée en

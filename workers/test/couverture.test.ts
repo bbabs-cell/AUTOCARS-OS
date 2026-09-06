@@ -33,6 +33,7 @@ const ADMIN = 'mamadou@diallo.sn';
 
 /** Les 88 routes du routeur PHP, méthode comprise. */
 const ROUTES: [string, string][] = [
+  ['GET', '/api/health'],
   ['POST', '/api/auth/login'],
   ['POST', '/api/auth/register'],
   ['POST', '/api/auth/refresh'],
@@ -101,6 +102,8 @@ const ROUTES: [string, string][] = [
   ['GET', '/api/analytics'],
 
   ['GET', '/api/inspections/1'],
+  ['POST', '/api/inspections/1/photos'],
+  ['GET', '/api/photos/1'],
 
   ['GET', '/api/payments'],
   ['POST', '/api/payments/1/refund'],
@@ -144,8 +147,7 @@ const ROUTES: [string, string][] = [
  * est exactement le rappel qu'on veut.
  */
 const PAS_ENCORE: [string, string, string][] = [
-  ['POST', '/api/inspections/1/photos', 'Étape 5 — stockage des photos (R2)'],
-  ['GET', '/api/photos/1', 'Étape 5 — stockage des photos (R2)'],
+  // Vide : les 88 routes du PHP répondent.
 ];
 
 describe('toutes les routes du PHP répondent', () => {
@@ -174,7 +176,12 @@ describe('toutes les routes du PHP répondent', () => {
     ).not.toEqual({ chemin: `${methode} ${chemin}`, message: "Cette adresse n'existe pas." });
   });
 
-  it.each(PAS_ENCORE)('%s %s — pas encore portée (%s)', async (methode, chemin) => {
+  it('aucune route ne manque', () => {
+    expect(PAS_ENCORE).toEqual([]);
+  });
+
+  it.skipIf(PAS_ENCORE.length === 0).each(PAS_ENCORE)(
+    '%s %s — pas encore portée (%s)', async (methode, chemin) => {
     const res = await SELF.fetch(`https://api.test${chemin}`, {
       method: methode,
       headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
@@ -185,6 +192,7 @@ describe('toutes les routes du PHP répondent', () => {
 
     // Le jour où elle sera portée, ce test échouera : il faudra la
     // déplacer dans la liste du dessus. C'est voulu.
-    expect(corps.message).toBe("Cette adresse n'existe pas.");
-  });
+      expect(corps.message).toBe("Cette adresse n'existe pas.");
+    },
+  );
 });

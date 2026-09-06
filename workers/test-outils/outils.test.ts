@@ -369,6 +369,11 @@ describe('le contrôle avant vol', () => {
     'database_id = "0123456789abcdef"',
     'APP_ENV = "production"',
     'APP_FRONTEND_URL = "https://magyapro.com"',
+    '[images]',
+    'binding = "IMAGES"',
+    '[[r2_buckets]]',
+    'binding = "PHOTOS"',
+    'bucket_name = "autocare-photos"',
   ].join('\n');
 
   it('laisse passer une configuration complète', () => {
@@ -417,6 +422,25 @@ describe('le contrôle avant vol', () => {
 
     expect(code).toBe(0);
     expect(sortie).toContain('APP_FRONTEND_URL est en HTTPS');
+  });
+
+  /**
+   * UN DÉPLOIEMENT QUI OUBLIE CES LIAISONS ne casse pas au
+   * démarrage : il casse à la première inspection, sur le parking,
+   * devant un client.
+   */
+  it('bloque quand le seau des photos n’est pas déclaré', () => {
+    const { code, sortie } = avantVol(BON.replace('binding = "PHOTOS"', ''));
+
+    expect(code).toBe(1);
+    expect(sortie).toContain('seau R2 des photos');
+  });
+
+  it('bloque quand Cloudflare Images n’est pas déclaré', () => {
+    const { code, sortie } = avantVol(BON.replace('[images]', ''));
+
+    expect(code).toBe(1);
+    expect(sortie).toContain('aucune photo n’est ré-encodée');
   });
 
   /**

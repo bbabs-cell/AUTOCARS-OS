@@ -27,3 +27,16 @@ APP_FRONTEND_URL = "https://magyapro.com"
 # variables de ce fichier : il est suivi par Git. Tant qu'ils ne sont
 # pas posés, les courriels sont écrits dans les traces du Worker et le
 # produit continue de fonctionner — voir src/core/courriel.ts.
+
+# Le ré-encodage des photos d'inspection. C'est lui qui remplace `gd`
+# du PHP : on ne réutilise jamais les octets reçus, on en fabrique de
+# nouveaux à partir des pixels.
+[images]
+binding = "IMAGES"
+
+# Les photos elles-mêmes. R2 et non D1 : une base de données n'est pas
+# un disque, et quelques milliers de photos y coûteraient cher pour un
+# usage qu'un stockage d'objets fait mieux.
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "autocare-photos"

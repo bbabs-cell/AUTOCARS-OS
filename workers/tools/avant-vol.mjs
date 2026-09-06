@@ -76,6 +76,28 @@ bloquant(
 
 bloquant('database_name est renseigné', lis('database_name') !== '');
 
+// LES PHOTOS D'INSPECTION ONT BESOIN DES DEUX. Sans le seau, aucune
+// photo ne se range ; sans Images, aucune n'est ré-encodée — et le
+// ré-encodage est ce qui neutralise un fichier piégé. Un déploiement
+// qui les oublie ne casse pas au démarrage : il casse à la première
+// inspection, sur le parking, devant un client.
+bloquant(
+  'le seau R2 des photos est déclaré',
+  /binding\s*=\s*"PHOTOS"/.test(toml),
+  'les photos d’inspection n’auraient nulle part où aller',
+);
+
+bloquant(
+  'la liaison Cloudflare Images est déclarée',
+  /\[images\]/.test(toml),
+  'sans elle, aucune photo n’est ré-encodée',
+);
+
+bloquant(
+  'le seau R2 porte un nom',
+  /bucket_name\s*=\s*"[^"]+"/.test(toml),
+);
+
 // ------------------------------------------------------------------
 // Les secrets
 // ------------------------------------------------------------------
