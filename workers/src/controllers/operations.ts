@@ -345,6 +345,28 @@ export async function dossierComplet(
   return ligne === null ? null : presente(ligne);
 }
 
+/**
+ * Plusieurs dossiers, dans la même forme.
+ *
+ * `clause` complète le WHERE — « AND o.subscription_id = ? ». Elle
+ * n'est jamais construite à partir d'une saisie : les valeurs passent
+ * par les paramètres, comme partout ailleurs.
+ */
+export async function dossiersOu(
+  base: TenantDb,
+  clause: string,
+  ...parametres: unknown[]
+): Promise<ReturnType<typeof presente>[]> {
+  const lignes = await base
+    .select(
+      `SELECT ${CHAMPS} ${JOINTURES} WHERE o.{ORG} ${clause} ORDER BY o.created_at DESC LIMIT 200`,
+      ...parametres,
+    )
+    .all<LigneOperation>();
+
+  return lignes.results.map(presente);
+}
+
 /** La forme exacte que l'application Angular lit déjà. */
 function presente(o: LigneOperation) {
   const depuis = o.status_changed_at ?? o.created_at;

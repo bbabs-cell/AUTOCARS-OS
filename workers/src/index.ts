@@ -39,6 +39,18 @@ import {
   reglage,
   utilise,
 } from './controllers/loyalty';
+import {
+  annule as annuleAbonnement,
+  annuleUsage,
+  bilan,
+  consomme,
+  creeForfait,
+  forfaits,
+  liste as listeAbonnements,
+  modifieForfait,
+  montre as montreAbonnement,
+  vend,
+} from './controllers/subscriptions';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -85,6 +97,10 @@ export default {
       const rdvArrive = /^\/api\/bookings\/(\d+)\/arrive$/.exec(chemin);
       const carte = /^\/api\/loyalty\/customers\/(\d+)$/.exec(chemin);
       const annulation = /^\/api\/loyalty\/redeem\/(\d+)\/cancel$/.exec(chemin);
+      const forfait = /^\/api\/subscriptions\/plans\/(\d+)$/.exec(chemin);
+      const finUsage = /^\/api\/subscriptions\/use\/(\d+)\/cancel$/.exec(chemin);
+      const finAbo = /^\/api\/subscriptions\/(\d+)\/cancel$/.exec(chemin);
+      const abonnement = /^\/api\/subscriptions\/(\d+)$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -115,6 +131,14 @@ export default {
         (chemin === '/api/loyalty/redeem' && P) ||
         (carte !== null && G) ||
         (annulation !== null && P) ||
+        (chemin === '/api/subscriptions' && (G || P)) ||
+        (chemin === '/api/subscriptions/plans' && (G || P)) ||
+        (chemin === '/api/subscriptions/overview' && G) ||
+        (chemin === '/api/subscriptions/use' && P) ||
+        (forfait !== null && request.method === 'PUT') ||
+        (finUsage !== null && P) ||
+        (finAbo !== null && P) ||
+        (abonnement !== null && G) ||
         (statut !== null && request.method === 'PUT') ||
         (paiements !== null && (G || P)) ||
         (remboursement !== null && P);
@@ -153,6 +177,34 @@ export default {
         // d'abord ne l'atteindrait jamais.
         if (annulation !== null) return await annuleRemise(env, utilisateur, annulation[1]);
         if (carte !== null) return await carteClient(env, utilisateur, carte[1]);
+
+        // LES ADRESSES FIXES AVANT LES VARIABLES : « /plans » et
+        // « /overview » sont aussi de la forme « /subscriptions/… », et
+        // un routeur qui testerait `{id}` d'abord les avalerait.
+        if (chemin === '/api/subscriptions/plans') {
+          return P ? await creeForfait(request, env, utilisateur)
+                   : await forfaits(request, env, utilisateur);
+        }
+
+        if (chemin === '/api/subscriptions/overview') return await bilan(request, env, utilisateur);
+        if (chemin === '/api/subscriptions/use') return await consomme(request, env, utilisateur);
+
+        if (chemin === '/api/subscriptions') {
+          return P ? await vend(request, env, utilisateur)
+                   : await listeAbonnements(request, env, utilisateur);
+        }
+
+        if (forfait !== null) {
+          return await modifieForfait(request, env, utilisateur, forfait[1]);
+        }
+
+        if (finUsage !== null) return await annuleUsage(env, utilisateur, finUsage[1]);
+
+        if (finAbo !== null) {
+          return await annuleAbonnement(request, env, utilisateur, finAbo[1]);
+        }
+
+        if (abonnement !== null) return await montreAbonnement(env, utilisateur, abonnement[1]);
 
         if (chemin === '/api/bookings') {
           return P ? await creeRdv(request, env, utilisateur)
