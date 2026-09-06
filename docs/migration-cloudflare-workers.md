@@ -231,6 +231,59 @@ devait faire apparaître en une étape plutôt qu'en seize.
 
 ---
 
+## 6 ter. Où en est réellement la migration
+
+**Mis à jour au terme de l'étape 4.**
+
+| | Fait | Reste |
+|---|---|---|
+| Schéma | 21 tables, 289 colonnes, 5 colonnes calculées | — |
+| Routes | **86 sur 88** | 2 (les photos) |
+| Tests | 628, verts | — |
+
+### Ce que les étapes 1 à 4 ont appris, au-delà du chiffrage
+
+**D1 se comporte mieux que prévu sur trois points qui inquiétaient.**
+Les clés étrangères sont appliquées, `batch()` est atomique,
+`last_insert_rowid()` fonctionne à l'intérieur d'un lot, et les
+colonnes calculées `STORED` sont acceptées **y compris sous contrainte
+UNIQUE** — ce qui permet de garder dans la base, et non dans un
+contrôleur, les cinq règles qui y étaient : une seule caisse ouverte
+par station, un seul pointage ouvert par employé, un seul programme de
+fidélité actif, un seul tampon par dossier, une seule annulation par
+remise. Chacune a été vérifiée par un test avant d'être utilisée.
+
+**Le vrai coût n'était pas là où le chiffrage le mettait.** Les
+traductions SQL (§4.1, §4.2) ont été mécaniques. Ce qui a coûté, c'est
+la **fidélité du contrat d'API** : à cinq reprises, une route répondait
+« 200 » avec une forme légèrement différente de ce que le frontend
+lit — un champ absent, un objet à la racine au lieu d'être sous une
+clé, un paramètre accepté puis jeté. Aucune n'aurait été vue en
+relisant le code du serveur ; toutes l'ont été en relisant le **modèle
+TypeScript du frontend**.
+
+D'où la règle adoptée en cours de route, et tenue depuis : *le contrat
+se lit dans le modèle du frontend, jamais dans le code qu'on vient
+d'écrire.*
+
+**Deux défauts de fond ont été trouvés et corrigés :**
+
+- La restitution d'un véhicule passait par un simple changement de
+  statut, sans la ressaisie de la plaque. C'est le seul contrôle du
+  produit qui porte sur le monde réel plutôt que sur la base.
+- `TenantDb` — la classe qui rend l'oubli du cloisonnement impossible —
+  ne liait qu'une valeur d'organisation quand une requête en demandait
+  deux. Aucune requête existante n'était touchée, mais la première qui
+  l'aurait fait aurait rendu des chiffres faux sans rien signaler.
+
+**Un ajustement de périmètre, à noter :** l'envoi de courriel n'existe
+pas sur Workers. La réinitialisation de mot de passe est portée en
+entier, l'envoi étant enfichable ; sans service configuré, le message
+part dans les traces. **Il faudra choisir un service d'envoi avant la
+mise en service** — ce n'était pas dans le chiffrage.
+
+---
+
 ## 7. Ce que je dois dire une fois, puis plus
 
 Vous avez tranché en connaissance de cause, et ce document sert à
