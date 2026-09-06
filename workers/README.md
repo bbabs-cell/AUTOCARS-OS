@@ -1,10 +1,36 @@
 # API AUTOCARE OS sur Cloudflare Workers
 
-> **Étapes 1 à 3 faites, étape 4 commencée.** La tranche verticale, le
-> schéma complet, le socle d'authentification, puis le cœur métier :
-> les opérations et la file d'attente. Le backend PHP reste la
-> référence en service dans `../backend/` tant que la migration n'est
-> pas terminée.
+> **Les sept étapes sont faites.** Les 88 routes du backend PHP
+> répondent, et un test les interroge une par une pour que ce chiffre
+> reste vrai. 651 tests dans le runtime Workers, 22 pour les outils en
+> ligne de commande.
+>
+> Le backend PHP reste dans `../backend/` comme référence de lecture :
+> c'est lui qui a servi à vérifier chaque comportement porté. Il n'est
+> plus la cible du déploiement.
+
+### Où en est quoi
+
+| Étape | | |
+|---|---|---|
+| 1 | Tranche verticale | ✅ |
+| 2 | Schéma D1 complet | ✅ 21 tables, 289 colonnes, 5 colonnes calculées |
+| 3 | Socle : jetons, cloisonnement, droits | ✅ |
+| 4 | Les vingt contrôleurs | ✅ 88 routes sur 88 |
+| 5 | Photos | ✅ Cloudflare Images + R2 |
+| 6 | Sauvegarde, restauration, avant-vol | ✅ Cycle complet exécuté |
+| 7 | Performance | ✅ 7 index mesurés, rien au-dessus de 10 ms |
+
+**Deux choses restent à décider par le commanditaire**, et aucune ne
+bloque le code :
+
+- **Le plan Cloudflare payant** (5 $/mois) est obligatoire : le plan
+  gratuit limite chaque requête à 10 ms de calcul, et le hachage d'un
+  mot de passe en coûte 92. Mesuré à l'étape 1.
+- **Un service d'envoi de courriel.** Workers n'en a pas. La
+  réinitialisation de mot de passe est portée en entier, l'envoi étant
+  enfichable ; sans service configuré, les messages partent dans les
+  traces du Worker.
 
 ---
 
@@ -181,7 +207,7 @@ vérifie qu'il n'apparaît dans aucun en-tête `Set-Cookie`.
 
 ---
 
-## Étape 4 (en cours) — le cœur métier
+## Étape 4 — le cœur métier
 
 **La file d'attente fonctionne**, avec ses cinq colonnes, ses cartes
 et ses alertes de dépassement. La machine à états et ses refus sont
@@ -336,26 +362,33 @@ frontend avant d'écrire le contrôleur.**
 
 ---
 
-## Ce qui est là, et ce qui ne l'est pas
+## Ce qui est là
 
-| Fait | Pas encore |
+Les 88 routes du PHP, vérifiées une par une par
+`test/couverture.test.ts` — avec la bonne méthode HTTP, ce qu'un
+premier contrôle jetable ne faisait pas : il comptait
+`POST /api/stations` comme portée parce que `GET /api/stations`
+existait, et elle manquait quand même.
+
+| Domaine | |
 |---|---|
-| `login`, `register`, `refresh`, `logout`, `me` | Les 62 autres routes |
-| `vehicles`, `queue`, `stations`, changement de statut | Photos, sauvegardes, contrôle d'avant-vol |
-| Encaissements, remboursements, journal | |
-| Caisse : ouverture, clôture, écart, historique | |
-| Tableau de bord, alertes | |
-| Clients : liste, fiche, création, modification | |
-| **Inspections : constat, historique** | **Photos (§4.4 à trancher)** |
-| Cloisonnement multi-clients, avec son garde-fou | Les index de performance (à re-mesurer, pas à recopier) |
-| Matrice des droits, portée à l'identique | |
-| Les 21 tables, leurs contraintes et leurs déclencheurs | |
-| **Sessions tournantes, journal d'audit** | |
+| Authentification | connexion, inscription, sessions tournantes, mot de passe oublié |
+| Véhicules et clients | liste, fiche, création, modification, doublon de téléphone |
+| Le parcours | accueil, file d'attente, états, priorité, affectation, **remise du véhicule** |
+| Argent | encaissements, remboursements, journal, caisse et son écart |
+| Inspections | constat, historique, **photos ré-encodées** |
+| Fidélité | carte à tampons, récompense en remise, annulation par écriture inverse |
+| Abonnements | forfaits, vente, consommation, dette restante |
+| Équipe | rôles, affectations, **pointage** et ses corrections |
+| Catalogue | prestations, stations, entreprise, installation guidée |
+| Analyse | tableau de bord, statistiques, réconciliation du livré |
 
-L'application Angular se connecte, **reste connectée** et affiche ses
-véhicules. Les écrans qui appellent des routes non encore portées
-(tableau de bord, file d'attente…) restent vides : c'est le périmètre
-des étapes suivantes, pas un défaut.
+**Outils d'exploitation** : sauvegarde, restauration, contrôle avant
+vol, banc de mesure — voir
+[`../docs/sauvegarde-restauration-d1.md`](../docs/sauvegarde-restauration-d1.md).
+
+L'application Angular **n'a pas été modifiée d'une ligne**. C'était la
+question posée à l'étape 1, et elle tient jusqu'au bout.
 
 ---
 
