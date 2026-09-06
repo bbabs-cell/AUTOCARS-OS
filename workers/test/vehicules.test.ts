@@ -23,6 +23,15 @@ describe('GET /api/vehicles', () => {
    *
    * Les noms sont donc figés ici, en dur, plutôt que dérivés du code :
    * un test qui recopie l'implémentation ne vérifie rien.
+   *
+   * ------------------------------------------------------------------
+   * LA LISTE VIENT DU MODÈLE `Vehicle` DU FRONTEND, PAS DU SERVEUR.
+   *
+   * Elle en comptait onze : `operation_count`, `last_operation_at` et
+   * `created_at` avaient été oubliés au portage. La fiche d'un
+   * véhicule annonçait donc « 0 passage » pour un habitué de six mois,
+   * et ce test le confirmait — parce qu'il avait été écrit d'après le
+   * serveur plutôt que d'après le modèle.
    */
   it('renvoie exactement les clés que le frontend lit déjà', async () => {
     const { corps } = await liste();
@@ -33,12 +42,15 @@ describe('GET /api/vehicles', () => {
     expect(Object.keys(corps.data[0]).sort()).toEqual([
       'brand',
       'color',
+      'created_at',
       'customer_id',
       'customer_name',
       'customer_phone',
       'id',
+      'last_operation_at',
       'model',
       'notes',
+      'operation_count',
       'plate_display',
       'plate_number',
       'vehicle_type',

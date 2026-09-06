@@ -18,13 +18,20 @@
  */
 
 import { connexion, deconnexion, inscription, moi, rafraichis } from './controllers/auth';
-import { liste } from './controllers/vehicles';
+import {
+  cree as creeVehicule,
+  fiche as ficheVehicule,
+  liste,
+  modifie as modifieVehicule,
+} from './controllers/vehicles';
 import { changeStatut, file } from './controllers/operations';
 import { liste as listeStations } from './controllers/stations';
 import { encaisse, journal, pourDossier, rembourse } from './controllers/payments';
 import { courante, ferme, historique, ouvre } from './controllers/cash';
 import { tableau } from './controllers/dashboard';
-import { cree, fiche, liste as listeClients, modifie } from './controllers/customers';
+import {
+  cree, fiche, liste as listeClients, modifie, verifieTelephone,
+} from './controllers/customers';
 import {
   cree as creeInspection, montre, pourVehicule,
 } from './controllers/inspections';
@@ -73,6 +80,14 @@ import {
   montre as montreService,
 } from './controllers/services';
 import { statistiques } from './controllers/analytics';
+import {
+  bascule as basculeStation,
+  cree as creeStation,
+  modifie as modifieStation,
+  montre as montreStation,
+} from './controllers/stations';
+import { montre as montreEntreprise, modifie as modifieEntreprise } from './controllers/organization';
+import { etat as etatInstallation, termine as termineInstallation } from './controllers/onboarding';
 import {
   accueille,
   affecte as affecteDossier,
@@ -143,15 +158,25 @@ export default {
       const affectationDossier = /^\/api\/operations\/(\d+)\/assign$/.exec(chemin);
       const verifRestitution = /^\/api\/operations\/(\d+)\/release-check$/.exec(chemin);
       const restitution = /^\/api\/operations\/(\d+)\/release$/.exec(chemin);
+      const etatStation = /^\/api\/stations\/(\d+)\/status$/.exec(chemin);
+      const station = /^\/api\/stations\/(\d+)$/.exec(chemin);
+      const vehicule = /^\/api\/vehicles\/(\d+)$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
 
       const protegee =
         (chemin === '/api/auth/me' && G) ||
-        (chemin === '/api/vehicles' && G) ||
+        (chemin === '/api/vehicles' && (G || P)) ||
+        (vehicule !== null && (G || request.method === 'PUT')) ||
+        (chemin === '/api/customers/check-phone' && G) ||
+        (chemin === '/api/organization' && (G || request.method === 'PUT')) ||
+        (chemin === '/api/onboarding/status' && G) ||
+        (chemin === '/api/onboarding/complete' && P) ||
+        (etatStation !== null && request.method === 'PUT') ||
+        (station !== null && (G || request.method === 'PUT')) ||
         (chemin === '/api/queue' && G) ||
-        (chemin === '/api/stations' && G) ||
+        (chemin === '/api/stations' && (G || P)) ||
         (chemin === '/api/payments' && G) ||
         (chemin === '/api/cash/current' && G) ||
         (chemin === '/api/cash/sessions' && G) ||
@@ -213,9 +238,45 @@ export default {
         }
 
         if (chemin === '/api/auth/me') return moi(utilisateur);
-        if (chemin === '/api/vehicles') return await liste(request, env, utilisateur);
+        if (chemin === '/api/vehicles') {
+          return P ? await creeVehicule(request, env, utilisateur)
+                   : await liste(request, env, utilisateur);
+        }
+
+        if (vehicule !== null) {
+          return G ? await ficheVehicule(env, utilisateur, vehicule[1])
+                   : await modifieVehicule(request, env, utilisateur, vehicule[1]);
+        }
+
+        // AVANT « /api/customers/{id} » : « check-phone » a la même
+        // forme qu'un identifiant, et le motif numérique ne l'attrape
+        // pas — mais l'ordre reste écrit pour qui lirait ce routeur.
+        if (chemin === '/api/customers/check-phone') {
+          return await verifieTelephone(request, env, utilisateur);
+        }
+
+        if (chemin === '/api/organization') {
+          return G ? await montreEntreprise(env, utilisateur)
+                   : await modifieEntreprise(request, env, utilisateur);
+        }
+
+        if (chemin === '/api/onboarding/status') return await etatInstallation(env, utilisateur);
+        if (chemin === '/api/onboarding/complete') return await termineInstallation(env, utilisateur);
+
+        // « /{id}/status » avant « /{id} », comme pour les prestations.
+        if (etatStation !== null) {
+          return await basculeStation(request, env, utilisateur, etatStation[1]);
+        }
+
+        if (station !== null) {
+          return G ? await montreStation(env, utilisateur, station[1])
+                   : await modifieStation(request, env, utilisateur, station[1]);
+        }
         if (chemin === '/api/queue') return await file(request, env, utilisateur);
-        if (chemin === '/api/stations') return await listeStations(request, env, utilisateur);
+        if (chemin === '/api/stations') {
+          return P ? await creeStation(request, env, utilisateur)
+                   : await listeStations(request, env, utilisateur);
+        }
         if (chemin === '/api/payments') return await journal(request, env, utilisateur);
         if (chemin === '/api/cash/current') return await courante(request, env, utilisateur);
         if (chemin === '/api/cash/sessions') return await historique(request, env, utilisateur);

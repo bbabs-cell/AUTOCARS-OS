@@ -306,3 +306,56 @@ function presente(c: LigneClient) {
     created_at: c.created_at,
   };
 }
+
+/**
+ * GET /api/customers/check-phone?phone=
+ * ==================================================================
+ * CE NUMÉRO EST-IL DÉJÀ ENREGISTRÉ ?
+ *
+ * Sert à AVERTIR pendant la saisie, jamais à bloquer : un couple
+ * partage souvent un numéro, et refuser l'enregistrement en pleine
+ * affluence serait pire que le doublon.
+ *
+ * ------------------------------------------------------------------
+ * LA COMPARAISON SE FAIT PAR LA FIN, ET NON À L'ÉGAL
+ *
+ * La base contient « +221 77 611 22 33 », soit « 221776112233 » une
+ * fois nettoyé. L'employé, lui, tape « 776112233 » sans l'indicatif —
+ * c'est ainsi qu'on donne son numéro au Sénégal. Une égalité stricte
+ * ne trouverait donc jamais rien, et l'avertissement de doublon ne se
+ * déclencherait jamais.
+ *
+ * En dessous de huit chiffres on ne cherche pas : le résultat serait
+ * trop large pour signifier quoi que ce soit.
+ */
+export async function verifieTelephone(
+  request: Request,
+  env: Env,
+  utilisateur: Utilisateur,
+): Promise<Response> {
+  if (!utilisateur.peut('customers.view')) {
+    return interdit();
+  }
+
+  const chiffres = (new URL(request.url).searchParams.get('phone') ?? '').replace(/\D/g, '');
+
+  if (chiffres.length < 8) {
+    return succes([]);
+  }
+
+  const lignes = await baseDe(utilisateur, env.DB)
+    .select(
+      `SELECT id, first_name, last_name, phone FROM customers
+        WHERE {ORG} AND deleted_at IS NULL
+          AND REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', '') LIKE ?
+        LIMIT 5`,
+      `%${chiffres}`,
+    )
+    .all<{ id: number; first_name: string; last_name: string; phone: string }>();
+
+  return succes(lignes.results.map((c) => ({
+    id: c.id,
+    full_name: `${c.first_name} ${c.last_name}`.trim(),
+    phone: c.phone,
+  })));
+}

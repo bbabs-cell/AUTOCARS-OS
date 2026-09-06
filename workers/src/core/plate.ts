@@ -17,3 +17,18 @@ export function affiche(plaque: string): string {
 
   return parties === null ? n : `${parties[1]}-${parties[2]}-${parties[3]}`;
 }
+
+/**
+ * Cette plaque est-elle exploitable ?
+ *
+ * ON NE VALIDE PAS UN FORMAT NATIONAL PRÉCIS. Un véhicule immatriculé
+ * en Gambie, en Guinée ou au Mali peut se présenter à la station, et
+ * refuser sa plaque empêcherait de le servir. On vérifie seulement
+ * qu'il y a de quoi identifier quelque chose : une longueur
+ * plausible, au moins une lettre et au moins un chiffre.
+ */
+export function plausible(plaque: string): boolean {
+  const n = normalise(plaque);
+
+  return n.length >= 5 && n.length <= 12 && /[A-Z]/.test(n) && /\d/.test(n);
+}
