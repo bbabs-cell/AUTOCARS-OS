@@ -9,6 +9,7 @@
 import { baseDe, type Utilisateur } from '../core/auth';
 import { enregistre } from '../core/audit';
 import { erreur, interdit, introuvable, succes } from '../core/response';
+import { attribueSiRegle, type Attribution } from '../core/fidelite';
 
 interface LignePaiement {
   id: number;
@@ -87,7 +88,10 @@ export async function encaisse(
     return interdit();
   }
 
-  let corps: { amount?: unknown; method?: unknown; notes?: unknown };
+  let corps: {
+    amount?: unknown; method?: unknown; notes?: unknown;
+    provider?: unknown; external_reference?: unknown;
+  };
 
   try {
     corps = (await request.json()) as typeof corps;
@@ -100,14 +104,16 @@ export async function encaisse(
 
   const dossier = await base
     .select(
-      `SELECT o.id, o.station_id, o.price, o.discount_amount, o.currency_code, o.reference,
+      `SELECT o.id, o.station_id, o.customer_id, o.price, o.discount_amount,
+              o.discount_source, o.currency_code, o.reference,
               (SELECT COALESCE(SUM(p.amount), 0) FROM payments p
                 WHERE p.operation_id = o.id AND p.status = 'PAID') AS deja
          FROM operations o WHERE o.{ORG} AND o.id = ? LIMIT 1`,
       id,
     )
     .first<{
-      id: number; station_id: number; price: number; discount_amount: number;
+      id: number; station_id: number; customer_id: number; price: number;
+      discount_amount: number; discount_source: string | null;
       currency_code: string; reference: string; deja: number;
     }>();
 
@@ -153,19 +159,32 @@ export async function encaisse(
     )
     .first<{ id: number }>();
 
-  await env.DB
+  // `provider` et `external_reference` sont du TEXTE SAISI À LA MAIN :
+  // le nom du service et le numéro recopié depuis le téléphone du
+  // client. Aucune API n'est appelée, aucun paiement n'est vérifié,
+  // rien n'est simulé — et c'est pourtant la seule trace exploitable
+  // en cas de contestation. Une première version les jetait
+  // silencieusement : le caissier les saisissait, la base ne les
+  // gardait pas.
+  const texte = (v: unknown) =>
+    typeof v === 'string' && v.trim() !== '' ? v.trim().slice(0, 120) : null;
+
+  const r = await env.DB
     .prepare(
       `INSERT INTO payments (organization_id, station_id, operation_id, cash_session_id,
-                             amount, currency_code, method, status, recorded_by_user_id,
-                             paid_at, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'PAID', ?, datetime('now'), ?)`,
+                             amount, currency_code, method, status, provider,
+                             external_reference, recorded_by_user_id, paid_at, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'PAID', ?, ?, ?, datetime('now'), ?)`,
     )
     .bind(
       utilisateur.organizationId, dossier.station_id, dossier.id,
-      session?.id ?? null, montant, dossier.currency_code, moyen, utilisateur.id,
-      typeof corps.notes === 'string' && corps.notes.trim() !== '' ? corps.notes.trim() : null,
+      session?.id ?? null, montant, dossier.currency_code, moyen,
+      texte(corps.provider), texte(corps.external_reference), utilisateur.id,
+      texte(corps.notes),
     )
     .run();
+
+  const paiementId = Number(r.meta.last_row_id);
 
   await enregistre(env.DB, {
     action: 'payment.recorded',
@@ -181,7 +200,62 @@ export async function encaisse(
     },
   });
 
-  return await pourDossier(env, utilisateur, String(dossier.id), 'Encaissement enregistré.');
+  const regle = dossier.deja + montant;
+
+  // ==================================================================
+  // UN LAVAGE PAYÉ DONNE UN TAMPON
+  // ==================================================================
+  // La règle appartient à la fidélité, mais c'est ICI qu'elle se
+  // déclenche : un lavage qui n'est pas payé n'est pas un lavage.
+  // `core/fidelite` la porte, pour qu'elle ne soit pas écrite deux
+  // fois.
+  //
+  // ELLE NE PEUT PAS FAIRE ÉCHOUER L'ENCAISSEMENT. Un problème de
+  // carte de fidélité n'a aucune raison d'empêcher de prendre
+  // l'argent d'un client : l'attribution est tentée, et ce qui en
+  // sort n'est qu'une information de plus dans la réponse.
+  let tampon: Attribution = { awarded: false, reason: 'error', balance: null };
+
+  try {
+    tampon = await attribueSiRegle(
+      base, env.DB,
+      {
+        id: dossier.id,
+        customer_id: dossier.customer_id,
+        price: dossier.price,
+        discount_amount: dossier.discount_amount,
+        discount_source: dossier.discount_source,
+        reference: dossier.reference,
+        paid_amount: regle,
+      },
+      utilisateur.id, utilisateur.organizationId,
+    );
+  } catch (e) {
+    console.error('Fidélité indisponible pendant un encaissement :', e);
+  }
+
+  const ligne = await base
+    .select(`SELECT ${CHAMPS} ${JOINTURES} WHERE p.{ORG} AND p.id = ? LIMIT 1`, paiementId)
+    .first<LignePaiement>();
+
+  return succes(
+    {
+      payment: ligne === null ? null : presente(ligne),
+      paid_amount: regle,
+      is_settled: regle >= du,
+      // null quand rien n'a été gagné : le frontend n'a alors rien à
+      // annoncer, et c'est le cas le plus fréquent.
+      loyalty_balance: tampon.awarded ? tampon.balance : null,
+      remaining: Math.max(0, du - regle),
+      // LE CAISSIER DOIT LE SAVOIR TOUT DE SUITE : c'est au moment de
+      // la saisie qu'on peut encore ouvrir le tiroir.
+      outside_cash_session: moyen === 'CASH' && session === null,
+    },
+    regle >= du
+      ? 'Paiement enregistré. Le dossier est réglé.'
+      : `Paiement enregistré. Reste ${(du - regle).toLocaleString('fr-FR')} FCFA.`,
+    201,
+  );
 }
 
 /** GET /api/operations/{id}/payments */

@@ -28,6 +28,17 @@ import { cree, fiche, liste as listeClients, modifie } from './controllers/custo
 import {
   cree as creeInspection, montre, pourVehicule,
 } from './controllers/inspections';
+import {
+  arrive, changeStatut as changeStatutRdv, cree as creeRdv,
+  liste as listeRdv, modifie as modifieRdv, montre as montreRdv, statuts,
+} from './controllers/bookings';
+import {
+  annule as annuleRemise,
+  apercu as apercuFidelite,
+  carteClient,
+  reglage,
+  utilise,
+} from './controllers/loyalty';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -69,6 +80,11 @@ export default {
       const inspections = /^\/api\/operations\/(\d+)\/inspections$/.exec(chemin);
       const inspection = /^\/api\/inspections\/(\d+)$/.exec(chemin);
       const inspectionsVehicule = /^\/api\/vehicles\/(\d+)\/inspections$/.exec(chemin);
+      const rdv = /^\/api\/bookings\/(\d+)$/.exec(chemin);
+      const rdvStatut = /^\/api\/bookings\/(\d+)\/status$/.exec(chemin);
+      const rdvArrive = /^\/api\/bookings\/(\d+)\/arrive$/.exec(chemin);
+      const carte = /^\/api\/loyalty\/customers\/(\d+)$/.exec(chemin);
+      const annulation = /^\/api\/loyalty\/redeem\/(\d+)\/cancel$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -89,6 +105,16 @@ export default {
         (inspections !== null && P) ||
         (inspection !== null && G) ||
         (inspectionsVehicule !== null && G) ||
+        (chemin === '/api/bookings/statuses' && G) ||
+        (chemin === '/api/bookings' && (G || P)) ||
+        (rdv !== null && (G || request.method === 'PUT')) ||
+        (rdvStatut !== null && request.method === 'PUT') ||
+        (rdvArrive !== null && P) ||
+        (chemin === '/api/loyalty' && G) ||
+        (chemin === '/api/loyalty/program' && request.method === 'PUT') ||
+        (chemin === '/api/loyalty/redeem' && P) ||
+        (carte !== null && G) ||
+        (annulation !== null && P) ||
         (statut !== null && request.method === 'PUT') ||
         (paiements !== null && (G || P)) ||
         (remboursement !== null && P);
@@ -115,6 +141,30 @@ export default {
           return P
             ? await cree(request, env, utilisateur)
             : await listeClients(request, env, utilisateur);
+        }
+
+        if (chemin === '/api/bookings/statuses') return statuts(utilisateur);
+        if (chemin === '/api/loyalty') return await apercuFidelite(request, env, utilisateur);
+        if (chemin === '/api/loyalty/program') return await reglage(request, env, utilisateur);
+        if (chemin === '/api/loyalty/redeem') return await utilise(request, env, utilisateur);
+
+        // AVANT `/api/loyalty/customers/{id}` : l'annulation est une
+        // adresse plus longue, et un routeur qui teste le plus court
+        // d'abord ne l'atteindrait jamais.
+        if (annulation !== null) return await annuleRemise(env, utilisateur, annulation[1]);
+        if (carte !== null) return await carteClient(env, utilisateur, carte[1]);
+
+        if (chemin === '/api/bookings') {
+          return P ? await creeRdv(request, env, utilisateur)
+                   : await listeRdv(request, env, utilisateur);
+        }
+
+        if (rdvStatut !== null) return await changeStatutRdv(request, env, utilisateur, rdvStatut[1]);
+        if (rdvArrive !== null) return await arrive(request, env, utilisateur, rdvArrive[1]);
+
+        if (rdv !== null) {
+          return G ? await montreRdv(env, utilisateur, rdv[1])
+                   : await modifieRdv(request, env, utilisateur, rdv[1]);
         }
 
         if (inspections !== null) {

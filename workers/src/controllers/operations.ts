@@ -12,6 +12,7 @@
  */
 
 import { baseDe, type Utilisateur } from '../core/auth';
+import type { TenantDb } from '../core/db';
 import { affiche } from '../core/plate';
 import { enregistre } from '../core/audit';
 import { erreur, interdit, introuvable, succes } from '../core/response';
@@ -322,6 +323,26 @@ function stationDemandee(request: Request): number | null {
   const n = Number.parseInt(brut, 10);
 
   return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/**
+ * UN DOSSIER, DANS LA FORME EXACTE QUE L'APPLICATION LIT.
+ *
+ * Exportée parce que trois modules répondent avec un dossier complet
+ * après l'avoir modifié — la fidélité, les abonnements, les
+ * rendez-vous. Chacun refaisant sa propre requête, il manquerait un
+ * champ quelque part : c'est précisément le défaut qui a coûté une
+ * demi-journée sur la file d'attente.
+ */
+export async function dossierComplet(
+  base: TenantDb,
+  id: number,
+): Promise<ReturnType<typeof presente> | null> {
+  const ligne = await base
+    .select(`SELECT ${CHAMPS} ${JOINTURES} WHERE o.{ORG} AND o.id = ? LIMIT 1`, id)
+    .first<LigneOperation>();
+
+  return ligne === null ? null : presente(ligne);
 }
 
 /** La forme exacte que l'application Angular lit déjà. */

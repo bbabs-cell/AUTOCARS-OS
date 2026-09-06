@@ -123,7 +123,13 @@ CREATE TABLE cash_sessions (
   closing_notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  open_station_id INTEGER CHECK (open_station_id >= 0),
+  -- Colonne CALCULÉE : elle vaut la station tant que la caisse est
+  -- ouverte, NULL ensuite. La clé unique interdit alors deux caisses
+  -- ouvertes au même endroit — une contrainte UNIQUE tolère autant
+  -- de NULL qu'on veut. La règle est dans la base, pas dans un
+  -- contrôleur qui pourrait l'oublier.
+  open_station_id INTEGER GENERATED ALWAYS AS
+    (CASE WHEN status = 'OPEN' THEN station_id END) STORED,
   UNIQUE (open_station_id),
   FOREIGN KEY (closed_by_user_id) REFERENCES users(id),
   FOREIGN KEY (opened_by_user_id) REFERENCES users(id),
@@ -192,8 +198,17 @@ CREATE TABLE loyalty_entries (
   note TEXT,
   created_by_user_id INTEGER CHECK (created_by_user_id >= 0),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  earn_operation_id INTEGER CHECK (earn_operation_id >= 0),
-  reversed_entry_id INTEGER CHECK (reversed_entry_id >= 0),
+  -- Un seul tampon par dossier. Le tampon est écrit quand le dossier
+  -- devient réglé : un client qui paie en deux fois déclenche deux
+  -- fois le calcul, et un paiement rejoué une troisième. Le
+  -- contrôleur vérifie avant d'écrire ; la base, elle, ne peut pas
+  -- se tromper.
+  earn_operation_id INTEGER GENERATED ALWAYS AS
+    (CASE WHEN type = 'EARN' THEN operation_id END) STORED,
+  -- Et une utilisation ne s'annule qu'une fois : sans cela, deux
+  -- appuis sur « Annuler » rendraient deux fois les tampons.
+  reversed_entry_id INTEGER GENERATED ALWAYS AS
+    (CASE WHEN type = 'REVERSAL' THEN related_entry_id END) STORED,
   UNIQUE (earn_operation_id),
   UNIQUE (reversed_entry_id),
   FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
@@ -216,7 +231,10 @@ CREATE TABLE loyalty_programs (
   created_by_user_id INTEGER CHECK (created_by_user_id >= 0),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  active_organization_id INTEGER CHECK (active_organization_id >= 0),
+  -- Même mécanisme : un seul programme ACTIF par entreprise. Deux
+  -- rendraient le solde d'un client indéterminé.
+  active_organization_id INTEGER GENERATED ALWAYS AS
+    (CASE WHEN status = 'ACTIVE' THEN organization_id END) STORED,
   UNIQUE (active_organization_id),
   FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (organization_id) REFERENCES organizations(id)
@@ -401,7 +419,9 @@ CREATE TABLE time_entries (
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  open_user_id INTEGER CHECK (open_user_id >= 0),
+  -- Même mécanisme : un seul pointage ouvert par employé.
+  open_user_id INTEGER GENERATED ALWAYS AS
+    (CASE WHEN clock_out_at IS NULL THEN user_id END) STORED,
   UNIQUE (open_user_id),
   FOREIGN KEY (corrected_by_user_id) REFERENCES users(id),
   FOREIGN KEY (organization_id) REFERENCES organizations(id),

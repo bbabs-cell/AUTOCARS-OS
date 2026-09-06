@@ -113,11 +113,19 @@ describe('les garanties perdues de MySQL, rétablies par CHECK', () => {
  * « Une seule caisse ouverte par station » est le refus n° 8 de
  * l'aide en ligne. Il ne tient pas à une vérification dans un
  * contrôleur — qu'on peut oublier — mais à une clé unique sur
- * `open_station_id`, laissée à NULL dès que la caisse est fermée.
+ * `open_station_id`, une colonne CALCULÉE qui vaut la station tant
+ * que la caisse est ouverte et NULL dès qu'elle est fermée.
  *
- * SQLite autorise plusieurs NULL dans une colonne unique, comme
- * MySQL : la règle traverse donc la migration intacte. Encore
- * fallait-il le vérifier plutôt que de le supposer.
+ * DEUX PROPRIÉTÉS À VÉRIFIER, PAS UNE :
+ *
+ *   · SQLite autorise plusieurs NULL dans une colonne unique, comme
+ *     MySQL — sans quoi deux caisses fermées se refuseraient l'une
+ *     l'autre ;
+ *   · la colonne est calculée par la BASE. Les insertions ci-dessous
+ *     ne l'écrivent pas : elles ne posent que le statut. C'est ce qui
+ *     rend la règle infalsifiable — un contrôleur ne peut pas la
+ *     contourner en oubliant une colonne, puisqu'il lui est interdit
+ *     d'y toucher.
  */
 describe('une seule caisse ouverte par station', () => {
   beforeEach(prepareBase);
@@ -125,9 +133,9 @@ describe('une seule caisse ouverte par station', () => {
   const ouvre = (id: number, station: number, ouverte: boolean) =>
     env.DB.prepare(
       `INSERT INTO cash_sessions (id, organization_id, station_id, opened_by_user_id,
-                                  status, opening_float, open_station_id)
-       VALUES (?, 1, ?, 1, ?, 0, ?)`,
-    ).bind(id, station, ouverte ? 'OPEN' : 'CLOSED', ouverte ? station : null).run();
+                                  status, opening_float)
+       VALUES (?, 1, ?, 1, ?, 0)`,
+    ).bind(id, station, ouverte ? 'OPEN' : 'CLOSED').run();
 
   it('deux caisses ouvertes sur la même station sont refusées', async () => {
     await ouvre(1, 1, true);
@@ -137,6 +145,31 @@ describe('une seule caisse ouverte par station', () => {
   it('deux stations peuvent avoir chacune leur caisse ouverte', async () => {
     await ouvre(1, 1, true);
     await expect(ouvre(2, 2, true)).resolves.toBeDefined();
+  });
+
+  // Le cas qu'une vérification écrite à la main aurait laissé passer :
+  // la seconde caisse est créée FERMÉE — donc acceptée — puis rouverte
+  // par un UPDATE. C'est le chemin d'une reprise de vacation, et la
+  // base doit le refuser exactement comme l'insertion directe.
+  it('rouvrir une caisse fermée pendant qu\'une autre est ouverte est refusé', async () => {
+    await ouvre(1, 1, true);
+    await ouvre(2, 1, false);
+
+    await expect(
+      env.DB.prepare("UPDATE cash_sessions SET status = 'OPEN' WHERE id = 2").run(),
+    ).rejects.toThrow(/UNIQUE|constraint/i);
+  });
+
+  // Et la colonne calculée n'est pas écrivable : la tentative est
+  // refusée par la base, pas seulement ignorée.
+  it('écrire soi-même open_station_id est refusé', async () => {
+    await expect(
+      env.DB.prepare(
+        `INSERT INTO cash_sessions (id, organization_id, station_id, opened_by_user_id,
+                                    status, opening_float, open_station_id)
+         VALUES (9, 1, 1, 1, 'CLOSED', 0, 1)`,
+      ).run(),
+    ).rejects.toThrow();
   });
 
   it('plusieurs caisses FERMÉES sur la même station sont possibles', async () => {

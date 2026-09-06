@@ -26,6 +26,26 @@ export interface Utilisateur {
   role: string;
   stationIds: number[];
   peut(action: string): boolean;
+
+  /**
+   * Cette station est-elle la sienne ?
+   *
+   * UN ADMINISTRATEUR VOIT TOUTES LES STATIONS DE SON ENTREPRISE,
+   * même celles où il n'est pas rattaché : c'est son rôle. Les autres
+   * ne voient que les leurs.
+   *
+   * La nuance a coûté un défaut réel côté PHP : un administrateur
+   * n'était rattaché qu'à une station, et un identifiant appartenant
+   * à une AUTRE entreprise passait le contrôle. Aucune donnée ne
+   * fuyait — toutes les requêtes portent `organization_id` et le
+   * cloisonnement renvoyait zéro ligne — mais l'API répondait
+   * « 200, rien à voir ici » là où elle devait répondre « cette
+   * station n'est pas la vôtre ».
+   *
+   * La requête n'est faite qu'une fois, et seulement pour un
+   * administrateur : les autres rôles ne paient rien.
+   */
+  voitStation(stationId: number): Promise<boolean>;
 }
 
 /**
@@ -83,6 +103,14 @@ export async function identifie(
   }
 
   const role = ligne.role;
+  const stations = (ligne.station_ids ?? '')
+    .split(',')
+    .filter((s) => s !== '')
+    .map(Number);
+
+  // Chargée au plus une fois par requête, et seulement si un
+  // administrateur interroge effectivement une station.
+  let stationsOrg: number[] | null = null;
 
   return {
     id: ligne.id,
@@ -90,11 +118,22 @@ export async function identifie(
     email: ligne.email,
     nomComplet: `${ligne.first_name} ${ligne.last_name}`.trim(),
     role,
-    stationIds: (ligne.station_ids ?? '')
-      .split(',')
-      .filter((s) => s !== '')
-      .map(Number),
+    stationIds: stations,
     peut: (action: string) => autorise(role, action),
+    voitStation: async (stationId: number) => {
+      if (role !== 'ADMIN') {
+        return stations.includes(stationId);
+      }
+
+      stationsOrg ??= (
+        await db
+          .prepare('SELECT id FROM stations WHERE organization_id = ?')
+          .bind(ligne.organization_id)
+          .all<{ id: number }>()
+      ).results.map((r) => r.id);
+
+      return stationsOrg.includes(stationId);
+    },
   };
 }
 

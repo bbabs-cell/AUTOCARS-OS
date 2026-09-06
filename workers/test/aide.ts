@@ -25,9 +25,15 @@ export async function prepareBase(): Promise<void> {
   // le désordre échoue avec « FOREIGN KEY constraint failed ». On part
   // donc des feuilles pour remonter vers les racines.
   const ordre = [
-    'inspection_photos', 'inspections', 'payments', 'operations',
-    'loyalty_entries', 'loyalty_programs', 'subscriptions', 'subscription_plans',
-    'bookings', 'time_entries', 'cash_sessions', 'audit_logs',
+    'inspection_photos', 'inspections', 'payments',
+    // Les rendez-vous AVANT les opérations : un rendez-vous « arrivé »
+    // pointe sur le dossier qu'il a ouvert, et supprimer l'opération
+    // d'abord viole la clé étrangère. L'ordre n'est pas décoratif.
+    // Les écritures de fidélité aussi : elles pointent sur le dossier
+    // qui les a values.
+    'bookings', 'loyalty_entries', 'operations',
+    'loyalty_programs', 'subscriptions', 'subscription_plans',
+    'time_entries', 'cash_sessions', 'audit_logs',
     'refresh_tokens', 'password_resets', 'services',
     'vehicles', 'customers', 'station_users', 'stations', 'users', 'organizations',
   ];

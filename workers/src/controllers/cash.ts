@@ -202,15 +202,18 @@ export async function ouvre(
 
   const r = await env.DB
     .prepare(
+      // `open_station_id` n'est pas écrite ici : c'est une colonne
+      // CALCULÉE, que la base déduit du statut. L'écrire serait
+      // refusé — et c'est justement ce qui rend la règle
+      // infalsifiable.
       `INSERT INTO cash_sessions (organization_id, station_id, status, opening_float,
-                                  opened_by_user_id, opened_at, opening_notes, open_station_id)
-       VALUES (?, ?, 'OPEN', ?, ?, datetime('now'), ?, ?)`,
+                                  opened_by_user_id, opened_at, opening_notes)
+       VALUES (?, ?, 'OPEN', ?, ?, datetime('now'), ?)`,
     )
     .bind(
       utilisateur.organizationId, station, fond, utilisateur.id,
       typeof corps.opening_notes === 'string' && corps.opening_notes.trim() !== ''
         ? corps.opening_notes.trim() : null,
-      station,
     )
     .run();
 
@@ -287,8 +290,7 @@ export async function ferme(
     .select(
       `UPDATE cash_sessions
           SET status = 'CLOSED', counted_amount = ?, expected_amount = ?, difference = ?,
-              closed_by_user_id = ?, closed_at = datetime('now'), closing_notes = ?,
-              open_station_id = NULL
+              closed_by_user_id = ?, closed_at = datetime('now'), closing_notes = ?
         WHERE {ORG} AND id = ?`,
       compte,
       session.expected_amount,

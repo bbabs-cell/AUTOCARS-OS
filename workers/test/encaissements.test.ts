@@ -24,9 +24,71 @@ describe('encaisser', () => {
   it('un employé encaisse — c’est son travail au comptoir', async () => {
     const { res, corps } = await encaisse(EMPLOYE, 2, 5000);
 
-    expect(res.status).toBe(200);
+    // 201 : un encaissement CRÉE une ligne. Le PHP répondait déjà
+    // cela, et Angular traite tout le 2xx de la même façon.
+    expect(res.status).toBe(201);
     expect(corps.data.is_settled).toBe(true);
     expect(corps.data.remaining).toBe(0);
+  });
+
+  it("renvoie les clés que `PaymentResult` déclare", async () => {
+    const { corps } = await encaisse(ADMIN, 2, 5000);
+
+    expect(Object.keys(corps.data).sort()).toEqual([
+      'is_settled', 'loyalty_balance', 'outside_cash_session',
+      'paid_amount', 'payment', 'remaining',
+    ]);
+    expect(corps.data.payment.amount).toBe(5000);
+  });
+
+  /**
+   * `provider` et `external_reference` SONT CONSERVÉS.
+   *
+   * Ils sont saisis à la main — le nom du service et le numéro
+   * recopié depuis le téléphone du client. Aucune API n'est appelée,
+   * rien n'est vérifié : c'est pourtant la seule trace exploitable en
+   * cas de contestation. Une version les acceptait et les jetait.
+   */
+  it('garde le fournisseur et la référence saisis à la main', async () => {
+    const { corps } = await appel(ADMIN, '/api/operations/2/payments', 'POST', {
+      amount: 5000, method: 'MOBILE_MONEY',
+      provider: 'Wave', external_reference: 'TX-889912',
+    });
+
+    expect(corps.data.payment.provider).toBe('Wave');
+    expect(corps.data.payment.external_reference).toBe('TX-889912');
+
+    const r = await env.DB
+      .prepare('SELECT provider, external_reference FROM payments WHERE operation_id = 2')
+      .first<{ provider: string; external_reference: string }>();
+
+    expect(r?.provider).toBe('Wave');
+    expect(r?.external_reference).toBe('TX-889912');
+  });
+
+  /**
+   * LE CAISSIER DOIT SAVOIR TOUT DE SUITE que son encaissement en
+   * espèces n'est rattaché à aucune caisse : c'est au moment de la
+   * saisie qu'on peut encore ouvrir le tiroir.
+   */
+  it('signale un encaissement en espèces hors caisse ouverte', async () => {
+    const { corps } = await encaisse(ADMIN, 2, 5000);
+
+    expect(corps.data.outside_cash_session).toBe(true);
+  });
+
+  it('ne le signale pas quand la caisse est ouverte', async () => {
+    await appel(ADMIN, '/api/cash/open', 'POST', { opening_float: 10_000 });
+
+    const { corps } = await encaisse(ADMIN, 2, 5000);
+
+    expect(corps.data.outside_cash_session).toBe(false);
+  });
+
+  it("ne le signale pas pour un paiement qui ne passe pas par le tiroir", async () => {
+    const { corps } = await encaisse(ADMIN, 2, 5000, 'MOBILE_MONEY');
+
+    expect(corps.data.outside_cash_session).toBe(false);
   });
 
   it('un règlement partiel laisse un reste', async () => {

@@ -17,6 +17,7 @@
 export interface Trace {
   action: string;
   organizationId?: number | null;
+  stationId?: number | null;
   userId?: number | null;
   entityType?: string | null;
   entityId?: number | null;
@@ -27,11 +28,13 @@ export async function enregistre(db: D1Database, t: Trace): Promise<void> {
   try {
     await db
       .prepare(
-        `INSERT INTO audit_logs (organization_id, user_id, action, entity_type, entity_id, metadata)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO audit_logs (organization_id, station_id, user_id, action,
+                                 entity_type, entity_id, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         t.organizationId ?? null,
+        t.stationId ?? null,
         t.userId ?? null,
         t.action,
         t.entityType ?? null,
