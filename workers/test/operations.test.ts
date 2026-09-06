@@ -9,7 +9,12 @@ const change = async (email: string, id: number, status: string, reason?: string
     headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(reason === undefined ? { status } : { status, reason }),
   });
-  return { res, corps: (await res.json()) as { success: boolean; message: string; data: Record<string, unknown> } };
+  return {
+    res,
+    corps: (await res.json()) as {
+      success: boolean; message: string; data: { operation: Record<string, unknown> };
+    },
+  };
 };
 
 const ADMIN = 'mamadou@diallo.sn';
@@ -79,7 +84,10 @@ describe('les refus de la machine à états, à travers l’API', () => {
     const { res, corps } = await change(EMPLOYE, 1, 'IN_PROGRESS');
 
     expect(res.status).toBe(200);
-    expect(corps.data.status).toBe('IN_PROGRESS');
+    // `{ operation: … }` : c'est ce que l'écran du dossier lit. La
+    // première version renvoyait l'objet nu, et la page remplaçait
+    // son dossier par `undefined` après chaque changement d'étape.
+    expect(corps.data.operation.status).toBe('IN_PROGRESS');
   });
 
   it('sauter une étape est refusé, avec la sortie indiquée', async () => {
@@ -157,6 +165,142 @@ describe('l’inspection d’entrée est obligatoire avant le lavage', () => {
 
 /**
  * ==================================================================
+ * LA RESTITUTION NE PASSE PAS PAR LE CHANGEMENT DE STATUT
+ * ==================================================================
+ * Elle a sa propre route, avec sa propre procédure. Autoriser un
+ * simple passage à COMPLETED contournerait le seul contrôle du
+ * produit qui porte sur le monde réel plutôt que sur la base : la
+ * ressaisie de la plaque, qui oblige à regarder la voiture avant de
+ * rendre les clés.
+ *
+ * La première version de ce portage le permettait. Elle vérifiait le
+ * paiement — et laissait partir n'importe quel véhicule réglé sans
+ * jamais comparer la plaque.
+ */
+describe('la restitution ne se fait pas par un changement de statut', () => {
+  beforeEach(prepareBase);
+
+  it('le passage direct à COMPLETED est refusé, et dit où aller', async () => {
+    const { res, corps } = await change(ADMIN, 2, 'COMPLETED');
+
+    expect(res.status).toBe(403);
+    expect(corps.message).toContain('remise du véhicule');
+  });
+
+  it('même pour un dossier entièrement réglé', async () => {
+    await env.DB.prepare(
+      `INSERT INTO payments (organization_id, station_id, operation_id, amount, method,
+                             status, recorded_by_user_id)
+       VALUES (1, 1, 2, 5000, 'CASH', 'PAID', 1)`,
+    ).run();
+
+    expect((await change(ADMIN, 2, 'COMPLETED')).res.status).toBe(403);
+  });
+});
+
+/**
+ * ==================================================================
+ * LA REMISE DU VÉHICULE AU CLIENT
+ * ==================================================================
+ * Quatre vérifications : le dossier est prêt, la référence
+ * correspond, la plaque correspond, la prestation est réglée.
+ */
+describe('la remise du véhicule', () => {
+  beforeEach(prepareBase);
+
+  const rend = async (
+    email: string, id: number, corps: Record<string, unknown>,
+  ) => {
+    const jeton = await jetonPour(email);
+    const res = await SELF.fetch(`https://api.test/api/operations/${id}/release`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(corps),
+    });
+
+    return {
+      res,
+      corps: (await res.json()) as { message: string; data: any; errors: Record<string, string> },
+    };
+  };
+
+  const regle = (montant = 5000) =>
+    env.DB.prepare(
+      `INSERT INTO payments (organization_id, station_id, operation_id, amount, method,
+                             status, recorded_by_user_id)
+       VALUES (1, 1, 2, ?, 'CASH', 'PAID', 1)`,
+    ).bind(montant).run();
+
+  /** Le dossier 2 est READY, plaque DK5678BC, référence OP-0002. */
+  const bon = { reference: 'OP-0002', plate_number: 'DK5678BC' };
+
+  it('rend le véhicule quand tout est en règle', async () => {
+    await regle();
+
+    const { res, corps } = await rend(ADMIN, 2, bon);
+
+    expect(res.status).toBe(200);
+    expect(corps.data.operation.status).toBe('COMPLETED');
+    expect(corps.data.operation.released_at).not.toBeNull();
+    expect(corps.message).toBe('Véhicule restitué.');
+  });
+
+  /**
+   * LE CONTRÔLE QUI PORTE SUR LE MONDE RÉEL.
+   *
+   * Deux Toyota blanches le même matin, ça arrive tous les jours ;
+   * rendre la mauvaise, une seule fois, suffit à perdre un client.
+   */
+  it('refuse une plaque qui ne correspond pas au dossier', async () => {
+    await regle();
+
+    const { res, corps } = await rend(ADMIN, 2, { ...bon, plate_number: 'DK9087DE' });
+
+    expect(res.status).toBe(422);
+    expect(corps.errors.plate_number).toContain('avant de remettre les clés');
+
+    // Le dossier n'a pas bougé.
+    const o = await env.DB.prepare('SELECT status FROM operations WHERE id = 2')
+      .first<{ status: string }>();
+
+    expect(o?.status).toBe('READY');
+  });
+
+  it('accepte la plaque telle qu’elle est écrite sur la voiture', async () => {
+    await regle();
+
+    // Espaces et tirets : le comptoir tape ce qu'il lit.
+    const { res } = await rend(ADMIN, 2, { ...bon, plate_number: 'dk 5678-bc' });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('refuse une référence qui ne correspond pas', async () => {
+    await regle();
+
+    const { res, corps } = await rend(ADMIN, 2, { ...bon, reference: 'OP-0001' });
+
+    expect(res.status).toBe(422);
+    expect(corps.errors.reference).toBeDefined();
+  });
+
+  it('un dossier qui n’est pas prêt ne se restitue pas', async () => {
+    const { res } = await rend(ADMIN, 1, { reference: 'OP-0001', plate_number: 'DK9087DE' });
+
+    expect(res.status).toBe(409);
+  });
+
+  it('la référence et la plaque sont obligatoires', async () => {
+    const { res, corps } = await rend(ADMIN, 2, {});
+
+    expect(res.status).toBe(422);
+    expect(corps.errors.reference).toBeDefined();
+    expect(corps.errors.plate_number).toBeDefined();
+  });
+});
+
+/**
+ * ==================================================================
  * ON NE REND PAS LES CLÉS D'UN VÉHICULE IMPAYÉ
  * ==================================================================
  * Refus n° 3, le plus dur du produit et celui qui sera le plus
@@ -167,8 +311,33 @@ describe('l’inspection d’entrée est obligatoire avant le lavage', () => {
 describe('la restitution d’un véhicule impayé', () => {
   beforeEach(prepareBase);
 
+  const rend = async (email: string, motif?: string) => {
+    const jeton = await jetonPour(email);
+    const res = await SELF.fetch('https://api.test/api/operations/2/release', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reference: 'OP-0002',
+        plate_number: 'DK5678BC',
+        ...(motif === undefined ? {} : { override_reason: motif }),
+      }),
+    });
+
+    return {
+      res,
+      corps: (await res.json()) as { message: string; data: any },
+    };
+  };
+
+  const paye = (montant: number, statut = 'PAID') =>
+    env.DB.prepare(
+      `INSERT INTO payments (organization_id, station_id, operation_id, amount, method,
+                             status, recorded_by_user_id)
+       VALUES (1, 1, 2, ?, 'CASH', ?, 1)`,
+    ).bind(montant, statut).run();
+
   it('est refusée, avec le code 402 et le reste dû', async () => {
-    const { res, corps } = await change(ADMIN, 2, 'COMPLETED');
+    const { res, corps } = await rend(ADMIN);
 
     expect(res.status).toBe(402);          // Payment Required
     expect(corps.message).toContain('5');  // le montant apparaît
@@ -176,59 +345,65 @@ describe('la restitution d’un véhicule impayé', () => {
   });
 
   it('passe une fois le règlement encaissé', async () => {
-    await env.DB.prepare(
-      `INSERT INTO payments (organization_id, station_id, operation_id, amount, method,
-                             status, recorded_by_user_id)
-       VALUES (1, 1, 2, 5000, 'CASH', 'PAID', 1)`,
-    ).run();
+    await paye(5000);
 
-    expect((await change(ADMIN, 2, 'COMPLETED')).res.status).toBe(200);
+    expect((await rend(ADMIN)).res.status).toBe(200);
   });
 
   it('un paiement PARTIEL ne suffit pas', async () => {
-    await env.DB.prepare(
-      `INSERT INTO payments (organization_id, station_id, operation_id, amount, method,
-                             status, recorded_by_user_id)
-       VALUES (1, 1, 2, 3000, 'CASH', 'PAID', 1)`,
-    ).run();
+    await paye(3000);
 
-    expect((await change(ADMIN, 2, 'COMPLETED')).res.status).toBe(402);
+    expect((await rend(ADMIN)).res.status).toBe(402);
   });
 
   it('un paiement ANNULÉ ne compte pas', async () => {
-    await env.DB.prepare(
-      `INSERT INTO payments (organization_id, station_id, operation_id, amount, method,
-                             status, recorded_by_user_id)
-       VALUES (1, 1, 2, 5000, 'CASH', 'CANCELLED', 1)`,
-    ).run();
+    await paye(5000, 'CANCELLED');
 
-    expect((await change(ADMIN, 2, 'COMPLETED')).res.status).toBe(402);
+    expect((await rend(ADMIN)).res.status).toBe(402);
   });
 
   it('un employé ne peut PAS lever le blocage, même avec un motif', async () => {
-    const { res } = await change(EMPLOYE, 2, 'COMPLETED', 'Le client reviendra payer demain');
+    const { res } = await rend(EMPLOYE, 'Le client reviendra payer demain');
 
     expect(res.status).toBe(403);
   });
 
   it('un responsable le peut, en indiquant un motif', async () => {
-    const { res } = await change(ADMIN, 2, 'COMPLETED', 'Client de confiance, réglera demain');
+    const { res } = await rend(ADMIN, 'Client de confiance, réglera demain');
 
     expect(res.status).toBe(200);
   });
 
   it('la dérogation est tracée NOMINATIVEMENT', async () => {
-    await change(ADMIN, 2, 'COMPLETED', 'Client de confiance, réglera demain');
+    await rend(ADMIN, 'Client de confiance, réglera demain');
 
     const t = await env.DB.prepare(
       "SELECT user_id, metadata FROM audit_logs WHERE action = 'operation.released_unpaid'",
     ).first<{ user_id: number; metadata: string }>();
 
     expect(t?.user_id).toBe(1);
-    const m = JSON.parse(t?.metadata ?? '{}') as { reste_du: number; motif: string; reference: string };
-    expect(m.reste_du).toBe(5000);
-    expect(m.motif).toContain('confiance');
+
+    const m = JSON.parse(t?.metadata ?? '{}') as {
+      amount_due: number; amount_paid: number; override_reason: string; reference: string;
+    };
+
+    expect(m.amount_due).toBe(5000);
+    expect(m.amount_paid).toBe(0);
+    expect(m.override_reason).toContain('confiance');
     expect(m.reference).toBe('OP-0002');
+  });
+
+  // Une restitution NORMALE n'est pas tracée comme une dérogation :
+  // sinon le journal ne distinguerait plus les deux.
+  it('une restitution réglée ne laisse pas de trace de dérogation', async () => {
+    await paye(5000);
+    await rend(ADMIN);
+
+    const t = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM audit_logs WHERE action = 'operation.released_unpaid'",
+    ).first<{ n: number }>();
+
+    expect(t?.n).toBe(0);
   });
 });
 

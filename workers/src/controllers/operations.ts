@@ -13,7 +13,7 @@
 
 import { baseDe, type Utilisateur } from '../core/auth';
 import type { TenantDb } from '../core/db';
-import { affiche } from '../core/plate';
+import { affiche, normalise } from '../core/plate';
 import { enregistre } from '../core/audit';
 import { erreur, interdit, introuvable, succes } from '../core/response';
 import {
@@ -213,12 +213,37 @@ export async function changeStatut(
     return introuvable("Ce dossier n'existe pas.");
   }
 
-  // --- 1. La machine à états ---------------------------------------
+  // --- 1. LA RESTITUTION NE PASSE PAS PAR ICI ----------------------
+  //
+  // Elle a sa propre route, avec sa procédure de vérification : la
+  // référence et la PLAQUE sont ressaisies au comptoir. Autoriser un
+  // simple changement de statut vers COMPLETED contournerait le seul
+  // contrôle du produit qui porte sur le monde réel plutôt que sur la
+  // base — celui qui oblige à regarder la voiture avant de rendre les
+  // clés.
+  //
+  // La première version de ce portage l'avait manqué : elle vérifiait
+  // le paiement, et laissait partir n'importe quel véhicule réglé
+  // sans jamais comparer la plaque. Deux Toyota blanches le même
+  // matin, ça arrive tous les jours.
+  if (vers === 'COMPLETED') {
+    return interdit(
+      'La restitution suit une procédure de vérification : '
+      + "utilisez l'écran de remise du véhicule.",
+    );
+  }
+
+  // --- 2. La machine à états ---------------------------------------
   if (!existe(vers) || !permet(dossier.status, vers)) {
     return erreur(messageRefus(dossier.status, vers), {}, 409);
   }
 
-  // --- 2. Les gardes ------------------------------------------------
+  // --- 3. Les gardes ------------------------------------------------
+  //
+  // `payment_settled` n'est plus jamais atteinte ici : elle garde la
+  // transition READY → COMPLETED, désormais réservée à la
+  // restitution. Elle reste déclarée dans la machine à états, où
+  // `restitue()` la lit.
   const garde = GARDES[`${dossier.status}:${vers}`];
 
   if (garde === 'entry_inspection_recorded') {
@@ -240,51 +265,7 @@ export async function changeStatut(
     }
   }
 
-  if (garde === 'payment_settled') {
-    const du = dossier.price - dossier.discount_amount;
-    const regle = await base
-      .select(
-        `SELECT COALESCE(SUM(p.amount), 0) AS total FROM payments p
-          WHERE p.{ORG} AND p.operation_id = ? AND p.status = 'PAID'`,
-        dossier.id,
-      )
-      .first<{ total: number }>();
-
-    if ((regle?.total ?? 0) < du) {
-      // La dérogation existe, et elle laisse une trace : c'est ce qui
-      // la rend acceptable. Sans trace, ce serait un contournement.
-      const derogation = typeof corps.reason === 'string' && corps.reason.trim() !== '';
-
-      if (!derogation) {
-        // 402 Payment Required : le code existe, c'est exactement ce
-        // cas. Le PHP l'utilisait déjà, et le frontend s'en sert pour
-        // proposer l'encaissement plutôt qu'une erreur générique.
-        return erreur(
-          `Ce véhicule n'est pas réglé : ${(regle?.total ?? 0).toLocaleString('fr-FR')} `
-          + `sur ${du.toLocaleString('fr-FR')}. Encaissez le solde, ou `
-          + 'un responsable peut lever le blocage en indiquant un motif.',
-          { payment: 'Paiement incomplet.' }, 402,
-        );
-      }
-
-      // La dérogation est un droit DISTINCT : un employé ne peut pas
-      // s'autoriser lui-même à rendre un véhicule impayé.
-      if (!utilisateur.peut('operations.override_payment')) {
-        return interdit('Seul un responsable peut restituer un véhicule non réglé.');
-      }
-
-      await enregistre(env.DB, {
-        action: 'operation.released_unpaid',
-        organizationId: utilisateur.organizationId,
-        userId: utilisateur.id,
-        entityType: 'operation',
-        entityId: dossier.id,
-        metadata: { reference: dossier.reference, reste_du: du - (regle?.total ?? 0), motif: corps.reason },
-      });
-    }
-  }
-
-  // --- 3. L'écriture -------------------------------------------------
+  // --- 4. L'écriture -------------------------------------------------
   const colonne = HORODATAGES[vers];
   const horodatage = colonne === undefined ? '' : `, ${colonne} = datetime('now')`;
 
@@ -310,7 +291,14 @@ export async function changeStatut(
     .select(`SELECT ${CHAMPS} ${JOINTURES} WHERE o.{ORG} AND o.id = ?`, dossier.id)
     .first<LigneOperation>();
 
-  return succes(apres === null ? null : presente(apres), `Dossier ${LIBELLES[vers]}.`);
+  // `{ operation: … }` et non le dossier à la racine : c'est ce que
+  // l'écran du dossier lit — `result.operation`. La première version
+  // renvoyait l'objet nu, et la page remplaçait son dossier par
+  // `undefined` après chaque changement d'étape.
+  return succes(
+    { operation: apres === null ? null : presente(apres) },
+    `Dossier ${LIBELLES[vers]}.`,
+  );
 }
 
 function stationDemandee(request: Request): number | null {
@@ -437,4 +425,836 @@ function presente(o: LigneOperation) {
     completed_at: o.completed_at,
     released_at: o.released_at,
   };
+}
+
+// ====================================================================
+// LA LISTE, LA FICHE, L'ACCUEIL
+// ====================================================================
+
+/**
+ * GET /api/operations/statuses
+ *
+ * La machine à états, envoyée au frontend : libellés, transitions
+ * possibles, statuts actifs.
+ *
+ * POURQUOI L'ENVOYER AU CLIENT ?
+ * Pour que l'interface n'affiche que les boutons utilisables, sans
+ * recopier les règles en TypeScript. Une règle recopiée est une règle
+ * qui divergera. C'est un CONFORT D'AFFICHAGE : le serveur revérifie
+ * chaque transition, quoi qu'ait affiché l'écran.
+ */
+export function statuts(utilisateur: Utilisateur): Response {
+  if (!utilisateur.peut('operations.view')) {
+    return interdit();
+  }
+
+  return succes({
+    statuses: (Object.keys(TRANSITIONS) as Etat[]).map((e) => ({
+      value: e,
+      label: LIBELLES[e],
+      allowed_next: [...TRANSITIONS[e]],
+      is_final: TRANSITIONS[e].length === 0,
+      is_active: (ACTIFS as readonly string[]).includes(e),
+    })),
+  });
+}
+
+/** GET /api/operations?active=1&status=&station_id=&vehicle_id=&search= */
+export async function liste(
+  request: Request,
+  env: Env,
+  utilisateur: Utilisateur,
+): Promise<Response> {
+  if (!utilisateur.peut('operations.view')) {
+    return interdit();
+  }
+
+  const p = new URL(request.url).searchParams;
+  const conditions: string[] = [];
+  const parametres: unknown[] = [];
+
+  const statut = p.get('status');
+
+  if (statut !== null && statut !== '' && existe(statut)) {
+    conditions.push('o.status = ?');
+    parametres.push(statut);
+  }
+
+  // « Ce qui est en cours » : les statuts actifs, ceux qui occupent
+  // réellement la station. C'est la vue par défaut du comptoir — un
+  // dossier restitué la semaine dernière n'a rien à y faire.
+  if (p.get('active') === '1') {
+    conditions.push(`o.status IN (${ACTIFS.map(() => '?').join(',')})`);
+    parametres.push(...ACTIFS);
+  }
+
+  for (const colonne of ['station_id', 'vehicle_id', 'customer_id', 'assigned_user_id']) {
+    const v = p.get(colonne);
+    const n = v === null ? Number.NaN : Number.parseInt(v, 10);
+
+    if (Number.isInteger(n) && n > 0) {
+      conditions.push(`o.${colonne} = ?`);
+      parametres.push(n);
+    }
+  }
+
+  const recherche = (p.get('search') ?? '').trim();
+
+  if (recherche !== '') {
+    // La plaque se cherche NORMALISÉE : elle est stockée sans espace
+    // ni tiret, et un client qui tape « DK 9087 DE » doit trouver son
+    // véhicule.
+    conditions.push(
+      '(o.reference LIKE ? OR v.plate_number LIKE ? OR c.last_name LIKE ? OR c.first_name LIKE ?)',
+    );
+    parametres.push(
+      `${recherche}%`,
+      `${recherche.replace(/[\s-]/g, '').toUpperCase()}%`,
+      `${recherche}%`,
+      `${recherche}%`,
+    );
+  }
+
+  const suite = conditions.length === 0 ? '' : ` AND ${conditions.join(' AND ')}`;
+  const base = baseDe(utilisateur, env.DB);
+
+  const lignes = await base
+    .select(
+      `SELECT ${CHAMPS} ${JOINTURES} WHERE o.{ORG}${suite}
+        ORDER BY o.priority DESC, o.created_at ASC LIMIT 100`,
+      ...parametres,
+    )
+    .all<LigneOperation>();
+
+  const station = stationDemandee(request);
+
+  const comptes = await base
+    .select(
+      `SELECT status, COUNT(*) AS total FROM operations
+        WHERE {ORG}${station === null ? '' : ' AND station_id = ?'}
+        GROUP BY status`,
+      ...(station === null ? [] : [station]),
+    )
+    .all<{ status: string; total: number }>();
+
+  // TOUTES LES CLÉS SONT PRÉSENTES, même à zéro : sans cela le
+  // frontend devrait tester l'existence de chaque colonne avant de
+  // l'afficher.
+  const counts: Record<string, number> = {};
+
+  for (const e of Object.keys(TRANSITIONS)) {
+    counts[e] = comptes.results.find((c) => c.status === e)?.total ?? 0;
+  }
+
+  return succes({ operations: lignes.results.map(presente), counts });
+}
+
+/** GET /api/operations/{id} */
+export async function fiche(
+  env: Env,
+  utilisateur: Utilisateur,
+  operationId: string,
+): Promise<Response> {
+  if (!utilisateur.peut('operations.view')) {
+    return interdit();
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+  const id = Number.parseInt(operationId, 10);
+  const dossier = await dossierComplet(base, id);
+
+  if (dossier === null) {
+    return introuvable("Ce dossier n'existe pas.");
+  }
+
+  const inspections = await base
+    .select(
+      `SELECT i.id, i.type, i.performed_at, i.has_damage,
+              u.first_name, u.last_name
+         FROM inspections i LEFT JOIN users u ON u.id = i.performed_by_user_id
+        WHERE i.{ORG} AND i.operation_id = ?
+        ORDER BY i.id ASC`,
+      id,
+    )
+    .all<{
+      id: number; type: string; performed_at: string; has_damage: number;
+      first_name: string | null; last_name: string | null;
+    }>();
+
+  return succes({
+    operation: dossier,
+    inspections: inspections.results.map((i) => ({
+      id: i.id,
+      type: i.type,
+      performed_by_name: `${i.first_name ?? ''} ${i.last_name ?? ''}`.trim(),
+      performed_at: i.performed_at,
+      has_damage: i.has_damage === 1,
+    })),
+  });
+}
+
+/**
+ * La référence remise au client : « DKP-2609-0042 ».
+ *
+ * TROIS PARTIES, CHACUNE UTILE :
+ *   DKP   code de la station — on sait d'où vient le véhicule
+ *   2609  année et mois     — on situe le dossier sans requête
+ *   0042  numéro du mois    — court, dictable au téléphone
+ *
+ * POURQUOI PAS SIMPLEMENT L'IDENTIFIANT DE LA BASE ?
+ * Parce qu'il révèle le volume d'activité : un concurrent qui dépose
+ * une voiture le lundi et une autre le vendredi lit exactement
+ * combien de dossiers ont été créés entre les deux.
+ *
+ * Le tri alphabétique donne bien le plus grand numéro parce que le
+ * suffixe est rempli de zéros à gauche : « 0009 » précède « 0010 ».
+ * Sans ce remplissage, « 9 » passerait après « 10 » et le compteur
+ * reculerait.
+ */
+async function prochaineReference(base: TenantDb, codeStation: string): Promise<string> {
+  const mois = new Date().toISOString().slice(2, 7).replace('-', '');
+  const prefixe = `${codeStation.toUpperCase()}-${mois}-`;
+
+  const derniere = await base
+    .select(
+      `SELECT reference FROM operations WHERE {ORG} AND reference LIKE ?
+        ORDER BY reference DESC LIMIT 1`,
+      `${prefixe}%`,
+    )
+    .first<{ reference: string }>();
+
+  const numero = derniere === null ? 0 : Number.parseInt(derniere.reference.slice(-4), 10);
+
+  return prefixe + String(numero + 1).padStart(4, '0');
+}
+
+/**
+ * POST /api/operations
+ * L'accueil d'un véhicule au comptoir.
+ */
+export async function accueille(
+  request: Request,
+  env: Env,
+  utilisateur: Utilisateur,
+): Promise<Response> {
+  if (!utilisateur.peut('operations.create')) {
+    return interdit();
+  }
+
+  let corps: Record<string, unknown>;
+
+  try {
+    corps = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return erreur('Le corps de la requête est illisible.');
+  }
+
+  const nombre = (cle: string) => {
+    const v = corps[cle];
+    const n = typeof v === 'number' ? v : Number(v);
+
+    return Number.isInteger(n) && n > 0 ? n : null;
+  };
+
+  const vehiculeId = nombre('vehicle_id');
+  const serviceId = nombre('service_id');
+  const stationId = nombre('station_id');
+  const manquants: Record<string, string> = {};
+
+  if (vehiculeId === null) manquants.vehicle_id = 'Le véhicule est obligatoire.';
+  if (serviceId === null) manquants.service_id = 'La prestation est obligatoire.';
+  if (stationId === null) manquants.station_id = 'La station est obligatoire.';
+
+  if (Object.keys(manquants).length > 0) {
+    return erreur('Vérifiez les champs.', manquants, 422);
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+
+  const vehicule = await base
+    .select(
+      'SELECT id, customer_id, plate_number FROM vehicles WHERE {ORG} AND id = ? LIMIT 1',
+      vehiculeId,
+    )
+    .first<{ id: number; customer_id: number; plate_number: string }>();
+
+  if (vehicule === null) {
+    return erreur('Vérifiez les champs.', { vehicle_id: "Ce véhicule n'existe pas." }, 422);
+  }
+
+  const service = await base
+    .select(
+      'SELECT id, price, status FROM services WHERE {ORG} AND id = ? LIMIT 1',
+      serviceId,
+    )
+    .first<{ id: number; price: number; status: string }>();
+
+  if (service === null) {
+    return erreur('Vérifiez les champs.', { service_id: "Cette prestation n'existe pas." }, 422);
+  }
+
+  if (service.status !== 'ACTIVE') {
+    return erreur('Vérifiez les champs.', {
+      service_id: "Cette prestation n'est plus proposée. Choisissez-en une autre.",
+    }, 422);
+  }
+
+  const station = await base
+    .select(
+      'SELECT id, code, status FROM stations WHERE {ORG} AND id = ? LIMIT 1',
+      stationId,
+    )
+    .first<{ id: number; code: string; status: string }>();
+
+  if (station === null) {
+    return erreur('Vérifiez les champs.', { station_id: "Cette station n'existe pas." }, 422);
+  }
+
+  // Un responsable d'une station ne crée pas de dossier dans une
+  // autre : le cloisonnement par organisation ne suffit pas ici, la
+  // séparation se joue À L'INTÉRIEUR d'une même entreprise.
+  if (!await utilisateur.voitStation(station.id)) {
+    return interdit("Vous n'êtes pas rattaché à cette station.");
+  }
+
+  // UNE STATION FERMÉE N'ACCUEILLE PLUS DE VÉHICULE. Sans ce refus,
+  // « fermer une station » ne serait qu'une étiquette : le travail
+  // continuerait d'y être enregistré, et le gérant découvrirait des
+  // dossiers ouverts sur un site qu'il croyait clos. Le passé de la
+  // station reste consultable — c'est l'avenir qu'on ferme.
+  if (station.status !== 'ACTIVE') {
+    return erreur('Vérifiez les champs.', {
+      station_id: 'Cette station est fermée. Choisissez-en une autre.',
+    }, 422);
+  }
+
+  // DEUX DOSSIERS OUVERTS SUR UN MÊME VÉHICULE, c'est deux inspections
+  // contradictoires et un litige garanti sur « laquelle des deux fait
+  // foi ».
+  const ouvert = await base
+    .select(
+      `SELECT reference FROM operations
+        WHERE {ORG} AND vehicle_id = ? AND status IN (${ACTIFS.map(() => '?').join(',')})
+        LIMIT 1`,
+      vehiculeId, ...ACTIFS,
+    )
+    .first<{ reference: string }>();
+
+  if (ouvert !== null) {
+    return erreur(
+      `Ce véhicule a déjà un dossier en cours (${ouvert.reference}). `
+      + "Ouvrez-le plutôt que d'en créer un second.",
+      { vehicle_id: `Dossier déjà ouvert : ${ouvert.reference}` },
+      409,
+    );
+  }
+
+  // La priorité est bornée : au-delà de quelques niveaux, plus
+  // personne ne sait ce que « priorité 47 » veut dire.
+  const brute = Number(corps.priority);
+  const priorite = Number.isFinite(brute) ? Math.max(0, Math.min(Math.trunc(brute), 3)) : 0;
+
+  const notes = typeof corps.notes === 'string' && corps.notes.trim() !== ''
+    ? corps.notes.trim().slice(0, 1000) : null;
+
+  // Si deux postes créent un dossier dans la même seconde, l'un des
+  // deux se voit refuser par la contrainte d'unicité : on relit le
+  // compteur et on réessaie. Trois tentatives suffisent largement —
+  // au-delà, ce n'est plus une collision mais un vrai problème, et
+  // mieux vaut une erreur visible qu'une boucle infinie.
+  let id = 0;
+  let reference = '';
+
+  for (let essai = 1; essai <= 3; essai += 1) {
+    reference = await prochaineReference(base, station.code);
+
+    try {
+      const r = await env.DB
+        .prepare(
+          `INSERT INTO operations (organization_id, station_id, vehicle_id, customer_id,
+                                   service_id, reference, status, status_changed_at,
+                                   price, priority, notes, created_by_user_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'WAITING', datetime('now'), ?, ?, ?, ?)`,
+        )
+        .bind(
+          utilisateur.organizationId, station.id, vehicule.id,
+          // Le client N'EST PAS lu dans la requête : il est déduit du
+          // véhicule. Un formulaire modifié ne peut donc pas rattacher
+          // un dossier au client de quelqu'un d'autre.
+          vehicule.customer_id,
+          service.id, reference,
+          // PRIX FIGÉ, recopié du catalogue au moment de l'accueil. Si
+          // le tarif change le mois prochain, ce dossier continue
+          // d'afficher ce qui a réellement été annoncé au client.
+          service.price,
+          priorite, notes, utilisateur.id,
+        )
+        .run();
+
+      id = Number(r.meta.last_row_id);
+      break;
+    } catch (e) {
+      if (!/UNIQUE|constraint/i.test(String(e)) || essai === 3) {
+        throw e;
+      }
+    }
+  }
+
+  await enregistre(env.DB, {
+    action: 'operation.created',
+    organizationId: utilisateur.organizationId,
+    stationId: station.id,
+    userId: utilisateur.id,
+    entityType: 'operation',
+    entityId: id,
+    metadata: { reference, plate: vehicule.plate_number, price: service.price },
+  });
+
+  return succes(
+    { operation: await dossierComplet(base, id) },
+    `Dossier ${reference} ouvert.`,
+    201,
+  );
+}
+
+// ====================================================================
+// LA PRIORITÉ ET L'AFFECTATION
+// ====================================================================
+
+/** PUT /api/operations/{id}/priority */
+export async function priorite(
+  request: Request,
+  env: Env,
+  utilisateur: Utilisateur,
+  operationId: string,
+): Promise<Response> {
+  if (!utilisateur.peut('operations.prioritize')) {
+    return interdit();
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+  const id = Number.parseInt(operationId, 10);
+
+  const dossier = await base
+    .select(
+      'SELECT id, status, priority, reference, station_id FROM operations WHERE {ORG} AND id = ? LIMIT 1',
+      id,
+    )
+    .first<{ id: number; status: Etat; priority: number; reference: string; station_id: number }>();
+
+  if (dossier === null) {
+    return introuvable("Ce dossier n'existe pas.");
+  }
+
+  let corps: { priority?: unknown };
+
+  try {
+    corps = (await request.json()) as typeof corps;
+  } catch {
+    return erreur('Le corps de la requête est illisible.');
+  }
+
+  const brute = Number(corps.priority);
+
+  if (!Number.isFinite(brute)) {
+    return erreur('Vérifiez les champs.', {
+      priority: 'La priorité doit être un nombre.',
+    }, 422);
+  }
+
+  // TROIS NIVEAUX, PAS TRENTE. Au-delà, plus personne ne sait ce que
+  // « priorité 47 » veut dire, et le classement redevient arbitraire —
+  // donc inutile.
+  const niveau = Math.max(0, Math.min(Math.trunc(brute), 3));
+
+  await base
+    .select('UPDATE operations SET priority = ? WHERE {ORG} AND id = ?', niveau, id)
+    .run();
+
+  // Faire passer quelqu'un devant est une décision qui se discute
+  // après coup — « pourquoi ma voiture est passée après celle-là ? ».
+  // On la trace.
+  await enregistre(env.DB, {
+    action: 'operation.prioritized',
+    organizationId: utilisateur.organizationId,
+    stationId: dossier.station_id,
+    userId: utilisateur.id,
+    entityType: 'operation',
+    entityId: id,
+    metadata: { reference: dossier.reference, from: dossier.priority, to: niveau },
+  });
+
+  return succes(
+    { operation: await dossierComplet(base, id) },
+    niveau > 0 ? 'Ce véhicule passe devant.' : 'Priorité normale rétablie.',
+  );
+}
+
+/**
+ * PUT /api/operations/{id}/assign
+ *
+ * Confier un dossier à quelqu'un.
+ *
+ * Un employé n'a pas besoin de cette route pour prendre un véhicule
+ * en charge : passer le dossier à IN_PROGRESS l'inscrit
+ * automatiquement dessus. Celle-ci sert à désigner QUELQU'UN
+ * D'AUTRE — c'est de la répartition de travail, donc du ressort du
+ * responsable.
+ */
+export async function affecte(
+  request: Request,
+  env: Env,
+  utilisateur: Utilisateur,
+  operationId: string,
+): Promise<Response> {
+  if (!utilisateur.peut('operations.assign')) {
+    return interdit();
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+  const id = Number.parseInt(operationId, 10);
+
+  const dossier = await base
+    .select(
+      'SELECT id, status, reference, station_id FROM operations WHERE {ORG} AND id = ? LIMIT 1',
+      id,
+    )
+    .first<{ id: number; status: Etat; reference: string; station_id: number }>();
+
+  if (dossier === null) {
+    return introuvable("Ce dossier n'existe pas.");
+  }
+
+  if (TRANSITIONS[dossier.status].length === 0) {
+    return erreur("Ce dossier est clos : il n'y a plus rien à confier.", {}, 409);
+  }
+
+  let corps: { assigned_user_id?: unknown };
+
+  try {
+    corps = (await request.json()) as typeof corps;
+  } catch {
+    return erreur('Le corps de la requête est illisible.');
+  }
+
+  const brut = corps.assigned_user_id;
+
+  // Une valeur vide RETIRE l'affectation : remettre un dossier dans le
+  // pot commun doit être aussi simple que l'attribuer.
+  if (brut === null || brut === undefined || brut === '' || brut === 0) {
+    await base
+      .select('UPDATE operations SET assigned_user_id = NULL WHERE {ORG} AND id = ?', id)
+      .run();
+
+    return succes(
+      { operation: await dossierComplet(base, id) },
+      'Dossier remis dans la file commune.',
+    );
+  }
+
+  const userId = Number(brut);
+
+  // L'employé doit appartenir à la MÊME entreprise. Le cloisonnement
+  // filtre déjà, mais c'est ici que la cohérence métier se vérifie :
+  // sans ce contrôle, une requête fabriquée pourrait confier un
+  // véhicule à l'employé d'un concurrent.
+  const membre = await base
+    .select(
+      `SELECT u.id, u.status FROM users u
+        WHERE u.{ORG} AND u.id = ? AND u.deleted_at IS NULL
+          AND EXISTS (SELECT 1 FROM station_users su WHERE su.user_id = u.id)
+        LIMIT 1`,
+      userId,
+    )
+    .first<{ id: number; status: string }>();
+
+  if (membre === null) {
+    return erreur('Vérifiez les champs.', {
+      assigned_user_id: 'Cette personne ne fait pas partie de votre équipe.',
+    }, 422);
+  }
+
+  if (membre.status !== 'ACTIVE') {
+    return erreur('Vérifiez les champs.', {
+      assigned_user_id: "Ce compte n'est plus actif.",
+    }, 422);
+  }
+
+  await base
+    .select('UPDATE operations SET assigned_user_id = ? WHERE {ORG} AND id = ?', userId, id)
+    .run();
+
+  await enregistre(env.DB, {
+    action: 'operation.assigned',
+    organizationId: utilisateur.organizationId,
+    stationId: dossier.station_id,
+    userId: utilisateur.id,
+    entityType: 'operation',
+    entityId: id,
+    metadata: { reference: dossier.reference, assigned_to: userId },
+  });
+
+  return succes({ operation: await dossierComplet(base, id) }, 'Dossier confié.');
+}
+
+// ====================================================================
+// LA RESTITUTION
+// ====================================================================
+
+/**
+ * La liste de vérification avant la remise du véhicule.
+ *
+ * Elle est calculée ici et non à l'écran : les libellés et les
+ * montants mis en forme sont des textes d'explication, pas des
+ * données à recalculer. Le frontend n'a qu'à les afficher.
+ */
+function listeVerification(
+  o: ReturnType<typeof presente>,
+  inspectionSortie: boolean,
+) {
+  const du = o.price - o.discount_amount;
+  const fcfa = (n: number) => n.toLocaleString('fr-FR').replace(/ | /g, ' ');
+
+  return [
+    {
+      key: 'status',
+      label: 'Le dossier est prêt à être restitué',
+      passed: o.status === 'READY',
+      blocking: true,
+      detail: LIBELLES[o.status],
+    },
+    {
+      key: 'identity',
+      label: 'Référence et plaque à confirmer au comptoir',
+      // Se vérifie à la SAISIE, pas avant : c'est tout l'objet de
+      // cette ligne, et la seule qui ne puisse jamais être cochée
+      // d'avance.
+      passed: false,
+      blocking: true,
+      detail: o.plate_display,
+    },
+    {
+      key: 'payment',
+      label: 'La prestation est réglée',
+      passed: o.paid_amount >= du,
+      blocking: true,
+      detail: o.paid_amount >= du
+        ? `${fcfa(du)} FCFA encaissés`
+        : `Reste ${fcfa(du - o.paid_amount)} FCFA sur ${fcfa(du)} FCFA`,
+    },
+    {
+      key: 'exit_inspection',
+      // NON BLOQUANTE : le contrôle qualité a déjà eu lieu, et bloquer
+      // une remise sur une seconde inspection ferait attendre un
+      // client dont la voiture est prête.
+      label: 'Inspection de sortie enregistrée',
+      passed: inspectionSortie,
+      blocking: false,
+      detail: inspectionSortie ? 'Enregistrée' : 'Recommandée en cas de doute',
+    },
+  ];
+}
+
+/** A-t-on enregistré l'inspection de sortie de ce dossier ? */
+async function aInspectionSortie(base: TenantDb, id: number): Promise<boolean> {
+  const i = await base
+    .select(
+      "SELECT id FROM inspections WHERE {ORG} AND operation_id = ? AND type = 'EXIT' LIMIT 1",
+      id,
+    )
+    .first();
+
+  return i !== null;
+}
+
+/**
+ * GET /api/operations/{id}/release-check
+ *
+ * L'état de la liste de vérification AVANT la remise. L'écran de
+ * restitution l'affiche pour que l'employé sache ce qui bloque,
+ * plutôt que de découvrir le refus après avoir ramené la voiture
+ * devant le comptoir.
+ */
+export async function verificationRestitution(
+  env: Env,
+  utilisateur: Utilisateur,
+  operationId: string,
+): Promise<Response> {
+  if (!utilisateur.peut('operations.view')) {
+    return interdit();
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+  const id = Number.parseInt(operationId, 10);
+  const dossier = await dossierComplet(base, id);
+
+  if (dossier === null) {
+    return introuvable("Ce dossier n'existe pas.");
+  }
+
+  return succes({
+    operation: dossier,
+    checklist: listeVerification(dossier, await aInspectionSortie(base, id)),
+  });
+}
+
+/**
+ * POST /api/operations/{id}/release
+ * ==================================================================
+ * LA REMISE DU VÉHICULE AU CLIENT.
+ * ==================================================================
+ *
+ * C'est le moment où la station se dessaisit du bien de quelqu'un
+ * d'autre. Quatre vérifications, dans cet ordre :
+ *
+ *   1. Le dossier est bien PRÊT (contrôle qualité passé).
+ *   2. La référence présentée correspond au dossier.
+ *   3. La plaque saisie correspond au véhicule qu'on va sortir.
+ *   4. La prestation est réglée — ou un responsable lève le blocage,
+ *      nominativement et avec un motif.
+ *
+ * POURQUOI RESSAISIR LA PLAQUE ALORS QU'ELLE EST À L'ÉCRAN ?
+ * Parce que c'est le seul contrôle qui porte sur le MONDE RÉEL et non
+ * sur la base. Il oblige à regarder la voiture avant de remettre les
+ * clés. Deux Toyota blanches le même matin, ça arrive tous les jours ;
+ * rendre la mauvaise, une seule fois, suffit à perdre un client.
+ */
+export async function restitue(
+  request: Request,
+  env: Env,
+  utilisateur: Utilisateur,
+  operationId: string,
+): Promise<Response> {
+  if (!utilisateur.peut('operations.release')) {
+    return interdit();
+  }
+
+  const base = baseDe(utilisateur, env.DB);
+  const id = Number.parseInt(operationId, 10);
+  const dossier = await dossierComplet(base, id);
+
+  if (dossier === null) {
+    return introuvable("Ce dossier n'existe pas.");
+  }
+
+  let corps: { reference?: unknown; plate_number?: unknown; override_reason?: unknown };
+
+  try {
+    corps = (await request.json()) as typeof corps;
+  } catch {
+    return erreur('Le corps de la requête est illisible.');
+  }
+
+  const saisie = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const manquants: Record<string, string> = {};
+
+  if (saisie(corps.reference) === '') manquants.reference = 'La référence est obligatoire.';
+  if (saisie(corps.plate_number) === '') manquants.plate_number = 'La plaque est obligatoire.';
+
+  if (Object.keys(manquants).length > 0) {
+    return erreur('Vérifiez les champs.', manquants, 422);
+  }
+
+  // --- 1. Le dossier est-il prêt ? -----------------------------------
+  if (dossier.status !== 'READY') {
+    return erreur(messageRefus(dossier.status, 'COMPLETED'), {}, 409);
+  }
+
+  // --- 2. La référence présentée -------------------------------------
+  const reference = saisie(corps.reference).replace(/\s+/g, '').toUpperCase();
+
+  // Comparaison à TEMPS CONSTANT : la référence est ce qui autorise à
+  // repartir avec un véhicule. Comparer caractère par caractère avec
+  // un arrêt au premier écart laisse mesurer, par le temps de
+  // réponse, à quel rang la devinette s'est trompée. Le coût est le
+  // même, la porte est fermée.
+  const identiques = (a: string, b: string): boolean => {
+    if (a.length !== b.length) {
+      return false;
+    }
+
+    let ecart = 0;
+
+    for (let i = 0; i < a.length; i += 1) {
+      ecart |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+
+    return ecart === 0;
+  };
+
+  if (!identiques(dossier.reference, reference)) {
+    return erreur('Vérifiez les champs.', {
+      reference: 'Cette référence ne correspond pas à ce dossier.',
+    }, 422);
+  }
+
+  // --- 3. La plaque du véhicule --------------------------------------
+  if (normalise(saisie(corps.plate_number)) !== dossier.plate_number) {
+    return erreur('Vérifiez les champs.', {
+      plate_number: 'Cette plaque ne correspond pas au véhicule du dossier. '
+        + 'Vérifiez avant de remettre les clés.',
+    }, 422);
+  }
+
+  // --- 4. Le règlement -----------------------------------------------
+  // `amount_due` et non `price` : une remise de fidélité ou un forfait
+  // peuvent avoir diminué ce qui reste dû.
+  const du = dossier.amount_due;
+  const regle = dossier.paid_amount;
+  const motif = saisie(corps.override_reason);
+  let derogation = false;
+
+  if (regle < du) {
+    const fcfa = (n: number) => n.toLocaleString('fr-FR').replace(/ | /g, ' ');
+
+    if (motif === '') {
+      // 402 Payment Required : le code existe, c'est exactement ce
+      // cas. Le frontend s'en sert pour proposer la dérogation plutôt
+      // qu'une erreur générique.
+      return erreur(
+        `Cette prestation n'est pas réglée (${fcfa(regle)} réglés sur ${fcfa(du)}). `
+        + 'Un responsable peut lever le blocage en indiquant un motif.',
+        { payment: 'Paiement incomplet.' }, 402,
+      );
+    }
+
+    // LA DÉROGATION EST UN DROIT DISTINCT : un employé ne peut pas
+    // s'autoriser lui-même à rendre un véhicule impayé.
+    if (!utilisateur.peut('operations.override_payment')) {
+      return interdit('Seul un responsable peut restituer un véhicule non réglé.');
+    }
+
+    derogation = true;
+  }
+
+  await base
+    .select(
+      `UPDATE operations
+          SET status = 'COMPLETED', status_changed_at = datetime('now'),
+              released_at = datetime('now'), released_by_user_id = ?
+        WHERE {ORG} AND id = ?`,
+      utilisateur.id, id,
+    )
+    .run();
+
+  // LA DÉROGATION EST TRACÉE NOMINATIVEMENT. C'est la raison d'être du
+  // journal d'audit : trois mois plus tard, on doit pouvoir dire qui a
+  // laissé partir ce véhicule sans paiement, et pourquoi.
+  await enregistre(env.DB, {
+    action: derogation ? 'operation.released_unpaid' : 'operation.released',
+    organizationId: utilisateur.organizationId,
+    stationId: dossier.station_id,
+    userId: utilisateur.id,
+    entityType: 'operation',
+    entityId: id,
+    metadata: {
+      reference: dossier.reference,
+      plate: dossier.plate_number,
+      amount_due: du,
+      amount_paid: regle,
+      ...(derogation ? { override_reason: motif } : {}),
+    },
+  });
+
+  return succes({ operation: await dossierComplet(base, id) }, 'Véhicule restitué.');
 }

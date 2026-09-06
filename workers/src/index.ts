@@ -73,6 +73,16 @@ import {
   montre as montreService,
 } from './controllers/services';
 import { statistiques } from './controllers/analytics';
+import {
+  accueille,
+  affecte as affecteDossier,
+  fiche as ficheDossier,
+  liste as listeOperations,
+  priorite,
+  restitue,
+  statuts as statutsOperation,
+  verificationRestitution,
+} from './controllers/operations';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -128,6 +138,11 @@ export default {
       const pointage = /^\/api\/attendance\/(\d+)$/.exec(chemin);
       const etatService = /^\/api\/services\/(\d+)\/status$/.exec(chemin);
       const service = /^\/api\/services\/(\d+)$/.exec(chemin);
+      const dossier = /^\/api\/operations\/(\d+)$/.exec(chemin);
+      const prioriteDossier = /^\/api\/operations\/(\d+)\/priority$/.exec(chemin);
+      const affectationDossier = /^\/api\/operations\/(\d+)\/assign$/.exec(chemin);
+      const verifRestitution = /^\/api\/operations\/(\d+)\/release-check$/.exec(chemin);
+      const restitution = /^\/api\/operations\/(\d+)\/release$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -179,6 +194,13 @@ export default {
         (etatService !== null && request.method === 'PUT') ||
         (service !== null && (G || request.method === 'PUT')) ||
         (chemin === '/api/analytics' && G) ||
+        (chemin === '/api/operations' && (G || P)) ||
+        (chemin === '/api/operations/statuses' && G) ||
+        (dossier !== null && G) ||
+        (prioriteDossier !== null && request.method === 'PUT') ||
+        (affectationDossier !== null && request.method === 'PUT') ||
+        (verifRestitution !== null && G) ||
+        (restitution !== null && P) ||
         (statut !== null && request.method === 'PUT') ||
         (paiements !== null && (G || P)) ||
         (remboursement !== null && P);
@@ -284,6 +306,32 @@ export default {
         }
 
         if (chemin === '/api/analytics') return await statistiques(request, env, utilisateur);
+
+        // « /statuses » avant « /{id} » : les deux ont la même forme,
+        // et un routeur qui teste l'identifiant d'abord répondrait
+        // « ce dossier n'existe pas » sur une adresse qui n'en
+        // désigne aucun.
+        if (chemin === '/api/operations/statuses') return statutsOperation(utilisateur);
+
+        if (chemin === '/api/operations') {
+          return P ? await accueille(request, env, utilisateur)
+                   : await listeOperations(request, env, utilisateur);
+        }
+
+        if (prioriteDossier !== null) {
+          return await priorite(request, env, utilisateur, prioriteDossier[1]);
+        }
+
+        if (affectationDossier !== null) {
+          return await affecteDossier(request, env, utilisateur, affectationDossier[1]);
+        }
+
+        if (verifRestitution !== null) {
+          return await verificationRestitution(env, utilisateur, verifRestitution[1]);
+        }
+
+        if (restitution !== null) return await restitue(request, env, utilisateur, restitution[1]);
+        if (dossier !== null) return await ficheDossier(env, utilisateur, dossier[1]);
 
         if (chemin === '/api/bookings') {
           return P ? await creeRdv(request, env, utilisateur)
