@@ -16,7 +16,8 @@ import { droitsDe } from '../core/permissions';
 import { erreur, succes } from '../core/response';
 import { emet, retrouve, revoque, revoqueTout } from '../core/tokens';
 import { efface, lit, pose } from '../core/cookie';
-import { enregistre } from '../core/audit';
+import { compteRecent, enregistre } from '../core/audit';
+import { envoie as courriel } from '../core/courriel';
 import type { Utilisateur } from '../core/auth';
 
 export async function connexion(request: Request, env: Env): Promise<Response> {
@@ -441,4 +442,217 @@ function slugify(nom: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 40) || 'station';
+}
+
+// ====================================================================
+// LE MOT DE PASSE OUBLIÉ
+// ====================================================================
+
+/** Trois demandes par quart d'heure et par adresse. */
+const MAX_DEMANDES = 3;
+
+/** L'empreinte SHA-256 d'un jeton, en hexadécimal. */
+async function empreinte(valeur: string): Promise<string> {
+  const octets = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(valeur));
+
+  return [...new Uint8Array(octets)].map((o) => o.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * POST /api/auth/forgot-password
+ * ==================================================================
+ * LA MÊME RÉPONSE DANS TOUS LES CAS.
+ * ==================================================================
+ * Que le compte existe ou non, qu'il soit actif ou désactivé, que la
+ * limite soit atteinte ou non : même code, même phrase. Sinon ce
+ * formulaire deviendrait un moyen commode de découvrir quelles
+ * adresses sont enregistrées.
+ *
+ * ------------------------------------------------------------------
+ * LA LIMITATION EST SILENCIEUSE, ET C'EST ESSENTIEL
+ *
+ * Répondre « trop de demandes » distinguerait une adresse connue
+ * d'une adresse inconnue — exactement l'énumération que la réponse
+ * unique existe pour empêcher.
+ *
+ * Sans elle, six appels de suite fabriqueraient six jetons VALIDES et
+ * enverraient six messages : on inonde la boîte de quelqu'un dont on
+ * connaît l'adresse, `password_resets` grossit sans limite, et
+ * surtout chaque jeton vivant est une occasion de plus qu'un seul
+ * fuite.
+ */
+export async function motDePasseOublie(request: Request, env: Env): Promise<Response> {
+  let corps: { email?: unknown };
+
+  try {
+    corps = (await request.json()) as typeof corps;
+  } catch {
+    return erreur('Le corps de la requête est illisible.');
+  }
+
+  const email = typeof corps.email === 'string' ? corps.email.trim().toLowerCase() : '';
+
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return erreur('Vérifiez les champs.', {
+      email: "L'adresse e-mail n'est pas valide.",
+    }, 422);
+  }
+
+  const reponse = () => succes(
+    null,
+    'Si un compte existe pour cette adresse, un lien de réinitialisation a été envoyé.',
+  );
+
+  const utilisateur = await env.DB
+    .prepare(
+      "SELECT id, organization_id, status FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1",
+    )
+    .bind(email)
+    .first<{ id: number; organization_id: number; status: string }>();
+
+  if (utilisateur === null || utilisateur.status !== 'ACTIVE') {
+    return reponse();
+  }
+
+  // L'ADRESSE EST DANS LA TRACE PARCE QUE LA LIMITATION LA CHERCHE.
+  // Une première version côté PHP comptait les demandes sans jamais
+  // écrire l'adresse : le compte valait toujours zéro, et la
+  // limitation était inerte. Le code était juste, la donnée qu'il
+  // interrogeait n'existait pas.
+  const recentes = await compteRecent(
+    env.DB, 'auth.password_reset_requested', '$.email', email, 15,
+  );
+
+  if (recentes >= MAX_DEMANDES) {
+    await enregistre(env.DB, {
+      action: 'auth.password_reset_throttled',
+      organizationId: utilisateur.organization_id,
+      userId: utilisateur.id,
+      metadata: { email },
+    });
+
+    return reponse();
+  }
+
+  const jeton = [...crypto.getRandomValues(new Uint8Array(32))]
+    .map((o) => o.toString(16).padStart(2, '0'))
+    .join('');
+
+  await env.DB
+    .prepare(
+      `INSERT INTO password_resets (user_id, token_hash, expires_at)
+       VALUES (?, ?, datetime('now', '+1 hour'))`,
+    )
+    .bind(utilisateur.id, await empreinte(jeton))
+    .run();
+
+  await enregistre(env.DB, {
+    action: 'auth.password_reset_requested',
+    organizationId: utilisateur.organization_id,
+    userId: utilisateur.id,
+    metadata: { email },
+  });
+
+  const lien = `${(env.APP_FRONTEND_URL ?? '').replace(/\/+$/, '')}/reset-password?token=${jeton}`;
+
+  await courriel(env, {
+    destinataire: email,
+    sujet: 'Réinitialisation de votre mot de passe — AUTOCARE OS',
+    texte: 'Bonjour,\n\n'
+      + 'Une réinitialisation de mot de passe a été demandée pour votre compte '
+      + 'AUTOCARE OS.\n\n'
+      + 'Ouvrez ce lien pour choisir un nouveau mot de passe :\n'
+      + `${lien}\n\n`
+      + "Ce lien est valable une heure et ne fonctionne qu'une fois.\n\n"
+      + "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : "
+      + 'votre mot de passe actuel reste valable.\n',
+  });
+
+  return reponse();
+}
+
+/** POST /api/auth/reset-password */
+export async function reinitialise(request: Request, env: Env): Promise<Response> {
+  let corps: { token?: unknown; password?: unknown };
+
+  try {
+    corps = (await request.json()) as typeof corps;
+  } catch {
+    return erreur('Le corps de la requête est illisible.');
+  }
+
+  const jeton = typeof corps.token === 'string' ? corps.token.trim() : '';
+  const motDePasse = typeof corps.password === 'string' ? corps.password : '';
+  const erreurs: Record<string, string> = {};
+
+  if (jeton === '') erreurs.token = 'Le jeton est obligatoire.';
+  if (motDePasse.length < 10) {
+    erreurs.password = 'Le mot de passe doit faire au moins 10 caractères.';
+  }
+
+  if (Object.keys(erreurs).length > 0) {
+    return erreur('Vérifiez les champs.', erreurs, 422);
+  }
+
+  // Le jeton n'est stocké QUE sous forme d'empreinte : une copie de
+  // la base ne permet pas de fabriquer un lien valide.
+  const demande = await env.DB
+    .prepare(
+      `SELECT id, user_id FROM password_resets
+        WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')
+        LIMIT 1`,
+    )
+    .bind(await empreinte(jeton))
+    .first<{ id: number; user_id: number }>();
+
+  // Un seul message pour « inconnu », « déjà utilisé » et « expiré » :
+  // les distinguer renseignerait sur l'existence d'un lien.
+  if (demande === null) {
+    return erreur('Ce lien est invalide ou a expiré.', {}, 400);
+  }
+
+  await env.DB.batch([
+    env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+      .bind(await hachePassword(motDePasse), demande.user_id),
+    env.DB.prepare("UPDATE password_resets SET used_at = datetime('now') WHERE id = ?")
+      .bind(demande.id),
+  ]);
+
+  // TOUTES LES SESSIONS OUVERTES SONT FERMÉES. Si quelqu'un s'était
+  // introduit dans le compte, il perd l'accès à l'instant même où le
+  // mot de passe change.
+  await revoqueTout(env.DB, demande.user_id);
+
+  await enregistre(env.DB, {
+    action: 'auth.password_reset',
+    userId: demande.user_id,
+  });
+
+  // ON PRÉVIENT LE PROPRIÉTAIRE DU COMPTE.
+  //
+  // Ce message ne sert à rien à celui qui vient de changer son mot de
+  // passe : il sait ce qu'il a fait. Il sert au cas contraire —
+  // quelqu'un d'autre a pris la main sur la boîte mail ou sur le
+  // lien, et cette notification est le seul signal que la victime
+  // recevra. Il n'est envoyé QU'APRÈS le changement réussi.
+  const compte = await env.DB
+    .prepare('SELECT email FROM users WHERE id = ? LIMIT 1')
+    .bind(demande.user_id)
+    .first<{ email: string }>();
+
+  if (compte !== null) {
+    await courriel(env, {
+      destinataire: compte.email,
+      sujet: 'Votre mot de passe a été modifié — AUTOCARE OS',
+      texte: 'Bonjour,\n\n'
+        + "Le mot de passe de votre compte AUTOCARE OS vient d'être modifié, et toutes "
+        + 'vos sessions ouvertes ont été fermées.\n\n'
+        + "Si vous êtes à l'origine de ce changement, il n'y a rien à faire.\n\n"
+        + "SI CE N'EST PAS VOUS, quelqu'un a eu accès à ce lien ou à votre messagerie : "
+        + 'demandez immédiatement une nouvelle réinitialisation et prévenez '
+        + "l'administrateur de votre entreprise.\n",
+    });
+  }
+
+  return succes(null, 'Mot de passe modifié. Vous pouvez vous connecter.');
 }

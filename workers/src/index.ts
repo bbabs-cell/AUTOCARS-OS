@@ -17,7 +17,15 @@
  * migration n'est pas terminée.
  */
 
-import { connexion, deconnexion, inscription, moi, rafraichis } from './controllers/auth';
+import {
+  connexion,
+  deconnexion,
+  inscription,
+  moi,
+  motDePasseOublie,
+  rafraichis,
+  reinitialise,
+} from './controllers/auth';
 import {
   cree as creeVehicule,
   fiche as ficheVehicule,
@@ -122,6 +130,8 @@ export default {
         if (chemin === '/api/auth/register') return await inscription(request, env);
         if (chemin === '/api/auth/refresh')  return await rafraichis(request, env);
         if (chemin === '/api/auth/logout')   return await deconnexion(request, env);
+        if (chemin === '/api/auth/forgot-password') return await motDePasseOublie(request, env);
+        if (chemin === '/api/auth/reset-password')  return await reinitialise(request, env);
       }
 
       // --------------------------------------------------------------

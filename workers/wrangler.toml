@@ -16,3 +16,14 @@ migrations_dir = "migrations"
 JWT_ACCESS_TTL_MINUTES = "30"
 # local | production — décide notamment de l'attribut Secure du cookie.
 APP_ENV = "production"
+
+# L'adresse d'expédition des courriels (mot de passe oublié).
+MAIL_FROM = "no-reply@magyapro.com"
+
+# Le lien envoyé dans le courriel de réinitialisation pointe ici.
+APP_FRONTEND_URL = "https://magyapro.com"
+
+# MAIL_ENDPOINT et MAIL_TOKEN sont des SECRETS Wrangler, jamais des
+# variables de ce fichier : il est suivi par Git. Tant qu'ils ne sont
+# pas posés, les courriels sont écrits dans les traces du Worker et le
+# produit continue de fonctionner — voir src/core/courriel.ts.

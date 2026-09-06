@@ -38,6 +38,8 @@ const ROUTES: [string, string][] = [
   ['POST', '/api/auth/refresh'],
   ['POST', '/api/auth/logout'],
   ['GET', '/api/auth/me'],
+  ['POST', '/api/auth/forgot-password'],
+  ['POST', '/api/auth/reset-password'],
 
   ['GET', '/api/onboarding/status'],
   ['POST', '/api/onboarding/complete'],
@@ -142,8 +144,6 @@ const ROUTES: [string, string][] = [
  * est exactement le rappel qu'on veut.
  */
 const PAS_ENCORE: [string, string, string][] = [
-  ['POST', '/api/auth/forgot-password', 'Envoi d’e-mail : demande un service de messagerie'],
-  ['POST', '/api/auth/reset-password', 'Va avec la précédente'],
   ['POST', '/api/inspections/1/photos', 'Étape 5 — stockage des photos (R2)'],
   ['GET', '/api/photos/1', 'Étape 5 — stockage des photos (R2)'],
 ];
