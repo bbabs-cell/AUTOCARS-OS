@@ -23,10 +23,20 @@ MAIL_FROM = "no-reply@magyapro.com"
 # Le lien envoyé dans le courriel de réinitialisation pointe ici.
 APP_FRONTEND_URL = "https://magyapro.com"
 
-# MAIL_ENDPOINT et MAIL_TOKEN sont des SECRETS Wrangler, jamais des
-# variables de ce fichier : il est suivi par Git. Tant qu'ils ne sont
-# pas posés, les courriels sont écrits dans les traces du Worker et le
-# produit continue de fonctionner — voir src/core/courriel.ts.
+# L'envoi de courriel passe par RESEND. Sa clé est un SECRET Wrangler,
+# jamais une variable de ce fichier — il est suivi par Git :
+#
+#     npx wrangler secret put RESEND_TOKEN
+#
+# Et AVANT cela, chez Resend : ajouter le domaine magyapro.com et poser
+# les enregistrements DNS qu'il donne (SPF, DKIM) dans la zone
+# Cloudflare. Sans eux, Resend accepte la requête et le courriel
+# n'arrive pas — la panne la plus déroutante de ce module, parce
+# qu'elle ne ressemble pas à une panne.
+#
+# Tant que la clé n'est pas posée, les courriels sont écrits dans les
+# traces du Worker et le produit continue de fonctionner. Voir
+# src/core/courriel.ts.
 
 # Le ré-encodage des photos d'inspection. C'est lui qui remplace `gd`
 # du PHP : on ne réutilise jamais les octets reçus, on en fabrique de

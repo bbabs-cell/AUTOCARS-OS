@@ -402,10 +402,11 @@ describe('le contrôle avant vol', () => {
     expect(sortie).toContain('secret public');
   });
 
-  it('bloque sur un jeton de messagerie écrit dans wrangler.toml', () => {
-    const { code } = avantVol(`${BON}\nMAIL_TOKEN = "cle-en-clair"`);
+  it('bloque sur une clé Resend écrite dans wrangler.toml', () => {
+    const { code, sortie } = avantVol(`${BON}\nRESEND_TOKEN = "re_cle_en_clair"`);
 
     expect(code).toBe(1);
+    expect(sortie).toContain("RESEND_TOKEN n'est pas dans wrangler.toml");
   });
 
   // APP_ENV resté à « local » fait perdre au cookie de session son

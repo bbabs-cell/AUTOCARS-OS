@@ -110,7 +110,7 @@ bloquant(
   'un secret dans un fichier suivi par Git est un secret public',
 );
 
-for (const cle of ['MAIL_TOKEN', 'MAIL_ENDPOINT']) {
+for (const cle of ['RESEND_TOKEN', 'MAIL_TOKEN', 'MAIL_ENDPOINT']) {
   bloquant(`${cle} n'est pas dans wrangler.toml`, !new RegExp(`^\\s*${cle}\\s*=`, 'm').test(toml));
 }
 
@@ -153,9 +153,17 @@ if (avecLaBase) {
   }
 
   avertir(
-    'un service d’envoi de courriel est configuré',
-    secrets.includes('MAIL_ENDPOINT') && secrets.includes('MAIL_TOKEN'),
-    'sans lui, les liens de réinitialisation partent dans les traces du Worker',
+    'la clé Resend est posée',
+    secrets.includes('RESEND_TOKEN'),
+    'sans elle, les liens de réinitialisation partent dans les traces du Worker',
+  );
+
+  // CE CONTRÔLE-LÀ NE PEUT PAS ÊTRE FAIT D'ICI, et le dire vaut mieux
+  // que de le taire : une clé posée ne garantit pas que le domaine
+  // expéditeur est vérifié chez Resend. Sans SPF ni DKIM, l'API
+  // accepte la requête et le courriel n'arrive jamais.
+  console.log(
+    '[ passé ] domaine vérifié chez Resend : à confirmer sur resend.com/domains',
   );
 } else {
   console.log('[ passé ] envoi de courriel : non vérifiable hors ligne (--remote)');

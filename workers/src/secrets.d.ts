@@ -13,10 +13,13 @@
  */
 declare namespace Cloudflare {
   interface Env {
-    /** L'API du service d'envoi de courriel. */
+    /** La clé d'API Resend, posée par `wrangler secret put`. */
+    RESEND_TOKEN?: string;
+    /**
+     * L'adresse de l'API, uniquement pour les tests : en production
+     * elle est fixe, c'est un service et non un réglage.
+     */
     MAIL_ENDPOINT?: string;
-    /** Sa clé. */
-    MAIL_TOKEN?: string;
   }
 }
 

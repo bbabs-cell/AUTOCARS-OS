@@ -299,10 +299,16 @@ requête des clients fidèles a dû être réécrite (168 ms → 5 ms).
 test les interroge une par une pour que ce chiffre reste vrai.
 
 **Un ajustement de périmètre, à noter :** l'envoi de courriel n'existe
-pas sur Workers. La réinitialisation de mot de passe est portée en
-entier, l'envoi étant enfichable ; sans service configuré, le message
-part dans les traces. **Il faudra choisir un service d'envoi avant la
-mise en service** — ce n'était pas dans le chiffrage.
+pas sur Workers. Le commanditaire a choisi **Resend** ; la
+réinitialisation de mot de passe est portée en entier, et des tests
+vérifient la requête réellement envoyée à leur API. Sans clé
+configurée, le message part dans les traces et le produit continue de
+fonctionner.
+
+Attention à l'ordre : **le domaine `magyapro.com` doit être vérifié
+chez Resend (SPF, DKIM) AVANT que quoi que ce soit arrive**. Sans
+cela, l'API répond 200 et le courriel n'arrive jamais. Voir
+[`mise-en-service-cloudflare.md`](mise-en-service-cloudflare.md).
 
 ---
 
