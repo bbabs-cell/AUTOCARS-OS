@@ -82,9 +82,32 @@ export class TenantDb {
     // Le défaut n'est apparu qu'à la première écriture, à l'étape 4.
     // On compte donc les paramètres qui précèdent le marqueur et on
     // glisse l'organisation à cet endroit précis.
-    const avant = (sql.split('{ORG}')[0].match(/\?/g) ?? []).length;
+    //
+    // ------------------------------------------------------------------
+    // ET AUTANT DE FOIS QUE LE MARQUEUR APPARAÎT.
+    //
+    // Une requête peut porter DEUX ensembles cloisonnés — « les
+    // clients venus pendant la période » et « ceux venus avant » se
+    // calculent séparément avant d'être rapprochés. Le remplacement du
+    // texte les traitait déjà tous les deux ; la liaison, non : deux
+    // `?` apparaissaient et une seule valeur était fournie.
+    //
+    // Selon la requête, D1 aurait refusé — ou pire, décalé les
+    // paramètres suivants d'un cran et rendu des chiffres faux sans
+    // rien signaler. C'est exactement la faute que cette classe existe
+    // pour rendre impossible, et elle était possible ici.
+    const morceaux = sql.split('{ORG}');
     const lies = [...parametres];
-    lies.splice(avant, 0, this.organizationId);
+    let decalage = 0;
+
+    // De la GAUCHE vers la droite, en tenant un décalage : chaque
+    // organisation insérée pousse d'un cran les positions suivantes.
+    for (let i = 0; i < morceaux.length - 1; i += 1) {
+      const avant = (morceaux.slice(0, i + 1).join('').match(/\?/g) ?? []).length;
+
+      lies.splice(avant + decalage, 0, this.organizationId);
+      decalage += 1;
+    }
 
     return this.db.prepare(sql.replaceAll('{ORG}', 'organization_id = ?')).bind(...lies);
   }

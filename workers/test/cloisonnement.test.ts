@@ -138,4 +138,66 @@ describe('la position du filtre d’organisation', () => {
     expect(v?.color).toBe('Vert');
     expect(v?.notes).toBe('Repeint');
   });
+
+  /**
+   * ==================================================================
+   * DEUX MARQUEURS DANS LA MÊME REQUÊTE
+   * ==================================================================
+   * Certaines questions portent sur deux ensembles cloisonnés qu'il
+   * faut rapprocher — « les clients venus pendant la période » et
+   * « ceux venus avant ». Chacun a besoin de son propre filtre.
+   *
+   * Le remplacement du texte traitait déjà les deux marqueurs ; la
+   * liaison, non : deux `?` apparaissaient et une seule valeur était
+   * fournie. Selon la requête, D1 aurait refusé — ou pire, décalé les
+   * paramètres suivants d'un cran, et rendu des chiffres faux sans
+   * rien signaler.
+   */
+  it('deux marqueurs reçoivent chacun leur organisation', async () => {
+    const base = TenantDb.pour(env.DB, 1);
+
+    const r = await base
+      .select(
+        `SELECT (SELECT COUNT(*) FROM vehicles WHERE {ORG}) AS a,
+                (SELECT COUNT(*) FROM customers WHERE {ORG}) AS b`,
+      )
+      .first<{ a: number; b: number }>();
+
+    // Deux véhicules et un client pour l'organisation 1 — pas les
+    // trois véhicules et deux clients de la base entière.
+    expect(r?.a).toBe(2);
+    expect(r?.b).toBe(1);
+  });
+
+  it('deux marqueurs entourés de paramètres gardent chacun leur place', async () => {
+    const base = TenantDb.pour(env.DB, 1);
+
+    const r = await base
+      .select(
+        `SELECT (SELECT COUNT(*) FROM vehicles WHERE brand = ? AND {ORG}) AS a,
+                (SELECT COUNT(*) FROM customers WHERE {ORG} AND first_name = ?) AS b`,
+        'Renault', 'Aminata',
+      )
+      .first<{ a: number; b: number }>();
+
+    expect(r?.a).toBe(1);
+    expect(r?.b).toBe(1);
+  });
+
+  it('et le second marqueur cloisonne vraiment', async () => {
+    const base = TenantDb.pour(env.DB, 1);
+
+    const r = await base
+      .select(
+        `SELECT (SELECT COUNT(*) FROM vehicles WHERE {ORG}) AS a,
+                (SELECT COUNT(*) FROM customers WHERE {ORG} AND last_name = ?) AS b`,
+        // « Rival » appartient à l'organisation 2 : le second filtre
+        // doit l'écarter, pas le compter.
+        'Rival',
+      )
+      .first<{ a: number; b: number }>();
+
+    expect(r?.a).toBe(2);
+    expect(r?.b).toBe(0);
+  });
 });

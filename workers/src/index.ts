@@ -65,6 +65,14 @@ import {
   moi as monPointage,
   registre,
 } from './controllers/attendance';
+import {
+  bascule as basculeService,
+  cree as creeService,
+  liste as listeServices,
+  modifie as modifieService,
+  montre as montreService,
+} from './controllers/services';
+import { statistiques } from './controllers/analytics';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -118,6 +126,8 @@ export default {
       const affectation = /^\/api\/team\/(\d+)\/stations$/.exec(chemin);
       const membre = /^\/api\/team\/(\d+)$/.exec(chemin);
       const pointage = /^\/api\/attendance\/(\d+)$/.exec(chemin);
+      const etatService = /^\/api\/services\/(\d+)\/status$/.exec(chemin);
+      const service = /^\/api\/services\/(\d+)$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -165,6 +175,10 @@ export default {
         (chemin === '/api/attendance/clock-in' && P) ||
         (chemin === '/api/attendance/clock-out' && P) ||
         (pointage !== null && request.method === 'PUT') ||
+        (chemin === '/api/services' && (G || P)) ||
+        (etatService !== null && request.method === 'PUT') ||
+        (service !== null && (G || request.method === 'PUT')) ||
+        (chemin === '/api/analytics' && G) ||
         (statut !== null && request.method === 'PUT') ||
         (paiements !== null && (G || P)) ||
         (remboursement !== null && P);
@@ -252,6 +266,24 @@ export default {
         if (chemin === '/api/attendance/clock-out') return await depart(env, utilisateur);
         if (chemin === '/api/attendance') return await registre(request, env, utilisateur);
         if (pointage !== null) return await corrige(request, env, utilisateur, pointage[1]);
+
+        if (chemin === '/api/services') {
+          return P ? await creeService(request, env, utilisateur)
+                   : await listeServices(request, env, utilisateur);
+        }
+
+        // « /{id}/status » avant « /{id} » : sinon la bascule d'état
+        // ne serait jamais atteinte.
+        if (etatService !== null) {
+          return await basculeService(env, utilisateur, etatService[1]);
+        }
+
+        if (service !== null) {
+          return G ? await montreService(env, utilisateur, service[1])
+                   : await modifieService(request, env, utilisateur, service[1]);
+        }
+
+        if (chemin === '/api/analytics') return await statistiques(request, env, utilisateur);
 
         if (chemin === '/api/bookings') {
           return P ? await creeRdv(request, env, utilisateur)
