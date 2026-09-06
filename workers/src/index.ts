@@ -51,6 +51,20 @@ import {
   montre as montreAbonnement,
   vend,
 } from './controllers/subscriptions';
+import {
+  activite,
+  affecte,
+  ajoute as ajouteMembre,
+  equipe,
+  modifie as modifieMembre,
+} from './controllers/team';
+import {
+  arrivee,
+  corrige,
+  depart,
+  moi as monPointage,
+  registre,
+} from './controllers/attendance';
 import { identifie } from './core/auth';
 import { erreur, introuvable, nonAuthentifie } from './core/response';
 
@@ -101,6 +115,9 @@ export default {
       const finUsage = /^\/api\/subscriptions\/use\/(\d+)\/cancel$/.exec(chemin);
       const finAbo = /^\/api\/subscriptions\/(\d+)\/cancel$/.exec(chemin);
       const abonnement = /^\/api\/subscriptions\/(\d+)$/.exec(chemin);
+      const affectation = /^\/api\/team\/(\d+)\/stations$/.exec(chemin);
+      const membre = /^\/api\/team\/(\d+)$/.exec(chemin);
+      const pointage = /^\/api\/attendance\/(\d+)$/.exec(chemin);
 
       const G = request.method === 'GET';
       const P = request.method === 'POST';
@@ -139,6 +156,15 @@ export default {
         (finUsage !== null && P) ||
         (finAbo !== null && P) ||
         (abonnement !== null && G) ||
+        (chemin === '/api/team' && (G || P)) ||
+        (chemin === '/api/team/activity' && G) ||
+        (affectation !== null && request.method === 'PUT') ||
+        (membre !== null && request.method === 'PUT') ||
+        (chemin === '/api/attendance' && G) ||
+        (chemin === '/api/attendance/me' && G) ||
+        (chemin === '/api/attendance/clock-in' && P) ||
+        (chemin === '/api/attendance/clock-out' && P) ||
+        (pointage !== null && request.method === 'PUT') ||
         (statut !== null && request.method === 'PUT') ||
         (paiements !== null && (G || P)) ||
         (remboursement !== null && P);
@@ -205,6 +231,27 @@ export default {
         }
 
         if (abonnement !== null) return await montreAbonnement(env, utilisateur, abonnement[1]);
+
+        // « /activity » avant « /{id} » : les deux ont le même nombre
+        // de segments, et le premier motif qui correspond gagne.
+        if (chemin === '/api/team/activity') return await activite(request, env, utilisateur);
+
+        if (chemin === '/api/team') {
+          return P ? await ajouteMembre(request, env, utilisateur)
+                   : await equipe(env, utilisateur);
+        }
+
+        if (affectation !== null) {
+          return await affecte(request, env, utilisateur, affectation[1]);
+        }
+
+        if (membre !== null) return await modifieMembre(request, env, utilisateur, membre[1]);
+
+        if (chemin === '/api/attendance/me') return await monPointage(env, utilisateur);
+        if (chemin === '/api/attendance/clock-in') return await arrivee(request, env, utilisateur);
+        if (chemin === '/api/attendance/clock-out') return await depart(env, utilisateur);
+        if (chemin === '/api/attendance') return await registre(request, env, utilisateur);
+        if (pointage !== null) return await corrige(request, env, utilisateur, pointage[1]);
 
         if (chemin === '/api/bookings') {
           return P ? await creeRdv(request, env, utilisateur)
