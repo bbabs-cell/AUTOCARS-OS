@@ -389,6 +389,67 @@ describe('les clients qui reviennent', () => {
   });
 
   /**
+   * ==================================================================
+   * LA RÉÉCRITURE DONNE EXACTEMENT LE MÊME RÉSULTAT.
+   * ==================================================================
+   * La requête a été réécrite à l'étape 7 : 168 ms → 5 ms sur 30 000
+   * dossiers. Une optimisation qui change les chiffres n'est pas une
+   * optimisation, c'est un bogue — ce test compare les deux formes
+   * sur les mêmes données.
+   *
+   * L'ancienne forme est écrite ici, et nulle part ailleurs : c'est
+   * un témoin de comparaison, pas du code qui tourne.
+   */
+  it('donne les mêmes chiffres que la forme qu’elle remplace', async () => {
+    // De quoi rendre la comparaison intéressante : un fidèle, un
+    // nouveau, et un client de l'autre entreprise.
+    await env.DB
+      .prepare(
+        `INSERT INTO customers (id, organization_id, first_name, last_name, phone)
+         VALUES (5, 1, 'Nouveau', 'Venu', '+221770000005')`,
+      ).run();
+
+    await env.DB
+      .prepare(
+        `INSERT INTO operations (organization_id, station_id, vehicle_id, customer_id,
+                                 service_id, reference, status, price, created_by_user_id,
+                                 created_at)
+         VALUES (1, 1, 1, 1, 1, 'OP-VIEUX', 'COMPLETED', 5000, 1, datetime('now', '-200 days')),
+                (1, 1, 1, 5, 1, 'OP-NEUF',  'COMPLETED', 5000, 1, datetime('now', '-2 days')),
+                (1, 1, 1, 5, 1, 'OP-ANNUL', 'CANCELLED', 5000, 1, datetime('now', '-1 days'))`,
+      ).run();
+
+    const depuis = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+    const jusqua = jour();
+
+    const { corps } = await appel(ADMIN, `/api/analytics?from=${depuis}&to=${jusqua}`);
+
+    const ancienne = await env.DB
+      .prepare(
+        `SELECT COUNT(*) AS total,
+                COALESCE(SUM(CASE WHEN avant.customer_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS revenus
+           FROM (SELECT DISTINCT o.customer_id FROM operations o
+                  WHERE o.organization_id = 1 AND o.status <> 'CANCELLED'
+                    AND o.created_at >= ? AND o.created_at <= ?) periode
+      LEFT JOIN (SELECT DISTINCT a.customer_id FROM operations a
+                  WHERE a.organization_id = 1 AND a.status <> 'CANCELLED'
+                    AND a.created_at < ?) avant
+             ON avant.customer_id = periode.customer_id`,
+      )
+      .bind(`${depuis} 00:00:00`, `${jusqua} 23:59:59`, `${depuis} 00:00:00`)
+      .first<{ total: number; revenus: number }>();
+
+    expect(corps.data.customers.total).toBe(ancienne?.total);
+    expect(corps.data.customers.returning).toBe(ancienne?.revenus);
+
+    // Et les chiffres eux-mêmes tiennent debout : deux clients vus
+    // sur la période, dont un seul déjà venu avant.
+    expect(corps.data.customers.total).toBe(2);
+    expect(corps.data.customers.returning).toBe(1);
+    expect(corps.data.customers.new).toBe(1);
+  });
+
+  /**
    * LE SECOND ENSEMBLE EST CLOISONNÉ LUI AUSSI.
    *
    * La requête porte DEUX filtres d'organisation — « venus pendant »

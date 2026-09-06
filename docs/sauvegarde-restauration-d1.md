@@ -202,3 +202,43 @@ npm run test:workers                          # 3. la suite passe-t-elle ?
 
 Trois commandes, un quart d'heure, une fois par trimestre. C'est le
 seul moyen de savoir que la sauvegarde en est une.
+
+---
+
+## 8. Le banc de mesure
+
+Les index de la migration `0003` ont été choisis avec ces deux outils,
+et non recopiés de MySQL.
+
+```bash
+node tools/banc-donnees.mjs 30000     # 30 000 dossiers sur 3 ans
+node tools/banc-mesures.mjs           # la pesée
+node tools/banc-mesures.mjs --plans   # et pourquoi
+```
+
+Le jeu de mesure s'écrit **uniquement dans la base locale** : il n'a
+pas de drapeau `--remote`, parce qu'une faute de frappe qui déverserait
+76 000 faux dossiers chez un client ne se rattrape pas.
+
+**Ce que la mesure a donné**, médiane de cinq passages sur 30 000
+dossiers :
+
+| Requête | Avant | Après |
+|---|---:|---:|
+| File d'attente, toutes stations | 8 ms | 0 ms |
+| Tableau de bord — la journée | 27 ms | 0 ms |
+| Journal des recettes, 90 jours | 5 ms | 0 ms |
+| Statistiques — valeur livrée | 31 ms | 4 ms |
+| Statistiques — par prestation | 16 ms | 4 ms |
+| Statistiques — par heure | 19 ms | 4 ms |
+| **Statistiques — clients fidèles** | **168 ms** | **5 ms** |
+| Historique d'un véhicule | 27 ms | 1 ms |
+
+**Le plus gros gain n'est pas venu d'un index.** Les clients fidèles
+restaient à 139 ms avec l'index : le coût était dans la *jointure* de
+deux ensembles matérialisés, pas dans la lecture. La requête a été
+réécrite pour ne faire qu'un seul parcours groupé par client — et un
+test compare les deux formes pour garantir qu'elles donnent les mêmes
+chiffres.
+
+> Une optimisation qui change les chiffres n'est pas une optimisation.

@@ -46,8 +46,11 @@
 --
 -- Ils avaient été choisis en lisant le plan d'exécution de MySQL, sur
 -- 76 041 opérations réelles. Le planificateur de SQLite est différent :
--- les recopier reviendrait à faire semblant d'avoir mesuré. Ils seront
--- rétablis — ou remplacés — à l'étape 7, sur des mesures neuves.
+-- les recopier reviendrait à faire semblant d'avoir mesuré.
+--
+-- C'EST FAIT : voir `0003_index_de_performance.sql`. Sept index, tous
+-- mesurés sur 30 000 dossiers, et un seul des cinq d'origine repris
+-- tel quel.
 --
 -- Les index structurels, eux, sont conservés : clés uniques, colonnes
 -- de clés étrangères, et les recherches évidentes.
