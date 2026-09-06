@@ -197,9 +197,9 @@ précédentes.
 | 2 | ~~Le schéma D1 complet et ses contraintes `CHECK`~~ **— FAITE** | ✅ 21 tables, 289 colonnes, aucun écart avec MySQL. Clés étrangères vérifiées appliquées par D1 |
 | 3 | ~~Le socle : multi-tenance, permissions, jetons~~ **— FAITE** | ✅ Sessions tournantes, détection de rejeu, inscription. L'application reste connectée |
 | 4 | ~~Les dépôts et contrôleurs, par domaine métier~~ **— FAITE** | ✅ 86 routes sur 88, 628 tests. Les deux manquantes sont les photos, qui relèvent de l'étape 5 |
-| 5 | Photos et envois | Après votre décision du §4.4 |
-| 6 | Sauvegarde, restauration, avant-vol | Une restauration d'essai réussie |
-| 7 | Performance | Des mesures neuves, pas des index copiés |
+| 5 | Photos et envois | **En attente de votre décision du §4.4** — c'est la seule étape qui reste |
+| 6 | ~~Sauvegarde, restauration, avant-vol~~ **— FAITE** | ✅ Cycle complet exécuté : témoin posé, sauvegardé, détruit, restauré, revenu. Voir [`docs/sauvegarde-restauration-d1.md`](sauvegarde-restauration-d1.md) |
+| 7 | ~~Performance~~ **— FAITE** | ✅ Sept index mesurés sur 30 000 dossiers, un seul repris de MySQL. Plus aucune requête au-dessus de 10 ms |
 
 **L'étape 1 est la plus importante.** Elle coûte peu et elle répond
 avant tout engagement à la seule question qui compte : est-ce que ce
@@ -275,6 +275,14 @@ d'écrire.*
   ne liait qu'une valeur d'organisation quand une requête en demandait
   deux. Aucune requête existante n'était touchée, mais la première qui
   l'aurait fait aurait rendu des chiffres faux sans rien signaler.
+
+**Les étapes 6 et 7 sont faites elles aussi.** La sauvegarde a été
+éprouvée en restaurant pour de vrai — ce qui a révélé deux pièges de
+D1 que `mysqldump` n'avait pas — et les index ont été choisis sur des
+mesures neuves, dont l'une a montré qu'un index ne suffisait pas : la
+requête des clients fidèles a dû être réécrite (168 ms → 5 ms).
+
+**Il ne reste que l'étape 5**, qui attend votre décision du §4.4.
 
 **Un ajustement de périmètre, à noter :** l'envoi de courriel n'existe
 pas sur Workers. La réinitialisation de mot de passe est portée en
