@@ -729,6 +729,32 @@
   }
 }
 
+// ==================================================================
+// LE FORMULAIRE FAIT PARTIE DE LA CHAÎNE, OU IL LA COUPE
+// ==================================================================
+// La plupart des fenêtres du produit sont écrites ainsi :
+//
+//     <div class="ac-modal">          ← conteneur flex en colonne
+//       <div class="ac-modal__header">
+//       <form>                        ← ★
+//         <div class="ac-modal__body">
+//         <div class="ac-modal__footer">
+//
+// Le corps et le pied ne sont donc PAS enfants de la fenêtre : ils
+// sont enfants du formulaire. Régler leur comportement flex ne servait
+// à rien tant que le formulaire, lui, restait un bloc ordinaire — il
+// prenait la hauteur de son contenu et débordait par le bas, emportant
+// le bouton d'enregistrement hors de l'écran.
+//
+// Le formulaire devient donc à son tour un conteneur flex en colonne,
+// et un enfant qui accepte de se comprimer.
+.ac-modal > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .ac-modal__header {
   display: flex;
   align-items: center;
@@ -736,11 +762,34 @@
   gap: var(--ac-space-4);
   padding: var(--ac-space-5) var(--ac-space-6);
   border-bottom: 1px solid var(--ac-border);
+
+  // L'en-tête ne se comprime jamais : c'est lui qui porte le titre et
+  // la croix de fermeture.
+  flex-shrink: 0;
 }
 
 .ac-modal__body {
   padding: var(--ac-space-6);
   overflow-y: auto;
+
+  // ================================================================
+  // LES DEUX LIGNES QUI FONT DÉFILER LE CORPS AU LIEU DE POUSSER
+  // ================================================================
+  // Sans `min-height: 0`, un élément flex refuse de devenir plus
+  // petit que son contenu — c'est la valeur `auto` par défaut. Le
+  // corps ne défilait donc pas : il poussait, et le PIED sortait de
+  // l'écran, emportant le bouton d'enregistrement.
+  //
+  // Le défaut ne se voyait que sur un écran court, avec un formulaire
+  // assez long : sur un grand écran, tout tenait sous les
+  // `100vh - 4rem` et rien ne dépassait. Signalé en production sur
+  // l'écran des clients — « il n'y a pas de bouton créer » — alors
+  // que le bouton était bien là, deux cents pixels sous le bord.
+  //
+  // `overflow-y: auto` seul ne suffit pas : il dit COMMENT défiler,
+  // pas QUAND se comprimer.
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .ac-modal__footer {
@@ -749,6 +798,11 @@
   gap: var(--ac-space-2);
   padding: var(--ac-space-4) var(--ac-space-6);
   border-top: 1px solid var(--ac-border);
+
+  // Le pied non plus : le bouton d'action doit rester visible quelle
+  // que soit la hauteur du formulaire. C'est tout l'objet du
+  // correctif.
+  flex-shrink: 0;
   background-color: var(--ac-gray-50);
   border-radius: 0 0 var(--ac-radius-xl) var(--ac-radius-xl);
 

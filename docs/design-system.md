@@ -244,6 +244,50 @@ en bout.
 
 Vérifié sans débordement horizontal à 390 px, 1024 px et 1440 px.
 
+### La HAUTEUR compte autant que la largeur
+
+Ces trois vérifications portaient toutes sur des largeurs. Aucune ne
+regardait la hauteur, et un défaut y a vécu jusqu'en production : sur
+un portable de 561 px de haut, le bouton « Créer le client » se
+trouvait **neuf pixels sous le bord de l'écran**. L'utilisateur voyait
+le formulaire et concluait qu'il n'y avait pas de bouton.
+
+La cause tenait à la structure, pas au style :
+
+```html
+<div class="ac-modal">          <!-- conteneur flex en colonne -->
+  <div class="ac-modal__header">
+  <form>                        <!-- ★ coupait la chaîne -->
+    <div class="ac-modal__body">
+    <div class="ac-modal__footer">
+```
+
+Le corps et le pied ne sont pas enfants de la fenêtre mais du
+formulaire. Tant que celui-ci restait un bloc ordinaire, il prenait la
+hauteur de son contenu et débordait par le bas. `.ac-modal > form` est
+désormais lui aussi un conteneur flex qui accepte de se comprimer, et
+`.ac-modal__body` porte le `min-height: 0` sans lequel un élément flex
+refuse de devenir plus petit que son contenu.
+
+**Dix écrans, quatorze formulaires** étaient concernés.
+
+Mesuré au navigateur, sur le formulaire client réel :
+
+| Hauteur d'écran | Avant | Après |
+|---|---|---|
+| 561 px | bouton à 570 px — **hors écran** | 498 px — visible |
+| 711 px | 609 px | 609 px — inchangé |
+| 900 px | 704 px | 704 px — inchangé |
+
+Les deux dernières lignes sont ce qui rend le correctif acceptable au
+regard du §37 : il ne s'active que lorsque la place manque, et ne
+déplace rien quand elle ne manque pas.
+
+**À vérifier désormais : 1440 × 900, 1366 × 768 et 1280 × 560.** Le
+dernier est un portable ordinaire, barre d'onglets et barre de tâches
+déduites — c'est la hauteur réelle dont dispose un gérant de station,
+pas celle de son écran.
+
 Les tableaux défilent **dans leur conteneur** (`.ac-table-wrapper`),
 jamais la page entière — ce qui donnerait l'impression d'une mise en
 page cassée.
