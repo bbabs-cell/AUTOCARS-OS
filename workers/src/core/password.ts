@@ -75,6 +75,26 @@ const SEL_OCTETS = 16;
 const CLE_BITS = 256;
 
 /**
+ * Une empreinte qui ne correspond à aucun mot de passe.
+ *
+ * `connexion()` la vérifie quand l'adresse est inconnue, pour que le
+ * temps de réponse ne trahisse pas l'inexistence du compte.
+ *
+ * SON NOMBRE D'ITÉRATIONS EST CELUI DES VRAIES, ET C'EST TOUT
+ * L'INTÉRÊT. La version précédente en annonçait 210 000 quand les
+ * vraies en faisaient 600 000 : la réponse arrivait ~60 ms plus tôt
+ * pour une adresse inconnue. Le message uniforme disait « je ne vous
+ * dirai pas si ce compte existe » ; le chronomètre le disait quand
+ * même, et une boucle sur mille adresses aurait révélé lesquelles
+ * sont clientes de la station.
+ *
+ * Construite à partir de `ITERATIONS`, elle ne peut plus s'en écarter
+ * le jour où ce nombre change.
+ */
+export const EMPREINTE_FACTICE =
+  `pbkdf2$${ITERATIONS}$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`;
+
+/**
  * Empreinte d'un mot de passe, au format
  * `pbkdf2$<itérations>$<sel base64>$<clé base64>`.
  *
@@ -128,26 +148,81 @@ export async function verifiePassword(
   return egaliteConstante(obtenu, attendu);
 }
 
+/**
+ * LE PLAFOND DE LA PLATEFORME — 100 000 ITÉRATIONS PAR APPEL.
+ * ==================================================================
+ * Cloudflare refuse PBKDF2 au-delà, pour éviter qu'une requête ne
+ * monopolise un cœur :
+ *
+ *     NotSupportedError: Pbkdf2 failed:
+ *     iteration counts above 100000 are not supported
+ *
+ * CE PLAFOND N'EXISTE PAS DANS workerd EN LOCAL. Un appel à 600 000
+ * y passe sans un mot — vérifié — et les 658 tests avec lui. La
+ * production, elle, levait l'exception, que le gestionnaire global
+ * transformait en « Une erreur interne est survenue ».
+ *
+ * Personne ne pouvait donc ni s'inscrire ni se connecter, et rien en
+ * local ne pouvait le montrer.
+ */
+const PALIER = 100_000;
+
+/**
+ * Dérive la clé en ENCHAÎNANT des tours sous le plafond.
+ *
+ * Chaque tour reprend la sortie du précédent comme mot de passe, avec
+ * le même sel. Le travail total reste celui du nombre d'itérations
+ * demandé : un attaquant doit refaire les mêmes tours dans le même
+ * ordre, il n'existe pas de raccourci qui saute le milieu de la
+ * chaîne.
+ *
+ * POURQUOI PAS SIMPLEMENT DESCENDRE À 100 000. Parce que ce serait
+ * diviser par six la protection réelle des mots de passe pour
+ * contourner une limite d'implémentation. L'OWASP recommande 600 000
+ * pour PBKDF2-HMAC-SHA256 ; c'est ce chiffre qui protège le client,
+ * pas celui qui arrange la plateforme.
+ *
+ * POURQUOI PAS scrypt, DISPONIBLE VIA `node:crypto`. Il serait
+ * meilleur — il coûte de la mémoire, donc résiste aux cartes
+ * graphiques là où PBKDF2 ne résiste qu'au temps. Mais son
+ * comportement sous Workers ne se vérifie qu'EN PRODUCTION, et c'est
+ * exactement l'hypothèse qui vient de coûter une mise en service.
+ * PBKDF2 sous 100 000 par appel, lui, est démontré accepté.
+ *
+ * COMPATIBILITÉ : en dessous de 100 000, la boucle fait un seul tour
+ * et le résultat est un PBKDF2 standard, identique à ce que produit
+ * n'importe quelle autre implémentation.
+ */
 async function derive(
   motDePasse: string,
   sel: Uint8Array,
   iterations: number,
 ): Promise<Uint8Array> {
-  const cleBrute = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(motDePasse),
-    'PBKDF2',
-    false,
-    ['deriveBits'],
-  );
+  let bloc: Uint8Array = new TextEncoder().encode(motDePasse);
+  let restant = iterations;
 
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: sel, iterations },
-    cleBrute,
-    CLE_BITS,
-  );
+  while (restant > 0) {
+    const tour = Math.min(restant, PALIER);
 
-  return new Uint8Array(bits);
+    const cleBrute = await crypto.subtle.importKey(
+      'raw',
+      bloc,
+      'PBKDF2',
+      false,
+      ['deriveBits'],
+    );
+
+    const bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt: sel, iterations: tour },
+      cleBrute,
+      CLE_BITS,
+    );
+
+    bloc = new Uint8Array(bits);
+    restant -= tour;
+  }
+
+  return bloc;
 }
 
 /**

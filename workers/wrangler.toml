@@ -50,6 +50,13 @@ preview_urls = false
 # journalisées : un identifiant de dossier ou une plaque passée en
 # paramètre n'a pas à se retrouver dans des journaux consultables par
 # toute personne ayant accès au tableau de bord.
+#
+# NOTE : l'outil de test affiche « Unexpected fields found in
+# observability field: redact_query_string ». C'est son lecteur de
+# configuration qui est en retard sur le schéma de Wrangler — le
+# champ y figure bien, et `wrangler deploy --dry-run` l'accepte.
+# Ne supprimez pas la ligne pour faire taire l'avertissement : ce
+# serait remettre les paramètres d'URL dans les journaux.
 [observability]
 enabled = true
 redact_query_string = true

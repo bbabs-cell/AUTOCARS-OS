@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { ITERATIONS, hachePassword, verifiePassword } from '../src/core/password';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EMPREINTE_FACTICE, ITERATIONS, hachePassword, verifiePassword } from '../src/core/password';
 
 describe('empreintes de mot de passe', () => {
   it('un mot de passe se vérifie contre sa propre empreinte', async () => {
@@ -138,4 +138,63 @@ describe('coût de la connexion', () => {
     // qui se dégrade, à chaque prise de poste.
     expect(ITERATIONS).toBeLessThanOrEqual(1_000_000);
   }, 60_000);
+});
+
+/**
+ * ==================================================================
+ * LA CONTRAINTE QUE LA MACHINE DE DÉVELOPPEMENT N'APPLIQUE PAS
+ * ==================================================================
+ * Cloudflare refuse PBKDF2 au-delà de 100 000 itérations par appel :
+ *
+ *     NotSupportedError: Pbkdf2 failed:
+ *     iteration counts above 100000 are not supported
+ *
+ * workerd en local ne l'applique pas. Un appel à 600 000 y passe, et
+ * les 658 tests avec lui — pendant qu'en production personne ne
+ * pouvait ni s'inscrire ni se connecter, l'exception étant convertie
+ * en « Une erreur interne est survenue » par le gestionnaire global.
+ *
+ * Ce test EST la contrainte de production, écrite là où elle se
+ * vérifie sans déployer. C'est le seul garde-fou contre le retour du
+ * même défaut, puisque l'environnement, lui, ne dira rien.
+ */
+describe('la limite de la plateforme', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("aucun appel ne dépasse les 100 000 itérations acceptées par Cloudflare", async () => {
+    const demandes: number[] = [];
+    const vrai = crypto.subtle.deriveBits.bind(crypto.subtle);
+
+    vi.spyOn(crypto.subtle, 'deriveBits').mockImplementation((algo: any, ...reste: any[]) => {
+      if (algo?.name === 'PBKDF2') demandes.push(algo.iterations);
+
+      return (vrai as any)(algo, ...reste);
+    });
+
+    const empreinte = await hachePassword('Autocare2026!');
+
+    await verifiePassword('Autocare2026!', empreinte);
+
+    expect(demandes.length).toBeGreaterThan(0);
+
+    for (const n of demandes) {
+      expect(n).toBeLessThanOrEqual(100_000);
+    }
+
+    // Et le travail total reste celui qui est annoncé : enchaîner des
+    // tours ne doit pas être un prétexte pour en faire moins.
+    const parTour = demandes.slice(0, demandes.length / 2);
+
+    expect(parTour.reduce((a, b) => a + b, 0)).toBe(ITERATIONS);
+  }, 60_000);
+
+  it("l'empreinte factice coûte autant qu'une vraie, sinon le temps trahit le compte", () => {
+    // `connexion()` vérifie cette empreinte quand l'adresse est
+    // inconnue. Si elle annonçait moins d'itérations que les vraies,
+    // la réponse arriverait plus tôt — et une boucle sur mille
+    // adresses révélerait lesquelles sont clientes de la station.
+    const [, iterations] = EMPREINTE_FACTICE.split('$');
+
+    expect(Number(iterations)).toBe(ITERATIONS);
+  });
 });

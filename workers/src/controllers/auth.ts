@@ -10,7 +10,7 @@
  * pas à livrer l'authentification complète. Il viendra à l'étape 3.
  */
 
-import { hachePassword, verifiePassword } from '../core/password';
+import { EMPREINTE_FACTICE, hachePassword, verifiePassword } from '../core/password';
 import { signe } from '../core/jwt';
 import { droitsDe } from '../core/permissions';
 import { erreur, succes } from '../core/response';
@@ -73,7 +73,7 @@ export async function connexion(request: Request, env: Env): Promise<Response> {
     // On vérifie quand même un mot de passe, contre une empreinte
     // fabriquée : sinon le temps de réponse trahirait l'inexistence du
     // compte, ce que le message uniforme cherchait justement à cacher.
-    await verifiePassword(motDePasse, 'pbkdf2$210000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+    await verifiePassword(motDePasse, EMPREINTE_FACTICE);
     return echec();
   }
 
