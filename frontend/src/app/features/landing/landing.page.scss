@@ -207,7 +207,7 @@
 // C'est pourquoi elle n'est appliquée qu'à `.ac-lp-hero__accent`, et
 // pas offerte comme une classe de texte réutilisable.
 .ac-lp-bande .ac-lp-hero__accent {
-  color: var(--ac-saffron);
+  color: var(--ac-accent);
 }
 
 // La coche verte des listes reste verte : sur bande, elle garde son
@@ -605,7 +605,7 @@
   padding: var(--ac-space-3) var(--ac-space-6);
   border: none;
   border-radius: var(--ac-radius);
-  background-color: var(--ac-saffron);
+  background-color: var(--ac-accent);
   color: var(--ac-gray-900);
   font-weight: var(--ac-weight-semibold);
   font-size: var(--ac-text-base);
@@ -614,7 +614,7 @@
               transform var(--ac-duree-immediat) var(--ac-courbe-sortie);
 
   &:hover {
-    background-color: var(--ac-saffron-600);
+    background-color: var(--ac-accent-600);
     color: var(--ac-gray-900);
     text-decoration: none;
   }

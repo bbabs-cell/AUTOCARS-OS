@@ -267,7 +267,7 @@
 // route. Le dégradé va du safran au safran — ce n'est pas un effet,
 // c'est un relief qui distingue la barre de son rail.
 .ac-progress__bar {
-  background: linear-gradient(90deg, var(--ac-saffron) 0%, var(--ac-saffron-600) 100%);
+  background: linear-gradient(90deg, var(--ac-accent) 0%, var(--ac-accent-600) 100%);
   transition: width var(--ac-duree-lente) var(--ac-courbe-sortie);
 }
 
@@ -275,8 +275,8 @@
 // autres restent en creux. C'est la carte perforée du lavage
 // traditionnel, et l'employé comme le client la lisent d'un regard.
 .ac-stamps__slot--filled {
-  background-color: var(--ac-saffron);
-  border-color: var(--ac-saffron-600);
+  background-color: var(--ac-accent);
+  border-color: var(--ac-accent-600);
   color: var(--ac-white);
   animation: ac-confirme var(--ac-duree) var(--ac-courbe-ressort) both;
 }

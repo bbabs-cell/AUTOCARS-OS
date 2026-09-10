@@ -1,0 +1,123 @@
+// ==================================================================
+// AUTOCARE OS — LE VERRE ET LA PROFONDEUR
+// ==================================================================
+//
+// LE REPROCHE ÉTAIT « TROP PLAT, SANS RELIEF ».
+//
+// La platitude ne venait pas d'un manque d'ombres. Elle venait de ce
+// que RIEN N'ÉTAIT DEVANT NI DERRIÈRE : une carte blanche sur un fond
+// gris, sans épaisseur, sans lumière, sans arrière-plan.
+//
+// Le remède tient en deux temps, et le second ne marche pas sans le
+// premier :
+//
+//   1. METTRE QUELQUE CHOSE DERRIÈRE — des halos de couleur diffusés,
+//      posés dans le fond de la coque. Sans eux, une surface
+//      translucide floute du gris et rend du gris.
+//   2. POSER LE VERRE DESSUS — surfaces semi-opaques, floutées, avec
+//      un liseré clair sur le bord qui attrape la lumière.
+//
+// ------------------------------------------------------------------
+// CE QUE CE STYLE COÛTE, ÉCRIT NOIR SUR BLANC
+//
+// Le catalogue qui recommande le verre dépoli le déconseille dans la
+// même ligne pour « accessibilité critique, performances limitées ».
+// Nos utilisateurs sont des employés de comptoir, en plein soleil, sur
+// des portables modestes. Le commanditaire a choisi ce style en
+// connaissant cette réserve.
+//
+// Deux règles bornent donc le coût, et elles ne se négocient pas :
+//
+//   · LE VERRE NE VA JAMAIS SUR UNE SURFACE QUI DÉFILE. Un tableau de
+//     quarante lignes ferait recalculer le flou à chaque image.
+//   · L'OPACITÉ NE DESCEND JAMAIS SOUS 0.55, sans quoi le contraste du
+//     texte dépendrait du halo qui passe derrière — donc de rien de
+//     calculable.
+// ==================================================================
+
+
+// ==================================================================
+// LES HALOS — CE QUI EST DERRIÈRE
+// ==================================================================
+// Deux taches de couleur très diffusées, immobiles, dans le fond de
+// la coque. Immobiles délibérément : une couleur qui dérive lentement
+// derrière un écran qu'on regarde huit heures fatigue sans qu'on
+// sache pourquoi.
+//
+// `pointer-events: none` parce qu'ils couvrent toute la zone : sans
+// cela, ils intercepteraient les clics destinés au contenu.
+.ac-halos {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    // `filter: blur` sur un élément FIXE et immobile : le navigateur
+    // le rend une fois et le garde en mémoire. C'est le seul flou du
+    // produit qui ne coûte rien en continu.
+    filter: blur(90px);
+  }
+
+  &::before {
+    width: 42rem;
+    height: 42rem;
+    top: -16rem;
+    left: -10rem;
+    background-color: var(--ac-primary-500);
+    opacity: 0.16;
+  }
+
+  &::after {
+    width: 30rem;
+    height: 30rem;
+    right: -8rem;
+    bottom: -12rem;
+    background-color: var(--ac-accent);
+    opacity: 0.10;
+  }
+}
+
+// ==================================================================
+// LES SURFACES DE VERRE
+// ==================================================================
+
+.ac-verre {
+  background-color: var(--ac-verre-fond);
+  backdrop-filter: blur(var(--ac-verre-flou));
+  -webkit-backdrop-filter: blur(var(--ac-verre-flou));
+  border: 1px solid var(--ac-verre-bord);
+  box-shadow: var(--ac-verre-ombre);
+}
+
+// La variante ÉPAISSE : pour ce qui porte du texte dense. Presque
+// opaque, sans flou. On garde le liseré et l'ombre — donc l'aspect —
+// sans en payer le calcul là où il ne se verrait pas.
+.ac-verre--plein {
+  background-color: var(--ac-verre-plein);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+// ==================================================================
+// LE REPLI QUAND LE NAVIGATEUR NE SAIT PAS FLOUTER
+// ==================================================================
+// `backdrop-filter` manque encore sur des navigateurs qu'on croisera
+// en station. Sans ce repli, la tuile deviendrait une vitre
+// TRANSPARENTE posée sur un halo coloré : le texte passerait de 12:1
+// à quelque chose d'illisible.
+//
+// On rend alors la surface opaque. L'effet disparaît, la lisibilité
+// reste. C'est le bon sens de la dégradation : ce qui est décoratif
+// s'en va, ce qui est nécessaire demeure.
+@supports not (backdrop-filter: blur(1px)) {
+  .ac-verre,
+  .ac-verre--plein {
+    background-color: rgb(255 255 255 / 97%);
+  }
+}

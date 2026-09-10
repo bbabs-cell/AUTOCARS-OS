@@ -1,3 +1,5 @@
+@use 'palette' as p;
+
 // ==================================================================
 // AUTOCARE OS — JETONS DE DESIGN (design tokens)
 // ==================================================================
@@ -26,50 +28,46 @@
   // 1. COULEURS
   // ================================================================
 
-  // --- Couleur principale ----------------------------------------
-  // Le bleu identifie l'ACTION et l'INFORMATION IMPORTANTE.
-  // Règle d'usage : il ne doit jamais envahir l'interface. Sur un
-  // écran type, moins de 10 % de la surface est bleue.
-  --ac-primary-50:  #eff6ff;
-  --ac-primary-100: #dbeafe;
-  --ac-primary-200: #bfdbfe;
-  --ac-primary-300: #93c5fd;
-  --ac-primary-400: #60a5fa;
-  --ac-primary:     #2563eb;   // couleur de référence du produit
-  --ac-primary-600: #1d4ed8;   // survol
-  --ac-primary-700: #1e40af;   // état actif (bouton enfoncé)
+  // --- Couleur d'action : SARCELLE --------------------------------
+  //
+  // Le bleu #2563EB a été écarté par le commanditaire. La sarcelle le
+  // remplace : c'est l'eau et la propreté, et c'est la famille que le
+  // catalogue UI UX Pro Max associe aux « outils de productivité ».
+  //
+  // ATTENTION AU PALIER EMPLOYÉ. Le catalogue donne #0D9488 comme
+  // couleur principale. Mesuré, du texte blanc dessus ne tient que
+  // 3.74:1 — SOUS le seuil de 4.5. Le catalogue se contredit lui-même
+  // : sa propre note de motif exige « at least 4.5:1 against the
+  // button fill ».
+  //
+  // D'où la répartition ci-dessous :
+  //   --ac-primary      #0f766e  remplissage des boutons  (blanc 5.47)
+  //   --ac-primary-500  #0d9488  identité : icônes, filets, pastilles
+  //
+  // Un composant qui pose du texte blanc lit TOUJOURS --ac-primary.
+  --ac-primary-50:  #{p.$ac-primary-50};
+  --ac-primary-100: #{p.$ac-primary-100};
+  --ac-primary-200: #{p.$ac-primary-200};
+  --ac-primary-300: #{p.$ac-primary-300};
+  --ac-primary-400: #{p.$ac-primary-400};
+  --ac-primary-500: #{p.$ac-primary-500};   // identité, jamais sous du texte blanc
+  --ac-primary:     #{p.$ac-primary};   // couleur de référence — 5.47 en blanc
+  --ac-primary-600: #{p.$ac-primary-600};   // survol
+  --ac-primary-700: #{p.$ac-primary-700};   // état actif
 
-  // --- Couleur d'accent ------------------------------------------
-  // Cyan/turquoise, utilisé avec parcimonie : graphiques secondaires,
-  // statut « en lavage », illustrations. Jamais pour une action
-  // principale, qui reste toujours bleue.
-  --ac-accent-50:  #ecfeff;
-  --ac-accent-100: #cffafe;
-  --ac-accent:     #06b6d4;
-  --ac-accent-600: #0891b2;
-
-  // --- Safran : le second rôle -----------------------------------
-  // AJOUT. Jusqu'ici le produit n'avait qu'UNE couleur et six
-  // déclinaisons de gris. Le bleu dit « clique ici » ; rien ne disait
-  // « il se passe quelque chose de bien ».
+  // --- Accent : ORANGE -------------------------------------------
+  // Il remplace le cyan ET le safran, qui faisaient deux accents pour
+  // un seul rôle. Une seule couleur d'appel, c'est déjà une de plus
+  // que la couleur d'action.
   //
-  // Le safran porte l'ÉNERGIE et l'ABOUTISSEMENT : barre de
-  // progression d'un lavage, moment où un dossier passe à « prêt »,
-  // récompense de fidélité atteinte, total d'une journée de caisse.
-  //
-  // IL N'EST JAMAIS UNE ACTION. Un bouton principal reste bleu — les
-  // employés l'ont appris, et deux couleurs d'action ne feraient
-  // qu'hésiter.
-  //
-  // Ce n'est pas non plus l'orange d'alerte : celui-ci est plus
-  // rouge, plus vif, et réservé aux avertissements. Le safran est
-  // plus profond, plus terreux — la lumière de fin d'après-midi, pas
-  // un gyrophare.
-  --ac-saffron-50:  #fff8ed;
-  --ac-saffron-100: #ffeacf;
-  --ac-saffron:     #e8901b;
-  --ac-saffron-600: #c2740f;
-  --ac-saffron-700: #96570b;   // texte sur fond clair (contraste 5.4)
+  // SON TEXTE EST FONCÉ, ET C'EST MESURÉ :
+  //   texte blanc sur #ea580c   3.56:1   ✗
+  //   texte foncé sur #ea580c   5.25:1   ✓
+  --ac-accent-50:  #{p.$ac-accent-50};
+  --ac-accent-100: #{p.$ac-accent-100};
+  --ac-accent:     #{p.$ac-accent};
+  --ac-accent-600: #{p.$ac-accent-600};
+  --ac-accent-700: #{p.$ac-accent-700};   // texte d'accent sur fond clair (7.31)
 
   // --- Couleurs de sens ------------------------------------------
   // Chacune existe en trois déclinaisons :
@@ -165,23 +163,44 @@
   // Le gain n'était pas l'objectif — la chaleur l'était — mais il
   // fallait s'assurer de ne rien perdre. Il se trouve qu'un neutre
   // légèrement chaud est aussi un peu plus foncé à teinte égale.
-  --ac-white:       #ffffff;
-  --ac-gray-50:     #f9f9f8;
-  --ac-gray-100:    #f2f2f0;
-  --ac-gray-200:    #e5e4e1;
-  --ac-gray-300:    #cdcbc6;
-  --ac-gray-400:    #96938c;
-  --ac-gray-500:    #67645e;
-  --ac-gray-600:    #4a4842;
-  --ac-gray-700:    #35332e;
-  --ac-gray-800:    #22201d;
-  --ac-gray-900:    #14120f;
+  //
+  // ILS REVIENNENT AU GRIS FROID. Je les avais réchauffés ce matin ;
+  // le commanditaire a rejeté ce choix avec le reste de la palette.
+  // Et il avait une raison technique que je n'avais pas vue : un gris
+  // chaud sous une couleur d'action SARCELLE se lit comme une tache
+  // brune. Un neutre s'accorde à la teinte qu'il accompagne, il ne se
+  // choisit pas dans l'absolu.
+  //
+  // Ces gris tirent très légèrement vers le bleu-vert, dans le sens de
+  // la sarcelle — assez pour que l'ensemble tienne, pas assez pour
+  // qu'on les prenne pour une couleur.
+  --ac-white:       #{p.$ac-white};
+  --ac-gray-50:     #{p.$ac-gray-50};
+  --ac-gray-100:    #{p.$ac-gray-100};
+  --ac-gray-200:    #{p.$ac-gray-200};
+  --ac-gray-300:    #{p.$ac-gray-300};
+  --ac-gray-400:    #{p.$ac-gray-400};
+  --ac-gray-500:    #{p.$ac-gray-500};
+  --ac-gray-600:    #{p.$ac-gray-600};
+  --ac-gray-700:    #{p.$ac-gray-700};
+  --ac-gray-800:    #{p.$ac-gray-800};
+  --ac-gray-900:    #{p.$ac-gray-900};
 
   // --- Rôles sémantiques ------------------------------------------
   // Utilise TOUJOURS ces variables-là dans les composants, jamais
   // --ac-gray-200 directement. Ainsi le rôle reste explicite :
   // « bordure » a un sens, « gris 200 » n'en a pas.
-  --ac-background:      var(--ac-gray-50);    // fond de page
+  // LE FOND DE PAGE EST TEINTÉ, ET C'EST LA CONDITION DU VERRE DÉPOLI.
+  //
+  // Une surface translucide posée sur du gris neutre ne montre rien :
+  // elle floute du gris et rend du gris. Le verre n'existe que s'il y
+  // a quelque chose DERRIÈRE. D'où ce fond très légèrement sarcelle,
+  // et les halos de couleur diffusés que pose `_glass.scss`.
+  //
+  // C'est aussi la réponse au reproche « trop plat » : la platitude ne
+  // venait pas des ombres manquantes, elle venait de l'absence de
+  // PROFONDEUR — rien n'était devant ou derrière quoi que ce soit.
+  --ac-background:      #{p.$ac-background};              // fond de page, sarcelle-50
   --ac-surface:         var(--ac-white);      // fond des cartes
   --ac-surface-hover:   var(--ac-gray-50);    // survol dans une liste
   --ac-surface-sunken:  var(--ac-gray-100);   // zones en creux
@@ -283,6 +302,32 @@
   --ac-domain:     var(--ac-domain-operations);
   --ac-domain-50:  var(--ac-domain-operations-50);
   --ac-domain-700: var(--ac-domain-operations-700);
+
+  // ================================================================
+  // 1 ter. LE VERRE
+  // ================================================================
+  //
+  // Trois jetons, et un quatrième qui est un garde-fou.
+  //
+  // L'OPACITÉ NE DESCEND PAS SOUS 0.55. En dessous, le contraste du
+  // texte posé sur la tuile dépend de ce qui passe derrière — donc
+  // d'un halo qui bouge, donc de rien de mesurable. Un contraste qu'on
+  // ne peut pas calculer n'est pas un contraste.
+  //
+  // LE FLOU RESTE À 14px. C'est le poste de dépense du verre dépoli :
+  // `backdrop-filter` fait recalculer la zone floutée à chaque image.
+  // Au-delà de 20px on le sent sur un portable modeste — et c'est
+  // précisément la contre-indication que le catalogue attache à ce
+  // style. On le prend, on l'assume, on le borne.
+  --ac-verre-fond:    rgb(255 255 255 / 62%);
+  --ac-verre-bord:    rgb(255 255 255 / 78%);
+  --ac-verre-flou:    14px;
+  --ac-verre-ombre:   0 8px 24px rgb(15 23 42 / 6%);
+
+  // La version opaque, pour les surfaces qui portent du texte dense :
+  // tableaux, longues listes, formulaires. Le verre y coûterait cher
+  // en calcul pour un effet qu'on ne verrait pas sous le contenu.
+  --ac-verre-plein:   rgb(255 255 255 / 92%);
 
   // ================================================================
   // 2. STATUTS MÉTIER

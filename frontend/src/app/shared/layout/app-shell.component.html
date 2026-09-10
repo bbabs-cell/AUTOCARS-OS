@@ -7,6 +7,15 @@
 -->
 <div class="ac-shell" [attr.data-domaine]="domaine()">
 
+  <!--
+    LES HALOS. Deux taches de couleur diffusées, immobiles, derrière
+    toute l'interface. Ce sont EUX qui rendent le verre visible : une
+    surface translucide posée sur du gris uni floute du gris et rend
+    du gris. Voir _glass.scss.
+  -->
+  <div class="ac-halos" aria-hidden="true"></div>
+
+
   <ac-sidebar [isOpen]="isSidebarOpen()" (navigate)="closeSidebar()" />
 
   <!--

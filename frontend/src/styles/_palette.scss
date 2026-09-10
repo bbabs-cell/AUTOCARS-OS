@@ -1,0 +1,74 @@
+// ==================================================================
+// AUTOCARE OS — LA PALETTE, EN VARIABLES SASS
+// ==================================================================
+//
+// POURQUOI CE FICHIER EXISTE : PARCE QUE LA « SOURCE UNIQUE » N'EN
+// ÉTAIT PAS UNE.
+//
+// `_tokens.scss` s'annonce comme la source unique de vérité visuelle.
+// Elle ne l'était pas. Bootstrap fige ses couleurs en variables Sass
+// AU MOMENT DE LA COMPILATION ; il ne lit pas les variables CSS.
+// `_bootstrap-config.scss` gardait donc sa propre copie du bleu.
+//
+// Conséquence observée : le passage de la couleur d'action au
+// sarcelle a changé les jetons, et le bouton principal est resté
+// BLEU. Deux fichiers, deux vérités, et c'est celle qu'on avait
+// oubliée qui gagnait.
+//
+// Ce fichier tient les valeurs UNE fois. `_tokens.scss` les
+// interpole dans les variables CSS ; `_bootstrap-config.scss` les
+// passe à Bootstrap. Changer une couleur ici les change des deux
+// côtés, et il devient impossible qu'elles divergent.
+//
+// C'est le seul endroit du projet où une couleur s'écrit en dur.
+// ==================================================================
+
+// --- Couleur d'action : sarcelle ---------------------------------
+//
+// ATTENTION AU PALIER. Le catalogue UI UX Pro Max donne #0d9488 comme
+// couleur principale ; mesuré, du texte blanc dessus ne tient que
+// 3.74:1, sous le seuil de 4.5. Le remplissage des boutons prend donc
+// le palier suivant.
+$ac-primary-50:  #f0fdfa;
+$ac-primary-100: #ccfbf1;
+$ac-primary-200: #99f6e4;
+$ac-primary-300: #5eead4;
+$ac-primary-400: #2dd4bf;
+$ac-primary-500: #0d9488;   // identité : icônes, filets — 3.74 en blanc
+$ac-primary:     #0f766e;   // remplissage : boutons     — 5.47 en blanc
+$ac-primary-600: #115e59;   // survol
+$ac-primary-700: #134e4a;   // actif
+
+// --- Accent : orange ----------------------------------------------
+// Son texte est FONCÉ : blanc dessus 3.56, foncé dessus 5.25.
+$ac-accent-50:  #fff7ed;
+$ac-accent-100: #ffedd5;
+$ac-accent:     #ea580c;
+$ac-accent-600: #c2410c;
+$ac-accent-700: #9a3412;
+
+// --- Neutres ------------------------------------------------------
+$ac-white:    #ffffff;
+$ac-gray-50:  #f8fafc;
+$ac-gray-100: #f1f5f9;
+$ac-gray-200: #e2e8f0;
+$ac-gray-300: #cbd5e1;
+$ac-gray-400: #94a3b8;
+$ac-gray-500: #64748b;
+$ac-gray-600: #475569;
+$ac-gray-700: #334155;
+$ac-gray-800: #1e293b;
+$ac-gray-900: #0f172a;
+
+// --- Couleurs de sens ---------------------------------------------
+// Les valeurs SOMBRES, celles que Bootstrap met sous du texte blanc.
+// Les déclinaisons claires vivent dans `_tokens.scss` : elles ne
+// portent jamais de texte, seulement des pastilles et des icônes.
+$ac-success: #047857;
+$ac-warning: #b45309;
+$ac-danger:  #dc2626;
+
+// --- Fond de page --------------------------------------------------
+// Teinté sarcelle, et c'est la condition du verre dépoli : une
+// surface translucide sur du gris uni floute du gris et rend du gris.
+$ac-background: #f0fdfa;

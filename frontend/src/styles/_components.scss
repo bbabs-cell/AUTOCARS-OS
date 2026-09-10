@@ -16,11 +16,49 @@
 // Le conteneur de base de toute l'interface. Bordure fine plutôt
 // qu'ombre marquée : c'est ce qui donne l'aspect « aéré » demandé.
 
+// LA CARTE PASSE AU VERRE.
+//
+// C'est ici que se joue le « trop plat » : la carte était un
+// rectangle blanc sur un fond gris, sans lumière ni épaisseur. Elle
+// devient une surface translucide posée SUR quelque chose — les
+// halos de la coque — avec un liseré clair qui attrape la lumière et
+// une ombre portée qui la décolle.
+//
+// Le rayon passe de 12 à 16 px : le verre veut des angles plus doux,
+// une arête vive contredit l'idée de matière.
+//
+// Le contenu prend `position: relative` pour passer AU-DESSUS des
+// halos, qui sont en z-index 0 dans la coque.
 .ac-card {
-  background-color: var(--ac-surface);
-  border: 1px solid var(--ac-border);
-  border-radius: var(--ac-radius-lg);
-  box-shadow: var(--ac-shadow-sm);
+  position: relative;
+  z-index: 1;
+  background-color: var(--ac-verre-fond);
+  backdrop-filter: blur(var(--ac-verre-flou));
+  -webkit-backdrop-filter: blur(var(--ac-verre-flou));
+  border: 1px solid var(--ac-verre-bord);
+  border-radius: var(--ac-radius-xl);
+  box-shadow: var(--ac-verre-ombre);
+}
+
+// LA CARTE QUI CONTIENT UN TABLEAU RESTE PLEINE.
+//
+// Un tableau de quarante lignes qui défile ferait recalculer le flou
+// à chaque image, sur un portable modeste, pendant qu'un employé
+// cherche un véhicule. La règle de `_glass.scss` s'applique : le
+// verre ne va jamais sur une surface qui défile.
+//
+// `:has()` fait le tri tout seul — aucune classe à poser à la main
+// dans les quatorze gabarits qui contiennent un tableau, donc aucune
+// occasion de l'oublier.
+.ac-card:has(.ac-table),
+.ac-card:has(.ac-table-wrapper) {
+  background-color: var(--ac-verre-plein);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .ac-card { background-color: rgb(255 255 255 / 97%); }
 }
 
 .ac-card__header {
