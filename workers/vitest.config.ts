@@ -48,10 +48,28 @@ export default defineConfig({
     // mesurée ailleurs, par `tools/banc-mesures.mjs`, qui n'accepte
     // rien au-dessus de 10 ms. Ce délai-ci ne couvre que le harnais.
     //
-    // CE QU'IL COÛTE : un test réellement bloqué met 30 s à le dire au
+    // 30 s ne suffisaient pas : sur le même poste, les mêmes tests
+    // passent de 2 s à 40 s selon le moment, sous la charge des
+    // travailleurs parallèles. Ce n'est pas une lenteur constante,
+    // c'est une IRRÉGULARITÉ — et aucun délai fixe ne la couvre
+    // proprement. 60 s laisse la marge nécessaire.
+    //
+    // LE VRAI LEVIER N'EST PAS ICI, IL EST DANS LA CONCURRENCE.
+    // Chaque travailleur refait la mise en place complète en même
+    // temps que les autres, et ils se disputent le disque. Sur une
+    // machine lente, en réduire le nombre rend chaque test PLUS
+    // rapide, même si l'ensemble ne l'est pas :
+    //
+    //     npm test -- --maxWorkers=2
+    //
+    // On ne le fixe pas ici : sur une machine normale, la parallélisme
+    // complet fait passer la suite en 69 s, et l'imposer à tout le
+    // monde coûterait cette vitesse pour le confort d'un poste.
+    //
+    // CE QU'IL COÛTE : un test réellement bloqué met 60 s à le dire au
     // lieu de 5. C'est le prix, et il est assumé.
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
   },
   plugins: [
     cloudflareTest({

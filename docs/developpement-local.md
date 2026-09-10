@@ -103,8 +103,23 @@ Les délais du harnais sont réglés à 30 secondes précisément pour que la
 suite reste juste sur une machine lente (voir `vitest.config.ts`), donc
 elle passe — simplement lentement.
 
-Pour retrouver une vitesse normale, excluez le dossier de travail de
-l'analyse en temps réel :
+Deux leviers, dans cet ordre.
+
+**1. Réduire la concurrence.** Chaque travailleur Vitest refait la mise
+en place complète en même temps que les autres, et ils se disputent le
+disque. En réduire le nombre rend chaque test plus rapide :
+
+```powershell
+npm test -- --maxWorkers=2
+```
+
+C'est ce qui empêche un test lent de dépasser son délai. Ce n'est pas
+réglé dans `vitest.config.ts` : sur une machine normale, le parallélisme
+complet fait passer la suite en 69 s, et l'imposer à tous coûterait
+cette vitesse pour le confort d'un poste.
+
+**2. Écarter l'antivirus.** Excluez le dossier de travail de l'analyse
+en temps réel :
 
 > **Sécurité Windows** → **Protection contre les virus et menaces** →
 > **Gérer les paramètres** → **Exclusions** → **Ajouter une exclusion**
