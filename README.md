@@ -97,11 +97,12 @@ AUTOCARS-OS/
 | [docs/security.md](docs/security.md) | Règles de sécurité du projet |
 | [docs/audit-securite.md](docs/audit-securite.md) | Audit du lot 21 : méthode, défauts trouvés, risques acceptés |
 | [docs/deploiement.md](docs/deploiement.md) | Mise en production, sauvegarde, restauration |
-| [docs/installation-vps-ovh.md](docs/installation-vps-ovh.md) | **Installation pas à pas** d'un VPS OVH pour `api.magyapro.com` |
+| [docs/mise-en-service-cloudflare.md](docs/mise-en-service-cloudflare.md) | **Mise en service pas à pas** sur Cloudflare : Workers, D1, R2, Images, Resend, domaine |
 | [docs/migration-cloudflare-workers.md](docs/migration-cloudflare-workers.md) | **Chiffrage mesuré** d'une réécriture du backend vers Workers + D1 |
 | [workers/README.md](workers/README.md) | **Étape 1 faite** : la tranche verticale sur Workers + D1, et ce qu'elle a mesuré |
 | [deploy/backup-offsite.sh](deploy/backup-offsite.sh) | Envoi vérifié des sauvegardes vers Cloudflare R2 |
-| [docs/deploiement-vercel.md](docs/deploiement-vercel.md) | Mise en ligne sur Vercel : l'application d'un côté, l'API de l'autre |
+| [docs/installation-vps-ovh.md](docs/installation-vps-ovh.md) | *Archive* : l'installation VPS OVH + PHP, avant la migration |
+| [docs/deploiement-vercel.md](docs/deploiement-vercel.md) | *Archive* : la mise en ligne Vercel, quand l'application et l'API étaient séparées |
 | [docs/performance.md](docs/performance.md) | Mesures à l'échelle, budgets par écran, ce qui a été trouvé |
 | [docs/grille-observation-terrain.md](docs/grille-observation-terrain.md) | **À imprimer** : comment observer une vraie station, et quoi en conclure |
 

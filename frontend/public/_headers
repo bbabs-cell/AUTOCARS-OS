@@ -1,0 +1,80 @@
+# ==================================================================
+# EN-TÊTES DE SÉCURITÉ DE L'APPLICATION
+# ==================================================================
+# Ces en-têtes vivaient dans « vercel.json ». Vercel a disparu — tout
+# est servi par le Worker — mais les protections, elles, restent
+# nécessaires. Cloudflare lit ce fichier depuis le dossier des
+# fichiers statiques et applique les règles aux réponses.
+#
+# Attention : ce fichier ne couvre QUE les fichiers statiques
+# (index.html, JS, CSS, images). Les réponses de l'API sont
+# construites dans « workers/src/core/response.ts », qui pose déjà
+# nosniff, Referrer-Policy et X-Frame-Options de son côté.
+#
+# Angular copie tout le contenu de « frontend/public » vers le
+# dossier de construction : c'est pourquoi le fichier est ici et non
+# dans « dist », qui est régénéré à chaque build.
+# ------------------------------------------------------------------
+
+/*
+  # Interdit au navigateur de repasser en HTTP pendant un an, même si
+  # l'utilisateur tape « magyapro.com » sans le « s ».
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+  # La protection la plus utile contre une injection de script : même
+  # si du HTML étranger arrive dans la page, le navigateur refuse
+  # d'exécuter un script qui ne vient pas de notre propre origine.
+  #
+  # 'unsafe-inline' n'est toléré que pour les STYLES : Angular pose
+  # ses styles de composant en ligne. Il n'est PAS accordé aux
+  # scripts, là où le risque réel se trouve.
+  #
+  # connect-src 'self' suffit désormais : l'API est sur la même
+  # origine que l'application. C'était impossible du temps où
+  # l'application et l'API vivaient sur deux domaines.
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+  # Empêche le navigateur de « deviner » le type d'un fichier. Sans
+  # cela, une photo mal formée pourrait être interprétée comme du
+  # HTML, donc exécutée.
+  X-Content-Type-Options: nosniff
+
+  # Aucune adresse interne (numéro d'opération, de station) ne part
+  # vers un site tiers dans l'en-tête Referer.
+  Referrer-Policy: no-referrer
+
+  # frame-ancestors ci-dessus fait le vrai travail ; celui-ci couvre
+  # les navigateurs anciens. Les deux visent le clickjacking : un site
+  # malveillant qui afficherait l'application dans un cadre invisible
+  # pour capter les clics d'un employé connecté.
+  X-Frame-Options: DENY
+
+  # L'application n'a besoin ni de la caméra, ni du micro, ni de la
+  # position, ni du paiement. On les refuse explicitement plutôt que
+  # de compter sur le fait qu'aucun code ne les demande.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# ------------------------------------------------------------------
+# MISE EN CACHE
+# ------------------------------------------------------------------
+# Angular met une empreinte dans le nom de chaque fichier JS et CSS
+# (« main-WY5MJLKG.js »). Le contenu d'un tel nom ne change JAMAIS :
+# une modification produit un nouveau nom, donc une nouvelle adresse.
+#
+# On peut donc dire au navigateur de le garder un an sans jamais
+# revenir demander s'il a changé. Par défaut, Cloudflare le fait
+# revalider à chaque chargement de page : un aller-retour par fichier,
+# ce qui se sent sur une connexion mobile.
+#
+# « index.html » n'est pas concerné : c'est lui qui porte la liste des
+# empreintes, il doit rester revalidé à chaque visite, sinon une mise
+# en ligne ne serait jamais vue.
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable

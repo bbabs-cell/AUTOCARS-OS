@@ -1,5 +1,20 @@
 # Mise en ligne sur Vercel
 
+> ## ⚠️ Ce document ne décrit plus l'architecture retenue
+>
+> L'application n'est plus coupée en deux. Le Worker sert **à la fois**
+> l'application et l'API, sur une seule origine, en un seul déploiement.
+> `vercel.json` a été supprimé du dépôt : le suivre mènerait vers
+> `api.magyapro.com`, un serveur qui n'existe plus.
+>
+> **Procédure à jour : [`mise-en-service-cloudflare.md`](mise-en-service-cloudflare.md).**
+>
+> Ce document est conservé parce qu'il explique *pourquoi* la coupure en
+> deux avait été envisagée, et ce qu'elle coûtait. C'est le raisonnement
+> qui garde de la valeur, pas les commandes.
+
+---
+
 > Ce document complète [`deploiement.md`](deploiement.md), qui décrit
 > la mise en ligne sur un serveur unique. Ici, l'application est
 > coupée en deux parce que Vercel impose de la couper en deux.

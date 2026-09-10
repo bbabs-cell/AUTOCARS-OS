@@ -1,5 +1,20 @@
 # Installation sur un VPS OVH — magyapro.com
 
+> ## ⚠️ Ce document ne décrit plus l'architecture retenue
+>
+> Il n'y a plus de VPS OVH, plus de PHP, plus de MySQL. Le backend a été
+> réécrit sur Cloudflare Workers + D1, et le même Worker sert
+> l'application. Ni la machine, ni les paquets, ni les enregistrements
+> DNS décrits ici ne correspondent à ce qui est déployé.
+>
+> **Procédure à jour : [`mise-en-service-cloudflare.md`](mise-en-service-cloudflare.md).**
+>
+> Ce document reste utile comme trace : il montre ce que l'installation
+> demandait avant, ce qui rend mesurable ce que la migration a réellement
+> supprimé.
+
+---
+
 > Procédure complète, dans l'ordre, à suivre une seule fois.
 > Chaque bloc se copie tel quel. Les seules valeurs à remplacer sont
 > signalées par `⟨…⟩`.
