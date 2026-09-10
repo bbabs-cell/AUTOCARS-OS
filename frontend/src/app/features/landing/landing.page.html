@@ -49,7 +49,7 @@
   <!-- ============================================================
        L'ACCROCHE
        ============================================================ -->
-  <section class="ac-lp-hero">
+  <section class="ac-lp-hero ac-lp-bande">
     <div class="ac-lp-container">
       <p class="ac-lp-eyebrow">Logiciel de gestion pour stations de lavage</p>
 
@@ -65,10 +65,10 @@
       </p>
 
       <div class="ac-lp-hero__actions">
-        <a routerLink="/register" class="btn btn-primary btn-lg">
-          Créer ma station
+        <a routerLink="/register" class="ac-lp-btn-appel">
+          Créer ma station <i class="bi bi-arrow-right" aria-hidden="true"></i>
         </a>
-        <a routerLink="/login" class="btn btn-outline-secondary btn-lg">
+        <a routerLink="/login" class="btn btn-outline-secondary btn-lg ac-lp-btn-secondaire">
           J'ai déjà un compte
         </a>
       </div>
@@ -92,6 +92,7 @@
        ============================================================ -->
   <section class="ac-lp-section ac-lp-section--sunken">
     <div class="ac-lp-container">
+      <p class="ac-lp-eyebrow">Le problème</p>
       <h2 class="ac-lp-section__title">Ce qui vous coûte cher aujourd'hui</h2>
       <p class="ac-lp-section__lead">
         Trois situations que vous avez déjà vécues cette semaine.
@@ -116,6 +117,7 @@
        ============================================================ -->
   <section id="fonctionnalites" class="ac-lp-section">
     <div class="ac-lp-container">
+      <p class="ac-lp-eyebrow">Fonctionnalités</p>
       <h2 class="ac-lp-section__title">Ce que fait AUTOCARE OS</h2>
       <p class="ac-lp-section__lead">
         Six modules, tous en service. Rien d'annoncé qui n'existe pas.
@@ -138,8 +140,9 @@
   <!-- ============================================================
        LE PARCOURS, EN TROIS TEMPS
        ============================================================ -->
-  <section id="parcours" class="ac-lp-section ac-lp-section--sunken">
+  <section id="parcours" class="ac-lp-section ac-lp-bande">
     <div class="ac-lp-container">
+      <p class="ac-lp-eyebrow">Comment ça marche</p>
       <h2 class="ac-lp-section__title">Comment ça se passe</h2>
       <p class="ac-lp-section__lead">
         De l'arrivée du véhicule à la remise des clés.
@@ -195,6 +198,7 @@
   -->
   <section id="tarifs" class="ac-lp-section ac-lp-section--sunken">
     <div class="ac-lp-container">
+      <p class="ac-lp-eyebrow">Tarifs</p>
       <h2 class="ac-lp-section__title">Combien ça coûte</h2>
 
       @if (hasPricing()) {
@@ -256,7 +260,7 @@
   <!-- ============================================================
        L'APPEL FINAL
        ============================================================ -->
-  <section class="ac-lp-cta">
+  <section class="ac-lp-cta ac-lp-bande">
     <div class="ac-lp-container">
       <h2 class="ac-lp-cta__title">Le prochain véhicule qui arrive</h2>
       <p class="ac-lp-cta__text">
@@ -264,14 +268,14 @@
         dans le logiciel. Vous verrez la différence dès le premier litige
         que vous n'aurez pas.
       </p>
-      <a routerLink="/register" class="btn btn-primary btn-lg">
-        Créer ma station
+      <a routerLink="/register" class="ac-lp-btn-appel">
+        Créer ma station <i class="bi bi-arrow-right" aria-hidden="true"></i>
       </a>
     </div>
   </section>
 </main>
 
-<footer class="ac-lp-footer">
+<footer class="ac-lp-footer ac-lp-pied">
   <div class="ac-lp-container ac-lp-footer__inner">
     <div class="ac-lp-brand">
       <span class="ac-lp-brand__logo"><i class="bi bi-droplet-fill"></i></span>

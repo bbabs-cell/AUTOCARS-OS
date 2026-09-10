@@ -113,24 +113,139 @@
 
 // --- L'accroche ---------------------------------------------------
 
+// ==================================================================
+// LES BANDES
+// ==================================================================
+// Une page vitrine et un outil de travail n'obéissent pas aux mêmes
+// règles. L'application reste blanche et calme — les employés y
+// passent huit heures. Ici, il s'agit de convaincre un gérant de
+// station en trente secondes, et le calme y devient de la fadeur.
+//
+// D'où les bandes pleine largeur : elles découpent la lecture, elles
+// donnent un rythme, et elles font ressortir ce qu'on veut voir.
+//
+// LE BLEU EST `--ac-primary-700`, ET LE CHOIX EST MESURÉ :
+//
+//              blanc dessus   surface safran dessus
+//   primary      5.17:1            2.08:1   ✗
+//   primary-600  6.70:1            2.69:1   ✗
+//   primary-700  8.72:1            3.50:1   ✓
+//
+// Les deux comptent. Le texte blanc doit être LU (seuil 4.5), et le
+// bouton d'appel doit se DÉTACHER de la bande (seuil 3.0 pour une
+// surface). Sur les deux bleus plus clairs, le bouton safran se
+// fondait dans le fond — il aurait fallu lui ajouter une bordure pour
+// rattraper un choix de couleur.
+//
+// UN APLAT, PAS UN DÉGRADÉ. Le prompt 1 interdit les dégradés
+// agressifs ; lever le §37 sur les couleurs ne lève pas cet
+// interdit-là, et rien n'oblige à le faire — une bande unie tient
+// aussi bien.
+.ac-lp-bande {
+  background-color: var(--ac-primary-700);
+  color: var(--ac-white);
+}
+
+.ac-lp-bande .ac-lp-section__title,
+.ac-lp-bande .ac-lp-hero__title {
+  color: var(--ac-white);
+}
+
+// Le texte secondaire ne devient pas gris sur fond bleu : un gris
+// clair sur bleu foncé perd tout contraste. On le laisse blanc et on
+// baisse l'opacité — le rapport reste au-dessus du seuil.
+// TOUT ce qui porte du texte dans une bande, pas seulement les deux
+// classes évidentes.
+//
+// La première version ne traitait que le titre de section et le
+// chapeau. Au rendu, la bande « Comment ça se passe » affichait ses
+// étapes en gris foncé sur bleu, et l'appel final tout entier était
+// illisible : ces blocs emploient `.ac-lp-card__title`,
+// `.ac-lp-card__text` et `.ac-lp-cta__*`, qu'aucune règle ne
+// couvrait.
+//
+// Le défaut n'était visible qu'AU RENDU. Le SCSS compilait, les
+// classes existaient, et le texte était invisible. C'est le genre de
+// chose qu'on ne trouve qu'en regardant la page.
+.ac-lp-bande .ac-lp-section__lead,
+.ac-lp-bande .ac-lp-hero__text,
+.ac-lp-bande .ac-lp-card__text,
+.ac-lp-bande .ac-lp-cta__text {
+  color: rgb(255 255 255 / 82%);
+}
+
+.ac-lp-bande .ac-lp-card__title,
+.ac-lp-bande .ac-lp-cta__title {
+  color: var(--ac-white);
+}
+
+// Le numéro d'étape : pastille claire, chiffre bleu foncé. Sur fond
+// bleu, l'inverse — un chiffre blanc sur bleu clair — passerait mais
+// se lirait moins bien de loin.
+.ac-lp-bande .ac-lp-step__number {
+  background-color: var(--ac-white);
+  color: var(--ac-primary-700);
+}
+
+// L'ACCENT DU TITRE PRINCIPAL.
+//
+// Il valait `--ac-primary` : le bleu du produit sur la bande bleue du
+// produit. Contraste mesuré : 1.69:1. La moitié du titre disparaissait
+// dans le fond — et c'est justement la moitié qu'on voulait mettre en
+// valeur.
+//
+// Il devient safran : 3.50:1 sur la bande, et il fait écho au bouton
+// d'appel placé juste dessous. Deux touches de la même couleur, aux
+// deux endroits où le regard s'arrête.
+//
+// 3.50 SUFFIT ICI, ET NULLE PART AILLEURS. Le seuil de 4.5 vaut pour
+// du texte courant ; pour du GRAND texte — au moins 24 px, ou 18.7 px
+// en gras — il tombe à 3.0, parce qu'un gros caractère reste lisible
+// à moindre contraste. Ce titre fait de 32 à 52 px en gras.
+//
+// La même couleur sur un paragraphe ordinaire serait donc un défaut.
+// C'est pourquoi elle n'est appliquée qu'à `.ac-lp-hero__accent`, et
+// pas offerte comme une classe de texte réutilisable.
+.ac-lp-bande .ac-lp-hero__accent {
+  color: var(--ac-saffron);
+}
+
+// La coche verte des listes reste verte : sur bande, elle garde son
+// sens de validation et son contraste tient.
+.ac-lp-bande .ac-lp-checklist i {
+  color: var(--ac-success);
+}
+
 .ac-lp-hero {
   padding: var(--ac-space-16) 0 var(--ac-space-12);
   text-align: center;
-
-  // Un dégradé TRÈS léger, du blanc vers le fond de page. Le cahier
-  // des charges interdit les dégradés agressifs : celui-ci ne se
-  // remarque pas, il empêche seulement le bandeau de flotter sur un
-  // aplat parfaitement uniforme.
-  background: linear-gradient(180deg, var(--ac-surface) 0%, var(--ac-background) 100%);
 }
 
+// Le surtitre devient une PASTILLE plutôt qu'une ligne de texte.
+//
+// Ce n'est pas décoratif : sur une page longue, la pastille marque le
+// DÉBUT d'une section pour qui fait défiler vite. Un petit texte en
+// majuscules se confond avec le reste ; une capsule s'accroche à
+// l'œil au passage.
 .ac-lp-eyebrow {
-  margin-bottom: var(--ac-space-3);
-  color: var(--ac-primary);
+  display: inline-block;
+  margin-bottom: var(--ac-space-4);
+  padding: 0.35rem var(--ac-space-3);
+  border-radius: var(--ac-radius-full);
+  background-color: var(--ac-primary-50);
+  color: var(--ac-primary-700);
   font-size: var(--ac-text-sm);
   font-weight: var(--ac-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+// Sur une bande bleue, la pastille s'inverse : fond translucide clair
+// et texte blanc. Le fond `--ac-primary-50` y serait presque blanc et
+// crierait plus fort que le titre qu'il annonce.
+.ac-lp-bande .ac-lp-eyebrow {
+  background-color: rgb(255 255 255 / 15%);
+  color: var(--ac-white);
 }
 
 .ac-lp-hero__title {
@@ -455,4 +570,112 @@
 
 .ac-lp-footer__links a:hover {
   color: var(--ac-primary-700);
+}
+
+// ==================================================================
+// LE BOUTON D'APPEL — SAFRAN, TEXTE FONCÉ
+// ==================================================================
+// LE TEXTE EST FONCÉ, ET CE N'EST PAS UN GOÛT :
+//
+//   texte foncé sur safran   7.51:1   ✓
+//   texte blanc sur safran   2.49:1   ✗
+//
+// Un bouton jaune à texte blanc est un classique des maquettes, et
+// il est illisible. On le voit sur beaucoup de sites ; il n'y a pas
+// de raison de reproduire l'erreur.
+//
+// POURQUOI PAS BLEU. Dans l'application, le bleu dit « clique ici »
+// et cette règle ne bouge pas. Mais sur une BANDE BLEUE, un bouton
+// bleu disparaît. Le safran n'entre pas en concurrence : il n'y a
+// qu'une seule action à cet endroit, et c'est celle-là.
+.ac-lp-btn-appel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  padding: var(--ac-space-3) var(--ac-space-6);
+  border: none;
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-saffron);
+  color: var(--ac-gray-900);
+  font-weight: var(--ac-weight-semibold);
+  font-size: var(--ac-text-base);
+  text-decoration: none;
+  transition: background-color var(--ac-duree-rapide) var(--ac-courbe-sortie),
+              transform var(--ac-duree-immediat) var(--ac-courbe-sortie);
+
+  &:hover {
+    background-color: var(--ac-saffron-600);
+    color: var(--ac-gray-900);
+    text-decoration: none;
+  }
+
+  &:active { transform: scale(0.97); }
+}
+
+// Le bouton secondaire d'une bande : contour blanc, fond transparent.
+// Un bouton blanc plein à côté du safran ferait deux actions de force
+// égale, alors qu'une seule compte.
+.ac-lp-bande .btn-outline-secondary,
+.ac-lp-btn-secondaire {
+  border-color: rgb(255 255 255 / 45%);
+  background-color: transparent;
+  color: var(--ac-white);
+
+  &:hover {
+    border-color: var(--ac-white);
+    background-color: rgb(255 255 255 / 12%);
+    color: var(--ac-white);
+  }
+}
+
+// La note sous les boutons, sur bande.
+.ac-lp-bande .ac-lp-hero__note {
+  color: rgb(255 255 255 / 70%);
+}
+
+// ==================================================================
+// LE PIED DE PAGE
+// ==================================================================
+// Sombre, et c'est le SEUL endroit sombre du produit. Un pied de page
+// clôt la page : il marque la fin de la lecture. Le prompt 1 interdit
+// le mode sombre et les fonds noirs POUR L'APPLICATION — un outil
+// utilisé huit heures en plein soleil. Un pied de page de vitrine
+// n'est ni l'un ni l'autre.
+//
+// Blanc dessus : 16.25:1.
+.ac-lp-pied {
+  background-color: var(--ac-gray-800);
+  color: rgb(255 255 255 / 80%);
+}
+
+.ac-lp-pied a {
+  color: rgb(255 255 255 / 80%);
+
+  &:hover { color: var(--ac-white); }
+}
+
+.ac-lp-pied .ac-lp-brand,
+.ac-lp-pied strong {
+  color: var(--ac-white);
+}
+
+// DEUX RÈGLES QUI RATTRAPENT DES COULEURS PENSÉES POUR UN FOND CLAIR.
+//
+// Renverser un fond ne suffit jamais : tout ce qui est écrit dessus a
+// été calibré pour l'ancien. Mesuré sur ce pied :
+//
+//   `.ac-caption` (#67645e)          2.76:1   ✗
+//   survol des liens (#1e40af)       1.86:1   ✗
+//
+// Le second est le plus vicieux : le lien devenait MOINS lisible au
+// survol qu'au repos. Un bleu foncé sur un fond foncé.
+//
+// La bordure supérieure du pied garde `--ac-border`, un gris clair :
+// sur fond sombre elle devient un filet lumineux, ce qui convient.
+.ac-lp-pied .ac-caption {
+  color: rgb(255 255 255 / 80%);   // 6.31:1
+}
+
+.ac-lp-pied .ac-lp-footer__links a:hover {
+  color: var(--ac-white);
 }
