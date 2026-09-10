@@ -4,6 +4,37 @@ compatibility_date = "2026-08-15"
 compatibility_flags = ["nodejs_compat"]
 
 # ==================================================================
+# QUI PEUT ATTEINDRE CE WORKER
+# ==================================================================
+# Les deux réglages ci-dessous étaient implicites, et Wrangler
+# l'a signalé au premier déploiement. Un défaut par défaut reste un
+# défaut : on les écrit.
+
+# L'adresse « autocare-api.<compte>.workers.dev ».
+#
+# Vraie tant que le domaine n'est pas branché : c'est la seule façon
+# d'atteindre le produit. À REPASSER À `false` une fois
+# autocare.magyapro.com en service — non pas parce que cette adresse
+# serait dangereuse, mais parce qu'elle CONTOURNE la zone Cloudflare :
+# les règles de pare-feu, la limitation de débit et les journaux
+# qu'on posera sur magyapro.com ne s'y appliquent pas. Deux portes,
+# une seule surveillée.
+workers_dev = true
+
+# Les « Preview URLs » : chaque version déployée reçoit sa propre
+# adresse publique, « <version>-autocare-api.<compte>.workers.dev ».
+#
+# REFUSÉ, et ce n'est pas une précaution de principe. Ces adresses
+# partagent les MÊMES LIAISONS que la production — la même base D1,
+# le même seau de photos. Une version d'avant un correctif de
+# sécurité resterait donc accessible, et utilisable contre les
+# données réelles, indéfiniment.
+#
+# Corriger une faille consisterait à déployer une version qui la
+# répare, en laissant en ligne celle qui l'ouvre.
+preview_urls = false
+
+# ==================================================================
 # LE WORKER SERT AUSSI L'APPLICATION
 # ==================================================================
 # Un seul déploiement, une seule origine.
