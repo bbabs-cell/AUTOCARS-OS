@@ -46,7 +46,19 @@ function node(source: string): string {
  * l'ordre qui est en cause.
  */
 function extrait(nomFonction: string): string {
-  const source = fs.readFileSync(path.join(racine, 'tools', 'restauration.mjs'), 'utf8');
+  // LES FINS DE LIGNE SONT NORMALISÉES AVANT TOUTE RECHERCHE.
+  //
+  // Git convertit les fichiers en CRLF au moment du clone sous
+  // Windows. Sans cette ligne, la recherche de « \n}\n » ne trouvait
+  // rien dans un fichier en « \r\n }\r\n », renvoyait -1, et le
+  // découpage ci-dessous produisait une chaîne VIDE. Le fragment
+  // exécuté ne contenait alors aucune fonction, et Node répondait
+  // « ordreDeSuppression is not defined » — un message qui désigne le
+  // mauvais coupable.
+  const source = fs
+    .readFileSync(path.join(racine, 'tools', 'restauration.mjs'), 'utf8')
+    .replace(/\r\n/g, '\n');
+
   const debut = source.indexOf(`function ${nomFonction}(`);
 
   expect(debut, `${nomFonction} introuvable dans restauration.mjs`).toBeGreaterThan(-1);
@@ -54,6 +66,13 @@ function extrait(nomFonction: string): string {
   // On coupe à la première accolade fermante en début de ligne : les
   // fonctions du fichier sont écrites à plat.
   const fin = source.indexOf('\n}\n', debut);
+
+  // LE GARDE-FOU QUI MANQUAIT. Le début en avait un, la fin non. Une
+  // extraction ratée doit le DIRE, pas rendre du vide : c'est le vide
+  // qui a transformé un défaut d'outillage en six échecs
+  // incompréhensibles.
+  expect(fin, `la fin de ${nomFonction}() est introuvable dans restauration.mjs`)
+    .toBeGreaterThan(debut);
 
   return source.slice(debut, fin + 3);
 }
