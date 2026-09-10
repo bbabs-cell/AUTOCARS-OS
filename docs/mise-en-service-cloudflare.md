@@ -6,6 +6,22 @@
 
 ---
 
+## 0. Se connecter
+
+Toutes les commandes qui suivent agissent sur **votre** compte
+Cloudflare. Elles échouent tant que Wrangler ne sait pas qui vous êtes.
+
+```bash
+cd workers
+npx wrangler login          # ouvre le navigateur
+npx wrangler whoami         # doit afficher votre compte, pas « not authenticated »
+```
+
+Notez l'**Account ID** affiché par `whoami` : plusieurs écrans du
+tableau de bord Cloudflare le demandent.
+
+---
+
 ## 1. Le plan payant est obligatoire
 
 Ce n'est pas un confort. Le plan gratuit limite chaque requête à
@@ -143,12 +159,50 @@ fausse assurance, ce qui est pire que pas de contrôle.
 
 ## 7. Déployer
 
+**L'application doit être construite avant de déployer.** Le Worker ne
+sert pas seulement l'API : `wrangler.toml` pointe `[assets]` vers
+`../frontend/dist/frontend/browser`. Ce dossier n'est pas dans Git — il
+est produit par la construction. Déployer sans l'avoir refait met en
+ligne l'ancienne version de l'application, ou rien du tout.
+
 ```bash
+cd ../frontend && npm ci && npm run build     # produit dist/frontend/browser
+cd ../workers
 npm test                    # 658 + 22 tests
 npm run typecheck
 node tools/avant-vol.mjs --remote
 npx wrangler deploy
 ```
+
+Une seule commande met en ligne l'application **et** l'API : elles
+partagent une origine, donc un déploiement. C'est ce qui permet à
+`environment.ts` de viser `/api` en relatif, sans CORS.
+
+À la fin, `wrangler deploy` affiche une adresse en
+`.workers.dev`. Ouvrez-la : vous devez voir l'application, et
+`/api/health` doit répondre `{"success":true,…}`. Tant que le domaine
+n'est pas branché (section 7 bis), c'est la seule adresse utilisable.
+
+---
+
+## 7 bis. Brancher magyapro.com
+
+Le domaine est déjà chez Cloudflare, donc il n'y a pas de DNS à
+recopier ailleurs.
+
+Tableau de bord → **Workers & Pages** → `autocare-api` → **Settings** →
+**Domains & Routes** → **Add** → **Custom domain** → `magyapro.com`.
+
+Cloudflare crée l'enregistrement et le certificat lui-même. Comptez
+quelques minutes.
+
+Ensuite, vérifiez que les deux variables de `[vars]` correspondent bien
+au domaine servi, sinon les liens des courriels enverront ailleurs :
+
+| Variable | Doit valoir |
+|---|---|
+| `APP_FRONTEND_URL` | `https://magyapro.com` |
+| `MAIL_FROM` | une adresse **du domaine vérifié chez Resend** |
 
 ---
 
