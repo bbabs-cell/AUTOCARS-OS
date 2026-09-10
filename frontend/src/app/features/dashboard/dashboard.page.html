@@ -66,8 +66,15 @@
     La recette n'est pas masquée pour l'employé : elle n'a jamais
     été envoyée par le serveur.
   -->
-  <div class="row g-3 mb-4">
-    <div class="col-6" [class.col-lg-3]="canSeeMoney()" [class.col-lg-4]="!canSeeMoney()">
+  <!--
+    LES TAILLES SONT INÉGALES, ET C'EST LE PROPOS.
+    Une grille de colonnes égales donne le même poids à tout. Ici,
+    l'encaissement du jour occupe deux fois la place des autres : c'est
+    le chiffre que le gérant vient chercher, et la taille est le signal
+    le plus fort dont on dispose — plus fort que la couleur.
+  -->
+  <div class="ac-bento mb-4">
+    <div [class]="canSeeMoney() ? 'ac-bento__3' : 'ac-bento__4'">
       <div class="ac-card h-100">
         <div class="ac-card__body">
           <div class="ac-caption">Véhicules accueillis</div>
@@ -79,7 +86,7 @@
       </div>
     </div>
 
-    <div class="col-6" [class.col-lg-3]="canSeeMoney()" [class.col-lg-4]="!canSeeMoney()">
+    <div [class]="canSeeMoney() ? 'ac-bento__3' : 'ac-bento__4'">
       <div class="ac-card h-100">
         <div class="ac-card__body">
           <div class="ac-caption">En station</div>
@@ -91,7 +98,7 @@
       </div>
     </div>
 
-    <div class="col-6" [class.col-lg-3]="canSeeMoney()" [class.col-lg-4]="!canSeeMoney()">
+    <div [class]="canSeeMoney() ? 'ac-bento__3' : 'ac-bento__4'">
       <div class="ac-card h-100">
         <div class="ac-card__body">
           <div class="ac-caption">Restitués aujourd'hui</div>
@@ -106,8 +113,8 @@
     </div>
 
     @if (canSeeMoney() && d.today.revenue !== undefined) {
-      <div class="col-6 col-lg-3">
-        <div class="ac-card h-100">
+      <div class="ac-bento__3">
+        <div class="ac-card ac-bento__tuile--maitresse h-100">
           <div class="ac-card__body">
             <div class="ac-caption">Encaissé aujourd'hui</div>
             <div class="ac-stat ac-stat--money">{{ d.today.revenue | acAmount }}</div>
@@ -128,14 +135,14 @@
     }
   </div>
 
-  <div class="row g-4">
+  <div class="ac-bento">
     <!--
       ==============================================================
       3. COMMENT ÇA SE PASSE — LA TENDANCE
       ==============================================================
     -->
     @if (canSeeMoney() && revenuePoints().length > 0) {
-      <div class="col-lg-7">
+      <div class="ac-bento__8">
         <div class="ac-card h-100">
           <div class="ac-card__header">
             <h2 class="ac-card__title">Recette des 7 derniers jours</h2>
@@ -149,7 +156,7 @@
         </div>
       </div>
 
-      <div class="col-lg-5">
+      <div class="ac-bento__4">
         <div class="ac-card h-100">
           <div class="ac-card__header">
             <h2 class="ac-card__title">Comment les clients ont payé</h2>
@@ -168,7 +175,7 @@
       la moitié des passages aide un employé à s'organiser. Les
       montants, eux, n'ont pas été envoyés à qui n'y a pas droit.
     -->
-    <div class="col-lg-7">
+    <div class="ac-bento__8">
       <div class="ac-card h-100">
         <div class="ac-card__header">
           <h2 class="ac-card__title">Prestations les plus demandées</h2>
@@ -225,7 +232,7 @@
 
     <!-- L'ÉTAT DE LA CAISSE, pour qui y a droit -->
     @if (d.cash; as cash) {
-      <div class="col-lg-5">
+      <div class="ac-bento__4">
         <div class="ac-card h-100">
           <div class="ac-card__header">
             <h2 class="ac-card__title">Caisse</h2>

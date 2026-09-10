@@ -1542,3 +1542,70 @@
   padding-block: var(--ac-space-4);
   padding-right: var(--ac-space-5);
 }
+
+// ==================================================================
+// LA GRILLE BENTO
+// ==================================================================
+//
+// POURQUOI ELLE REMPLACE LA GRILLE BOOTSTRAP SUR LE TABLEAU DE BORD.
+//
+// Une grille de colonnes égales donne le même poids à tout. Sur un
+// tableau de bord, c'est faux : « encaissé aujourd'hui » et « dont 3
+// en attente » ne méritent pas la même surface. Le regard d'un gérant
+// qui ouvre l'écran doit tomber sur ce qui compte, et la TAILLE est
+// le signal le plus fort dont on dispose — plus fort que la couleur,
+// plus fort que la position.
+//
+// Douze colonnes, comme Bootstrap, mais des tuiles qui en occupent
+// des largeurs INÉGALES et choisies.
+//
+// SUR TÉLÉPHONE, TOUT RETOMBE EN UNE COLONNE. Une grille asymétrique
+// sur 390 px produit des tuiles de deux centimètres ; l'asymétrie n'a
+// de sens qu'à partir d'une certaine largeur.
+.ac-bento {
+  display: grid;
+  gap: var(--ac-space-4);
+  grid-template-columns: 1fr;
+
+  @media (min-width: 576px) {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+// Les largeurs. `minmax(0, 1fr)` ci-dessus n'est pas un détail : sans
+// le 0, une tuile contenant un tableau large refuserait de se
+// comprimer et ferait déborder la page entière.
+@media (min-width: 576px) {
+  .ac-bento__3  { grid-column: span 6; }
+  .ac-bento__4  { grid-column: span 6; }
+  .ac-bento__6  { grid-column: span 12; }
+  .ac-bento__8  { grid-column: span 12; }
+  .ac-bento__12 { grid-column: span 12; }
+}
+
+@media (min-width: 992px) {
+  .ac-bento__3  { grid-column: span 3; }
+  .ac-bento__4  { grid-column: span 4; }
+  .ac-bento__6  { grid-column: span 6; }
+  .ac-bento__8  { grid-column: span 8; }
+  .ac-bento__12 { grid-column: span 12; }
+}
+
+// LA TUILE QUI COMPTE. Une seule par écran — deux, et il n'y en a
+// plus aucune. Elle porte le chiffre que le gérant vient chercher :
+// l'encaissement du jour.
+//
+// Elle se distingue par un fond légèrement teinté et un filet à
+// gauche, pas par une couleur criarde : elle doit ressortir, pas
+// hurler.
+.ac-bento__tuile--maitresse {
+  background-color: var(--ac-primary-50);
+  border-color: var(--ac-primary-200);
+  border-left: 3px solid var(--ac-primary-500);
+}
+
+// La tuile s'étire pour remplir sa rangée : sans cela, deux tuiles
+// côte à côte de contenus inégaux auraient des hauteurs différentes,
+// et la grille aurait l'air cassée.
+.ac-bento > * { min-width: 0; }
+.ac-bento > .ac-card { height: 100%; }

@@ -248,57 +248,53 @@
   // Les huit teintes sont séparées en teinte comme en clarté, et
   // toutes tiennent le contraste 4.5:1 sur fond clair dans leur
   // déclinaison -700.
-  --ac-domain-queue:         #0d9488;   // file d'attente — sarcelle
-  --ac-domain-queue-50:      #eefbf8;
-  --ac-domain-queue-700:     #0f6f66;
+  // SIX TEINTES, PAS HUIT — ET C'EST UN CALCUL, PAS UN GOÛT.
+  //
+  // Chaque teinte doit tenir un écart perceptuel d'au moins 25 avec
+  // TROIS choses à la fois : l'identité sarcelle, les couleurs de sens
+  // (vert, orange, rouge), et chacune des autres teintes de domaine.
+  //
+  // Avec la sarcelle comme couleur d'action, la place manque. Le cyan
+  // tombe à 23.1 de l'identité ; l'ambre à 16.3 de l'orange d'alerte.
+  // Douze candidats testés, dix survivent aux réservées, et le plus
+  // grand jeu mutuellement séparable en compte SIX.
+  //
+  // La file d'attente et les dossiers prennent donc l'identité : c'est
+  // le même flux de travail, un véhicule y passe sans changer de
+  // sujet. Les distinguer par la couleur aurait inventé une frontière
+  // qui n'existe pas dans le métier.
+  --ac-domain-queue:         #0f766e;   // = l'identité
+  --ac-domain-queue-50:      #f0fdfa;
+  --ac-domain-queue-700:     #115e59;
 
-  --ac-domain-operations:    #2563eb;   // dossiers — le bleu du produit
-  --ac-domain-operations-50: #eff6ff;
-  --ac-domain-operations-700:#1e40af;
+  --ac-domain-operations:    #0f766e;   // = l'identité, même flux
+  --ac-domain-operations-50: #f0fdfa;
+  --ac-domain-operations-700:#115e59;
 
-  // La caisse est SAFRAN, pas verte, et c'est délibéré : le vert dit
-  // déjà « réussi » dans ce produit. Un en-tête vert au-dessus d'un
-  // encaissement se lirait comme une confirmation qui n'a pas encore
-  // eu lieu.
-  --ac-domain-cash:          #c2740f;
-  --ac-domain-cash-50:       #fff8ed;
-  --ac-domain-cash-700:      #96570b;
+  --ac-domain-cash:          #1e3a8a;   // marine
+  --ac-domain-cash-50:       #eef2ff;
+  --ac-domain-cash-700:      #1e3a8a;
 
-  --ac-domain-customers:     #7c3aed;   // clients — violet
-  --ac-domain-customers-50:  #f5f0ff;
+  --ac-domain-customers:     #6d28d9;   // violet
+  --ac-domain-customers-50:  #f5f3ff;
   --ac-domain-customers-700: #5b21b6;
 
-  --ac-domain-loyalty:       #be185d;   // fidélité — rose
+  --ac-domain-loyalty:       #be185d;   // rose
   --ac-domain-loyalty-50:    #fdf2f8;
   --ac-domain-loyalty-700:   #9d174d;
 
-  --ac-domain-bookings:      #4f46e5;   // rendez-vous — indigo
-  --ac-domain-bookings-50:   #eef2ff;
-  --ac-domain-bookings-700:  #3730a3;
+  --ac-domain-bookings:      #0369a1;   // ardoise
+  --ac-domain-bookings-50:   #f0f9ff;
+  --ac-domain-bookings-700:  #075985;
 
-  --ac-domain-analytics:     #0891b2;   // statistiques — cyan
-  --ac-domain-analytics-50:  #ecfeff;
-  --ac-domain-analytics-700: #0e7490;
+  --ac-domain-analytics:     #86198f;   // prune
+  --ac-domain-analytics-50:  #fdf4ff;
+  --ac-domain-analytics-700: #701a75;
 
-  // L'équipe est OLIVE, et le choix mérite son paragraphe.
-  //
-  // Elle était d'abord émeraude — #047857. En vérifiant, ce n'était
-  // pas « proche » du vert de réussite : c'était `--ac-success-700`,
-  // AU CARACTÈRE PRÈS. Écart perceptuel mesuré : 0.0. Le bandeau
-  // « Équipe » aurait donc été peint dans la couleur qui signifie
-  // « prêt » partout ailleurs dans le produit.
-  //
-  // L'olive reste dans la famille verte — ce qui convient à l'équipe
-  // et au pointage — mais s'en éloigne franchement : 38 d'écart avec
-  // le vert de réussite, 52 avec la sarcelle de la file d'attente.
-  // Mesuré, pas jugé à l'œil.
-  --ac-domain-team:          #4d7c0f;   // équipe et pointage — olive
-  --ac-domain-team-50:       #f5faea;
+  --ac-domain-team:          #4d7c0f;   // olive
+  --ac-domain-team-50:       #f7fee7;
   --ac-domain-team-700:      #3f6212;
 
-  // La teinte courante. Chaque page pose `--ac-domain` sur son
-  // conteneur ; les composants lisent CETTE variable et n'ont donc
-  // pas à connaître les huit. Sans elle, on retombe sur le bleu.
   --ac-domain:     var(--ac-domain-operations);
   --ac-domain-50:  var(--ac-domain-operations-50);
   --ac-domain-700: var(--ac-domain-operations-700);

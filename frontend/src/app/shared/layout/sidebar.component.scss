@@ -5,8 +5,18 @@
   flex-direction: column;
   width: var(--ac-sidebar-width);
   height: 100vh;
-  background-color: var(--ac-surface);
-  border-right: 1px solid var(--ac-border);
+  // EN VERRE. Elle est en `position: fixed` AU-DESSUS des halos de la
+  // coque : il y a donc réellement quelque chose à flouter derrière
+  // elle, ce qui est la condition de l'effet.
+  //
+  // Elle ne défile pas — son contenu tient en quinze entrées — donc
+  // la règle « pas de verre sur ce qui défile » ne s'y applique pas.
+  // C'est même la surface idéale : grande, immobile, toujours à
+  // l'écran, floutée une seule fois.
+  background-color: var(--ac-verre-fond);
+  backdrop-filter: blur(var(--ac-verre-flou));
+  -webkit-backdrop-filter: blur(var(--ac-verre-flou));
+  border-right: 1px solid var(--ac-verre-bord);
 
   // Fixe : la navigation reste accessible quand le contenu défile.
   position: fixed;
@@ -186,4 +196,10 @@
   padding: var(--ac-space-3);
   border-top: 1px solid var(--ac-border);
   flex-shrink: 0;
+}
+
+// Sans flou disponible, la barre redevient opaque : autrement, le
+// menu se lirait par transparence sur le contenu de la page.
+@supports not (backdrop-filter: blur(1px)) {
+  .ac-sidebar { background-color: rgb(255 255 255 / 97%); }
 }

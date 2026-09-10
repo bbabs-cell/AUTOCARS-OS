@@ -6,8 +6,17 @@
   gap: var(--ac-space-3);
   height: var(--ac-topbar-height);
   padding-inline: var(--ac-space-4);
-  background-color: var(--ac-surface);
-  border-bottom: 1px solid var(--ac-border);
+  // EN VERRE, comme la barre latérale. Elle est `sticky` : le contenu
+  // défile DERRIÈRE elle, et c'est exactement ce que le flou rend
+  // lisible — sans lui, du texte passerait sous une barre
+  // semi-transparente et deviendrait illisible pendant le défilement.
+  //
+  // Le flou n'est ici ni décoratif ni gratuit : il est ce qui rend la
+  // transparence acceptable.
+  background-color: var(--ac-verre-fond);
+  backdrop-filter: blur(var(--ac-verre-flou));
+  -webkit-backdrop-filter: blur(var(--ac-verre-flou));
+  border-bottom: 1px solid var(--ac-verre-bord);
   position: sticky;
   top: 0;
   z-index: var(--ac-z-topbar);
@@ -195,4 +204,8 @@
   background-color: var(--ac-success-50);
   border-color: var(--ac-success-600);
   color: var(--ac-success-700);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .ac-topbar { background-color: rgb(255 255 255 / 97%); }
 }
