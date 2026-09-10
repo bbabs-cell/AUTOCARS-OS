@@ -35,6 +35,26 @@ workers_dev = true
 preview_urls = false
 
 # ==================================================================
+# LES TRACES SONT CONSERVÉES
+# ==================================================================
+# Sans cela, les journaux d'un Worker ne s'observent qu'EN DIRECT :
+# il faut qu'un `wrangler tail` tourne au moment exact où l'incident
+# se produit. Une panne signalée par un employé une heure plus tard
+# n'a alors laissé aucune trace.
+#
+# Le code écrit déjà ce qu'il faut — `index.ts` journalise chaque
+# exception avec « Erreur non rattrapée : » avant de renvoyer un
+# message neutre au client. Encore faut-il pouvoir le relire.
+#
+# `redact_query_string` retire la chaîne de requête des adresses
+# journalisées : un identifiant de dossier ou une plaque passée en
+# paramètre n'a pas à se retrouver dans des journaux consultables par
+# toute personne ayant accès au tableau de bord.
+[observability]
+enabled = true
+redact_query_string = true
+
+# ==================================================================
 # LE WORKER SERT AUSSI L'APPLICATION
 # ==================================================================
 # Un seul déploiement, une seule origine.
