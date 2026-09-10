@@ -71,21 +71,71 @@ describe('empreintes de mot de passe', () => {
  *
  * Ce test échoue dans les deux cas.
  */
-describe('coût de la connexion', () => {
-  it('une vérification reste dans un budget tenable', async () => {
-    const empreinte = await hachePassword('Autocare2026!');
+/** Le coût d'un PBKDF2 de `n` itérations sur CETTE machine, en ms. */
+async function coutDe(n: number): Promise<number> {
+  const cle = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode('Autocare2026!'), 'PBKDF2', false, ['deriveBits'],
+  );
+  const sel = crypto.getRandomValues(new Uint8Array(16));
 
+  const debut = performance.now();
+  await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: sel, iterations: n }, cle, 256,
+  );
+
+  return performance.now() - debut;
+}
+
+describe('coût de la connexion', () => {
+  it('une vérification reste proportionnée à ses itérations', async () => {
+    // Chauffe : la toute première dérivation paie l'initialisation du
+    // moteur, et la compter fausserait l'étalon.
+    await coutDe(1_000);
+
+    const ETALON = 60_000;
+    const etalon = await coutDe(ETALON);
+
+    const empreinte = await hachePassword('Autocare2026!');
     const debut = performance.now();
     await verifiePassword('Autocare2026!', empreinte);
     const duree = performance.now() - debut;
 
-    // Large, volontairement : la machine qui exécute les tests n'est
-    // pas celle de production. Ce test ne prétend pas mesurer la
-    // production — il attrape un dérapage d'un ordre de grandeur.
-    expect(duree).toBeLessThan(400);
+    // ---------------------------------------------------------------
+    // 1. LE CODE HONORE-T-IL LE NOMBRE QU'IL ANNONCE ?
+    //
+    // PBKDF2 coûte linéairement en itérations : la vérification doit
+    // donc coûter ITERATIONS / ETALON fois l'étalon — 10 aujourd'hui.
+    //
+    // La borne BASSE est la plus intéressante des deux. Si la
+    // constante affichait 600 000 pendant que le code en exécute
+    // 10 000, tout le reste du fichier passerait : les empreintes se
+    // vérifieraient, les mauvais mots de passe seraient refusés, et la
+    // protection annoncée serait fausse d'un facteur 60. Seul le
+    // chronomètre le voit.
+    //
+    // Le facteur 3 de part et d'autre absorbe le bruit de mesure sans
+    // laisser passer un écart d'un ordre de grandeur.
+    const attendu = ITERATIONS / ETALON;
+    expect(duree / etalon).toBeGreaterThan(attendu / 3);
+    expect(duree / etalon).toBeLessThan(attendu * 3);
 
-    // Et il attrape aussi le sens inverse : une valeur effondrée à
-    // quelques milliers d'itérations passerait inaperçue autrement.
+    // ---------------------------------------------------------------
+    // 2. LE PLANCHER DE SOLIDITÉ
+    //
+    // Une valeur effondrée à quelques milliers d'itérations passerait
+    // inaperçue autrement : elle resterait proportionnée à elle-même.
     expect(ITERATIONS).toBeGreaterThanOrEqual(210_000);
-  }, 30_000);
+
+    // ---------------------------------------------------------------
+    // 3. LE PLAFOND DE COÛT
+    //
+    // C'est ce que gardait l'ancienne borne en millisecondes, mais
+    // exprimé sur la seule grandeur qui ne dépende pas de la machine.
+    // Mesuré dans workerd : 600 000 itérations coûtent 92 ms, donc
+    // 1 000 000 en coûteraient ~155. Le plan payant offre 30 s de
+    // calcul par requête, mais une connexion n'a pas à en consommer un
+    // dixième — au-delà, c'est l'expérience de l'employé au comptoir
+    // qui se dégrade, à chaque prise de poste.
+    expect(ITERATIONS).toBeLessThanOrEqual(1_000_000);
+  }, 60_000);
 });
