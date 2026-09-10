@@ -23,6 +23,35 @@ export default defineConfig({
     // configuration. Sans cette exclusion, ils seraient chargés ici
     // aussi et échoueraient à la première lecture de fichier.
     include: ['test/**/*.test.ts'],
+
+    // ================================================================
+    // POURQUOI 30 SECONDES ET NON LES 5 PAR DÉFAUT
+    // ================================================================
+    // Ce n'est pas une tolérance accordée à du code lent. Ce qui coûte
+    // ici, c'est la MISE EN PLACE, pas le code vérifié :
+    // `prepareBase()` applique les 3 migrations, vide 21 tables et
+    // réinsère le jeu d'essai — avant CHAQUE test, 658 fois.
+    //
+    // Mesuré : 111 ms sur cette machine, dont 50 ms de migrations.
+    // Sur un poste Windows où les entrées-sorties de workerd sont
+    // ~25 fois plus lentes, la même préparation prend ~2,7 s. La
+    // limite de 5 s laissait alors 2 s au test lui-même, et 159 tests
+    // sur 658 échouaient — tous sur « Test timed out », aucun sur une
+    // assertion.
+    //
+    // Le symptôme était trompeur : un test interrompu en pleine
+    // préparation laisse la base à moitié remplie, et la requête
+    // suivante échoue sur une clé étrangère. On cherche un défaut de
+    // logique là où il n'y a qu'un chronomètre.
+    //
+    // POURQUOI CE N'EST PAS UN PANSEMENT : la latence du produit est
+    // mesurée ailleurs, par `tools/banc-mesures.mjs`, qui n'accepte
+    // rien au-dessus de 10 ms. Ce délai-ci ne couvre que le harnais.
+    //
+    // CE QU'IL COÛTE : un test réellement bloqué met 30 s à le dire au
+    // lieu de 5. C'est le prix, et il est assumé.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
   plugins: [
     cloudflareTest({

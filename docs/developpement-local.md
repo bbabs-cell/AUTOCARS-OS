@@ -86,3 +86,30 @@ npm run typecheck
 Les tests n'ont besoin **ni** de `wrangler dev`, **ni** du jeu de
 démonstration : chacun applique les migrations sur une base vide et
 pose ses propres données.
+
+---
+
+## Les tests sont très lents sous Windows
+
+Symptôme : `npm test` met 15 à 20 minutes au lieu d'une minute, et une
+partie des tests échoue sur `Test timed out`.
+
+La cause n'est pas le projet. `workerd` — le moteur qui exécute les
+tests — crée et détruit beaucoup de petits fichiers dans `.wrangler`.
+L'antivirus de Windows analyse chacun d'eux, ce qui multiplie le coût
+des entrées-sorties par un facteur de l'ordre de 25.
+
+Les délais du harnais sont réglés à 30 secondes précisément pour que la
+suite reste juste sur une machine lente (voir `vitest.config.ts`), donc
+elle passe — simplement lentement.
+
+Pour retrouver une vitesse normale, excluez le dossier de travail de
+l'analyse en temps réel :
+
+> **Sécurité Windows** → **Protection contre les virus et menaces** →
+> **Gérer les paramètres** → **Exclusions** → **Ajouter une exclusion**
+> → **Dossier** → `AUTOCARS-OS\workers\.wrangler`
+
+N'excluez que ce dossier : il ne contient que l'état de travail du
+moteur local, régénéré à volonté. Exclure le dépôt entier reviendrait à
+ne plus analyser le code que vous téléchargez.
