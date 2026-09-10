@@ -52,40 +52,86 @@
        L'ACCROCHE
        ============================================================ -->
   <section class="ac-lp-hero ac-lp-bande">
-    <div class="ac-lp-container">
-      <p class="ac-lp-eyebrow">Logiciel de gestion pour stations de lavage</p>
+    <div class="ac-lp-container ac-lp-hero__split">
 
-      <h1 class="ac-lp-hero__title">
-        Chaque véhicule, tracé de son arrivée
-        <span class="ac-lp-hero__accent">à sa restitution.</span>
-      </h1>
+      <div class="ac-lp-hero__dire">
+        <p class="ac-lp-eyebrow ac-lp-eyebrow--gauche">Logiciel de gestion pour stations de lavage</p>
 
-      <p class="ac-lp-hero__text">
-        AUTOCARE OS remplace le cahier et les groupes WhatsApp. Photos à
-        l'arrivée, file d'attente en temps réel, encaissements et caisse —
-        au même endroit, sur n'importe quel téléphone.
-      </p>
+        <h1 class="ac-lp-hero__title">
+          Chaque véhicule, tracé de son arrivée
+          <span class="ac-lp-hero__accent">à sa restitution.</span>
+        </h1>
 
-      <div class="ac-lp-hero__actions">
-        <a routerLink="/register" class="ac-lp-btn-appel">
-          Créer ma station <i class="bi bi-arrow-right" aria-hidden="true"></i>
-        </a>
-        <a routerLink="/login" class="btn btn-outline-secondary btn-lg ac-lp-btn-secondaire">
-          J'ai déjà un compte
-        </a>
+        <p class="ac-lp-hero__text">
+          AUTOCARE OS remplace le cahier et les groupes WhatsApp. Photos à
+          l'arrivée, file d'attente en temps réel, encaissements et caisse —
+          au même endroit, sur n'importe quel téléphone.
+        </p>
+
+        <div class="ac-lp-hero__actions">
+          <a routerLink="/register" class="ac-lp-btn-appel">
+            Créer ma station <i class="bi bi-arrow-right" aria-hidden="true"></i>
+          </a>
+          <a routerLink="/login" class="btn btn-outline-secondary btn-lg ac-lp-btn-secondaire">
+            J'ai déjà un compte
+          </a>
+        </div>
+
+        <p class="ac-lp-hero__note">
+          <i class="bi bi-clock" aria-hidden="true"></i>
+          Votre station est configurée en cinq minutes. Aucune carte bancaire demandée.
+        </p>
       </div>
 
       <!--
-        Pas de « rejoignez les 200 stations qui nous font confiance ».
-        Le produit n'a pas encore de clients : un chiffre inventé se
-        repère, et il coûte plus cher en crédibilité qu'il ne rapporte.
-        On promet ce qu'on tient : la mise en route.
+        ============================================================
+        LA DÉMONSTRATION — LE PRODUIT, PAS UNE PROMESSE
+        ============================================================
+        Un gérant de station ne lit pas une liste de fonctionnalités :
+        il veut voir à quoi ça ressemble. On lui montre l'écran qu'il
+        regardera le plus, avec des plaques sénégalaises et des
+        montants en francs.
+
+        CONSTRUIT EN HTML, PAS EN IMAGE. Trois raisons, et la
+        troisième est la plus importante :
+          · c'est net sur tous les écrans, sans jeu de captures ;
+          · ça ne pèse rien à charger, ce qui compte en 4G ;
+          · le texte reste du TEXTE — lisible par un lecteur d'écran
+            et par un moteur de recherche, là où une capture ne dit
+            rien à personne.
+
+        `aria-hidden` est écarté volontairement : ce n'est pas de la
+        décoration, c'est une démonstration, et son contenu a du sens.
       -->
-      <p class="ac-lp-hero__note">
-        <i class="bi bi-clock"></i>
-        Votre station est configurée en cinq minutes. Aucune carte bancaire
-        demandée.
-      </p>
+      <div class="ac-lp-demo" role="img"
+           aria-label="Aperçu de l'écran file d'attente : trois véhicules,
+                       leur prestation et le temps écoulé.">
+        <div class="ac-lp-demo__cadre">
+          <div class="ac-lp-demo__barre">
+            <span class="ac-lp-demo__point"></span>
+            <span class="ac-lp-demo__titre">File d'attente — Dakar Plateau</span>
+          </div>
+
+          <div class="ac-lp-demo__corps">
+            <div class="ac-lp-demo__stats">
+              <div><span class="ac-lp-demo__chiffre">12</span><span>en station</span></div>
+              <div><span class="ac-lp-demo__chiffre">3</span><span>prêts</span></div>
+              <div><span class="ac-lp-demo__chiffre">23 min</span><span>d'attente</span></div>
+            </div>
+
+            @for (v of demo; track v.plaque) {
+              <div class="ac-lp-demo__ligne">
+                <div>
+                  <div class="ac-lp-demo__plaque">{{ v.plaque }}</div>
+                  <div class="ac-lp-demo__modele">{{ v.modele }}</div>
+                </div>
+                <span class="ac-lp-demo__etat ac-lp-demo__etat--{{ v.ton }}">{{ v.etat }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 

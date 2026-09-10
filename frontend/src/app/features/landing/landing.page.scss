@@ -598,6 +598,22 @@
 // et cette règle ne bouge pas. Mais sur une BANDE BLEUE, un bouton
 // bleu disparaît. Le safran n'entre pas en concurrence : il n'y a
 // qu'une seule action à cet endroit, et c'est celle-là.
+// SUR UNE BANDE, LE BOUTON PREND L'ORANGE CLAIR.
+//
+// La bande était bleue, elle est devenue sarcelle foncée. Le bouton
+// orange-600 y est tombé de 3.50 à 2.66 de séparation — sous le seuil
+// de 3. Il ne s'est rien passé de visible : le bouton était toujours
+// là, simplement fondu dans le fond.
+//
+// C'est la troisième fois aujourd'hui qu'un changement de fond casse
+// en silence quelque chose de calibré contre lui. Sur fond clair, le
+// bouton garde le 600 : là, c'est le 500 qui serait trop pâle.
+.ac-lp-bande .ac-lp-btn-appel {
+  background-color: var(--ac-accent-500);
+
+  &:hover { background-color: var(--ac-accent); }
+}
+
 .ac-lp-btn-appel {
   display: inline-flex;
   align-items: center;
@@ -762,3 +778,151 @@
 .ac-lp-eyebrow--gauche {
   margin-inline: 0;
 }
+
+// ==================================================================
+// L'ACCROCHE EN DEUX COLONNES, ET LA DÉMONSTRATION
+// ==================================================================
+// L'accroche était centrée : un titre, un paragraphe, deux boutons, et
+// beaucoup de vide. Elle DÉCRIVAIT le produit.
+//
+// Elle le MONTRE désormais. Le texte à gauche, l'écran à droite. C'est
+// la structure que le commanditaire a retenue — « Hero-Centric +
+// Interactive Product Demo ».
+
+.ac-lp-hero__split {
+  display: grid;
+  gap: var(--ac-space-8);
+  align-items: center;
+  text-align: left;
+
+  // UNE SEULE COLONNE JUSQU'À 992 px, ET LA DÉMONSTRATION PASSE
+  // DESSOUS. Sur un téléphone, la mettre à côté du texte donnerait
+  // deux colonnes de six centimètres, illisibles l'une comme l'autre.
+  @media (min-width: 992px) {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ac-space-10);
+  }
+}
+
+.ac-lp-hero__split .ac-lp-hero__title {
+  max-width: 14ch;
+  margin-inline: 0;
+}
+
+.ac-lp-hero__split .ac-lp-hero__text {
+  margin-inline: 0;
+}
+
+.ac-lp-hero__split .ac-lp-hero__actions,
+.ac-lp-hero__split .ac-lp-hero__note {
+  justify-content: flex-start;
+}
+
+// --- La démonstration ---------------------------------------------
+
+.ac-lp-demo__cadre {
+  border-radius: var(--ac-radius-xl);
+  overflow: hidden;
+  background-color: var(--ac-white);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
+
+  // LÉGÈREMENT INCLINÉE. Trois degrés : assez pour qu'on la lise comme
+  // un objet posé et non comme une image collée, pas assez pour gêner
+  // la lecture du texte qu'elle contient.
+  transform: rotate(-1.5deg);
+
+  // L'inclinaison disparaît quand la démonstration passe SOUS le
+  // texte, sur petit écran : de travers en pleine largeur, elle
+  // aurait l'air cassée plutôt que posée.
+  @media (max-width: 991.98px) {
+    transform: none;
+  }
+}
+
+.ac-lp-demo__barre {
+  display: flex;
+  align-items: center;
+  gap: var(--ac-space-2);
+  padding: var(--ac-space-3) var(--ac-space-4);
+  background-color: var(--ac-primary);
+  color: var(--ac-white);
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-semibold);
+}
+
+// La pastille qui respire : elle dit « temps réel » sans l'écrire.
+// C'est l'argument principal du produit, montré au lieu d'être promis.
+.ac-lp-demo__point {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ac-radius-full);
+  background-color: #4ade80;
+  animation: ac-respire 2.4s var(--ac-courbe-douce) infinite;
+}
+
+.ac-lp-demo__corps {
+  padding: var(--ac-space-4);
+  background-color: var(--ac-background);
+}
+
+.ac-lp-demo__stats {
+  display: flex;
+  gap: var(--ac-space-4);
+  margin-bottom: var(--ac-space-3);
+
+  > div {
+    flex: 1;
+    padding: var(--ac-space-3);
+    border-radius: var(--ac-radius);
+    background-color: var(--ac-white);
+    border: 1px solid var(--ac-border);
+    text-align: center;
+  }
+
+  span { display: block; font-size: var(--ac-text-sm); color: var(--ac-text-muted); }
+}
+
+.ac-lp-demo__chiffre {
+  font-size: var(--ac-text-xl);
+  font-weight: var(--ac-weight-bold);
+  color: var(--ac-text) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.ac-lp-demo__ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ac-space-3);
+  padding: var(--ac-space-3);
+  margin-bottom: var(--ac-space-2);
+  border-radius: var(--ac-radius);
+  background-color: var(--ac-white);
+  border: 1px solid var(--ac-border);
+}
+
+.ac-lp-demo__plaque {
+  font-weight: var(--ac-weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--ac-text);
+}
+
+.ac-lp-demo__modele {
+  font-size: var(--ac-text-sm);
+  color: var(--ac-text-muted);
+}
+
+// Les états reprennent les couleurs de STATUT du produit, pas des
+// teintes choisies pour la vitrine. Ce que le visiteur voit ici est
+// ce qu'il verra en s'inscrivant.
+.ac-lp-demo__etat {
+  padding: 0.2rem var(--ac-space-3);
+  border-radius: var(--ac-radius-full);
+  font-size: var(--ac-text-sm);
+  font-weight: var(--ac-weight-semibold);
+  white-space: nowrap;
+}
+
+.ac-lp-demo__etat--cours    { background: var(--ac-status-washing-bg);    color: var(--ac-status-washing-text); }
+.ac-lp-demo__etat--pret     { background: var(--ac-status-ready-bg);      color: var(--ac-status-ready-text); }
+.ac-lp-demo__etat--controle { background: var(--ac-status-quality-bg);    color: var(--ac-status-quality-text); }

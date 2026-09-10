@@ -43,7 +43,16 @@ $ac-primary-700: #134e4a;   // actif
 // Son texte est FONCÉ : blanc dessus 3.56, foncé dessus 5.25.
 $ac-accent-50:  #fff7ed;
 $ac-accent-100: #ffedd5;
-$ac-accent:     #ea580c;
+// Le palier 500 existe pour UNE raison précise : un bouton orange posé
+// sur la bande sarcelle foncée de la vitrine. Le 600 n'y tient que
+// 2.66:1 de séparation — sous le seuil de 3 exigé pour une surface —
+// et disparaît dans le fond. Le 500 tient 3.38, avec du texte foncé à
+// 6.37 dessus.
+//
+// Sur fond CLAIR, c'est l'inverse : le 500 ne tient que 2.80 et c'est
+// le 600 qu'il faut. D'où deux paliers, chacun pour son fond.
+$ac-accent-500: #f97316;   // sur fond SOMBRE
+$ac-accent:     #ea580c;   // sur fond CLAIR
 $ac-accent-600: #c2410c;
 $ac-accent-700: #9a3412;
 

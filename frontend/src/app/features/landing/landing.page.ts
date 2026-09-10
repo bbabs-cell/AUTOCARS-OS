@@ -71,6 +71,24 @@ export class LandingPage {
   protected readonly faq = FAQ;
 
   /**
+   * Les trois véhicules montrés dans l'accroche.
+   *
+   * DES PLAQUES ET DES MODÈLES D'ICI. « DK » pour Dakar, « TH » pour
+   * Thiès, un Hilux et un Duster — ce qu'on voit réellement dans une
+   * station sénégalaise. Une démonstration avec des plaques
+   * européennes et une Tesla dirait au visiteur que le produit n'a
+   * pas été pensé pour lui, avant même qu'il ait lu une ligne.
+   *
+   * Ce ne sont pas des données : c'est une illustration, et elle
+   * n'est reliée à aucune API. La page n'appelle rien.
+   */
+  protected readonly demo = [
+    { plaque: 'DK-9087-DE', modele: 'Toyota Hilux',   etat: 'Lavage',   ton: 'cours' },
+    { plaque: 'DK-1420-AB', modele: 'Peugeot 208',    etat: 'Prêt',     ton: 'pret' },
+    { plaque: 'TH-3311-CC', modele: 'Hyundai Tucson', etat: 'Contrôle', ton: 'controle' },
+  ] as const;
+
+  /**
    * Tant qu'aucun tarif n'est publié, la section invite à prendre
    * contact plutôt que d'afficher des prix inventés. Voir la note
    * dans marketing.config.ts.
