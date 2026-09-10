@@ -39,6 +39,7 @@ import { gunzipSync } from 'node:zlib';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { NPX } from './npx.mjs';
 
 const racine = path.resolve(import.meta.dirname, '..');
 const options = process.argv.slice(2);
@@ -257,7 +258,7 @@ function reordonneLesTables(source) {
 
 const cible = distant ? '--remote' : '--local';
 const wrangler = (args) =>
-  execFileSync('npx', ['wrangler', 'd1', ...args], { cwd: racine, encoding: 'utf8' });
+  execFileSync(NPX, ['wrangler', 'd1', ...args], { cwd: racine, encoding: 'utf8' });
 
 // ------------------------------------------------------------------
 // Vider la base

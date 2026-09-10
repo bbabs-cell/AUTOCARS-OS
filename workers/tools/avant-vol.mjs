@@ -35,6 +35,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { NPX } from './npx.mjs';
 
 const racine = path.resolve(import.meta.dirname, '..');
 const avecLaBase = process.argv.includes('--remote');
@@ -145,7 +146,7 @@ if (avecLaBase) {
   let secrets = '';
 
   try {
-    secrets = execFileSync('npx', ['wrangler', 'secret', 'list'], {
+    secrets = execFileSync(NPX, ['wrangler', 'secret', 'list'], {
       cwd: racine, encoding: 'utf8',
     });
   } catch {
@@ -248,7 +249,7 @@ if (avecLaBase) {
 
   const interroge = (requete) => {
     const brut = execFileSync(
-      'npx',
+      NPX,
       ['wrangler', 'd1', 'execute', lis('database_name'), '--remote', '--json',
         '--command', requete],
       { cwd: racine, encoding: 'utf8' },
@@ -290,7 +291,36 @@ if (avecLaBase) {
       `${clair[0]?.n} compte(s)`,
     );
   } catch (e) {
-    bloquant('la base répond', false, e.message.split('\n')[0]);
+    // NE PAS CONFONDRE « JE N'AI PAS PU VÉRIFIER » ET « C'EST CASSÉ ».
+    //
+    // La première version annonçait « la base répond : NON » quoi qu'il
+    // arrive. Quand c'était `npx` qui n'avait pas démarré, elle
+    // accusait la base de production — et on cherchait du côté de
+    // Cloudflare un défaut qui était sur la machine.
+    //
+    // Le contrôle BLOQUE dans les deux cas, et c'est voulu : une
+    // vérification qu'on n'a pas pu faire n'est pas une vérification
+    // réussie. Mais il doit nommer le bon coupable.
+    const premiere = e.message.split('\n')[0];
+
+    if (e.code === 'ENOENT' || /ENOENT/.test(premiere)) {
+      bloquant(
+        'npx a pu être lancé', false,
+        "introuvable — sous Windows la commande est « npx.cmd » ; vérifiez que Node est installé et dans le PATH",
+      );
+    } else if (/not authenticated|wrangler login|Authentication/i.test(premiere)) {
+      bloquant(
+        'wrangler est authentifié', false,
+        'lancez « npx wrangler login », puis relancez ce contrôle',
+      );
+    } else {
+      bloquant('la base répond', false, premiere);
+    }
+
+    console.log(
+      '\n  Les vérifications suivantes n\'ont donc PAS été faites :\n'
+      + '  les 21 tables, le jeu de démonstration, les mots de passe hachés.\n',
+    );
   }
 } else {
   console.log('\n--- Base de production ---');

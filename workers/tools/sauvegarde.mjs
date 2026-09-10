@@ -40,6 +40,7 @@ import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import fs from 'node:fs';
 import path from 'node:path';
+import { NPX } from './npx.mjs';
 
 const racine = path.resolve(import.meta.dirname, '..');
 const options = process.argv.slice(2);
@@ -127,7 +128,7 @@ const brut = path.join(dossier, `${nom}.sql`);
 
 try {
   execFileSync(
-    'npx',
+    NPX,
     [
       'wrangler', 'd1', 'export', base,
       distant ? '--remote' : '--local',

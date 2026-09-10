@@ -21,6 +21,7 @@
   "include": [
     "src/**/*.ts",
     "test/**/*.ts",
-    "worker-configuration.d.ts"
+    "worker-configuration.d.ts",
+    "env.d.ts"
   ]
 }

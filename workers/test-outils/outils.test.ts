@@ -363,12 +363,15 @@ describe('le contrôle avant vol', () => {
     // wrangler.toml, et l'essai ne doit pas modifier le vrai.
     const bac = fs.mkdtempSync(path.join(os.tmpdir(), 'autocare-avant-vol-'));
 
-    fs.mkdirSync(path.join(bac, 'tools'));
+    // TOUT le dossier `tools`, pas le seul fichier de l'outil.
+    //
+    // La première version ne copiait que `avant-vol.mjs`. Le jour où
+    // il a importé un module voisin, les neuf essais ont échoué d'un
+    // coup — sur « exit code 1 », sans dire que c'était un import
+    // manquant. Le bac à sable doit ressembler au dossier réel, sinon
+    // il vérifie autre chose que ce qui sera exécuté.
+    fs.cpSync(path.join(racine, 'tools'), path.join(bac, 'tools'), { recursive: true });
     fs.mkdirSync(path.join(bac, 'migrations'));
-    fs.copyFileSync(
-      path.join(racine, 'tools', 'avant-vol.mjs'),
-      path.join(bac, 'tools', 'avant-vol.mjs'),
-    );
     fs.writeFileSync(path.join(bac, 'migrations', '0001_x.sql'), '');
     fs.writeFileSync(path.join(bac, 'wrangler.toml'), toml);
 
