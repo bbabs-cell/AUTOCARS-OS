@@ -40,7 +40,12 @@
     }
 
     <main class="ac-shell__content">
-      <div class="ac-shell__container">
+      <!--
+        `data-domaine` porte la teinte de la section affichée. Les
+        composants lisent `--ac-domain` et n'ont donc pas à savoir sur
+        quel écran ils se trouvent — voir _tokens.scss.
+      -->
+      <div class="ac-shell__container" [attr.data-domaine]="domaine()">
         <router-outlet />
       </div>
     </main>

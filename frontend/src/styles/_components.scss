@@ -1411,3 +1411,96 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+// ==================================================================
+// LA TEINTE DE LA SECTION AFFICHÉE
+// ==================================================================
+// La coque pose `data-domaine` sur le conteneur des pages ; ces
+// règles n'y font que traduire le nom en trois variables. Tout le
+// reste du produit lit `--ac-domain`, jamais `--ac-domain-queue` :
+// un composant n'a pas à savoir sur quel écran il se trouve.
+//
+// SANS ATTRIBUT, ON RETOMBE SUR LE BLEU. Un écran oublié n'est donc
+// pas cassé, il est simplement neutre — c'est ce qu'on veut pour le
+// tableau de bord, les réglages ou l'aide, qui traversent tout le
+// produit et n'appartiennent à aucun domaine.
+
+[data-domaine='queue'] {
+  --ac-domain:     var(--ac-domain-queue);
+  --ac-domain-50:  var(--ac-domain-queue-50);
+  --ac-domain-700: var(--ac-domain-queue-700);
+}
+
+[data-domaine='operations'] {
+  --ac-domain:     var(--ac-domain-operations);
+  --ac-domain-50:  var(--ac-domain-operations-50);
+  --ac-domain-700: var(--ac-domain-operations-700);
+}
+
+[data-domaine='cash'] {
+  --ac-domain:     var(--ac-domain-cash);
+  --ac-domain-50:  var(--ac-domain-cash-50);
+  --ac-domain-700: var(--ac-domain-cash-700);
+}
+
+[data-domaine='customers'] {
+  --ac-domain:     var(--ac-domain-customers);
+  --ac-domain-50:  var(--ac-domain-customers-50);
+  --ac-domain-700: var(--ac-domain-customers-700);
+}
+
+[data-domaine='loyalty'] {
+  --ac-domain:     var(--ac-domain-loyalty);
+  --ac-domain-50:  var(--ac-domain-loyalty-50);
+  --ac-domain-700: var(--ac-domain-loyalty-700);
+}
+
+[data-domaine='bookings'] {
+  --ac-domain:     var(--ac-domain-bookings);
+  --ac-domain-50:  var(--ac-domain-bookings-50);
+  --ac-domain-700: var(--ac-domain-bookings-700);
+}
+
+[data-domaine='analytics'] {
+  --ac-domain:     var(--ac-domain-analytics);
+  --ac-domain-50:  var(--ac-domain-analytics-50);
+  --ac-domain-700: var(--ac-domain-analytics-700);
+}
+
+[data-domaine='team'] {
+  --ac-domain:     var(--ac-domain-team);
+  --ac-domain-50:  var(--ac-domain-team-50);
+  --ac-domain-700: var(--ac-domain-team-700);
+}
+
+// ==================================================================
+// L'EN-TÊTE DE PAGE PORTE LA TEINTE
+// ==================================================================
+// C'est le seul endroit où la couleur du domaine occupe une vraie
+// surface, et elle reste FAIBLE : un filet de 3 px et un fond très
+// clair. La page demeure blanche et aérée — c'était la promesse du
+// produit, et une refonte ne l'annule pas.
+//
+// Le titre prend la déclinaison -700, jamais la teinte pure : celle-ci
+// est calibrée pour être vue (3:1), pas pour être lue (4.5:1).
+.ac-page-header {
+  position: relative;
+  padding-left: var(--ac-space-4);
+  border-left: 3px solid var(--ac-domain);
+  animation: ac-monte var(--ac-duree) var(--ac-courbe-sortie) both;
+}
+
+.ac-page-header__title {
+  color: var(--ac-domain-700);
+}
+
+// Le fond teinté n'apparaît QUE si un domaine est posé. Sur le
+// tableau de bord, l'en-tête reste sur fond de page — sans quoi une
+// section « neutre » se peindrait en bleu, ce qui lui donnerait un
+// sens qu'elle n'a pas.
+[data-domaine] .ac-page-header {
+  background-color: var(--ac-domain-50);
+  border-radius: 0 var(--ac-radius-lg) var(--ac-radius-lg) 0;
+  padding-block: var(--ac-space-4);
+  padding-right: var(--ac-space-5);
+}
