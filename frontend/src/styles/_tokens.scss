@@ -48,6 +48,29 @@
   --ac-accent:     #06b6d4;
   --ac-accent-600: #0891b2;
 
+  // --- Safran : le second rôle -----------------------------------
+  // AJOUT. Jusqu'ici le produit n'avait qu'UNE couleur et six
+  // déclinaisons de gris. Le bleu dit « clique ici » ; rien ne disait
+  // « il se passe quelque chose de bien ».
+  //
+  // Le safran porte l'ÉNERGIE et l'ABOUTISSEMENT : barre de
+  // progression d'un lavage, moment où un dossier passe à « prêt »,
+  // récompense de fidélité atteinte, total d'une journée de caisse.
+  //
+  // IL N'EST JAMAIS UNE ACTION. Un bouton principal reste bleu — les
+  // employés l'ont appris, et deux couleurs d'action ne feraient
+  // qu'hésiter.
+  //
+  // Ce n'est pas non plus l'orange d'alerte : celui-ci est plus
+  // rouge, plus vif, et réservé aux avertissements. Le safran est
+  // plus profond, plus terreux — la lumière de fin d'après-midi, pas
+  // un gyrophare.
+  --ac-saffron-50:  #fff8ed;
+  --ac-saffron-100: #ffeacf;
+  --ac-saffron:     #e8901b;
+  --ac-saffron-600: #c2740f;
+  --ac-saffron-700: #96570b;   // texte sur fond clair (contraste 5.4)
+
   // --- Couleurs de sens ------------------------------------------
   // Chacune existe en trois déclinaisons :
   //   -50   fond très clair (badges, bandeaux)
@@ -114,18 +137,45 @@
   --ac-chart-track: var(--ac-gray-100);
 
   // --- Neutres ----------------------------------------------------
-  // L'essentiel de l'interface est construit avec ces gris.
+  // L'essentiel de l'interface est construit avec ces gris. C'est
+  // donc EUX qui donnent son caractère au produit, bien plus que la
+  // couleur d'action qu'on ne voit que par touches.
+  //
+  // POURQUOI ILS ONT CHANGÉ. Les précédents étaient des gris
+  // franchement bleutés — ceux que produit n'importe quel outil par
+  // défaut. Un gris neutre pur se lit « pas choisi » ; un gris
+  // légèrement incliné se lit « choisi ». Ceux-ci portent une pointe
+  // de chaleur, à peine perceptible isolément, très nette sur un
+  // écran entier : le fond de page cesse d'être bleu-blanc d'hôpital.
+  //
+  // La chaleur reste DISCRÈTE, volontairement. Un beige franc aurait
+  // donné un air de papier ancien à un outil de comptoir, et aurait
+  // fait virer les photos de véhicules.
+  //
+  // Les contrastes ont été MESURÉS sur la nouvelle échelle, pas
+  // hérités de l'ancienne, et AUCUN n'a perdu — les cinq ont gagné :
+  //
+  //            avant    après
+  //   gray-400  2.56  →  3.07   décoratif (voir plus bas)
+  //   gray-500  4.76  →  5.90   texte discret
+  //   gray-600  7.58  →  9.14   texte secondaire
+  //   gray-700 10.35  → 12.62
+  //   gray-900 17.74  → 18.70   texte principal
+  //
+  // Le gain n'était pas l'objectif — la chaleur l'était — mais il
+  // fallait s'assurer de ne rien perdre. Il se trouve qu'un neutre
+  // légèrement chaud est aussi un peu plus foncé à teinte égale.
   --ac-white:       #ffffff;
-  --ac-gray-50:     #f8fafc;
-  --ac-gray-100:    #f1f5f9;
-  --ac-gray-200:    #e2e8f0;
-  --ac-gray-300:    #cbd5e1;
-  --ac-gray-400:    #94a3b8;
-  --ac-gray-500:    #64748b;
-  --ac-gray-600:    #475569;
-  --ac-gray-700:    #334155;
-  --ac-gray-800:    #1e293b;
-  --ac-gray-900:    #111827;
+  --ac-gray-50:     #f9f9f8;
+  --ac-gray-100:    #f2f2f0;
+  --ac-gray-200:    #e5e4e1;
+  --ac-gray-300:    #cdcbc6;
+  --ac-gray-400:    #96938c;
+  --ac-gray-500:    #67645e;
+  --ac-gray-600:    #4a4842;
+  --ac-gray-700:    #35332e;
+  --ac-gray-800:    #22201d;
+  --ac-gray-900:    #14120f;
 
   // --- Rôles sémantiques ------------------------------------------
   // Utilise TOUJOURS ces variables-là dans les composants, jamais
@@ -144,9 +194,83 @@
 
   // Gris le plus clair, réservé aux éléments DÉCORATIFS : icône de
   // recherche, chevrons, séparateurs. Jamais pour du texte : son
-  // contraste sur fond clair est de 2.45, très en dessous du seuil
-  // d'accessibilité de 4.5 exigé pour un texte lisible.
+  // contraste sur fond clair est de 3.07 — mieux que les 2.56 de
+  // l'ancienne échelle, mais toujours très en dessous du seuil de
+  // 4.5 exigé pour un texte lisible. La règle ne change donc pas.
   --ac-icon-muted:      var(--ac-gray-400);
+
+  // ================================================================
+  // 1 bis. LA COULEUR DE CHAQUE DOMAINE
+  // ================================================================
+  //
+  // AJOUT, ET C'EST LE CŒUR DE CETTE REFONTE.
+  //
+  // Un employé de comptoir passe cinquante fois par jour de la file
+  // d'attente à la caisse, de la caisse à la fiche d'un client. Dans
+  // la version précédente, ces écrans étaient rigoureusement de la
+  // même couleur : seul le titre les distinguait, et un titre se lit,
+  // il ne se perçoit pas.
+  //
+  // Chaque domaine reçoit donc sa teinte, portée par l'en-tête de
+  // page, l'icône de section et l'élément actif de la navigation.
+  // LA COULEUR DEVIENT UNE INFORMATION : on sait où l'on est avant
+  // d'avoir lu quoi que ce soit.
+  //
+  // TROIS RÈGLES QUI EMPÊCHENT QUE ÇA TOURNE AU CARNAVAL :
+  //
+  //   1. La teinte ne colore JAMAIS une action. Le bouton principal
+  //      reste bleu partout, sinon on aurait appris huit couleurs de
+  //      bouton au lieu d'une.
+  //   2. Elle ne colore jamais un statut non plus : vert, orange et
+  //      rouge gardent leur sens, et lui seul.
+  //   3. Elle occupe peu de surface — un filet, une icône, un fond
+  //      très clair. La page reste blanche et aérée.
+  //
+  // Les huit teintes sont séparées en teinte comme en clarté, et
+  // toutes tiennent le contraste 4.5:1 sur fond clair dans leur
+  // déclinaison -700.
+  --ac-domain-queue:         #0d9488;   // file d'attente — sarcelle
+  --ac-domain-queue-50:      #eefbf8;
+  --ac-domain-queue-700:     #0f6f66;
+
+  --ac-domain-operations:    #2563eb;   // dossiers — le bleu du produit
+  --ac-domain-operations-50: #eff6ff;
+  --ac-domain-operations-700:#1e40af;
+
+  // La caisse est SAFRAN, pas verte, et c'est délibéré : le vert dit
+  // déjà « réussi » dans ce produit. Un en-tête vert au-dessus d'un
+  // encaissement se lirait comme une confirmation qui n'a pas encore
+  // eu lieu.
+  --ac-domain-cash:          #c2740f;
+  --ac-domain-cash-50:       #fff8ed;
+  --ac-domain-cash-700:      #96570b;
+
+  --ac-domain-customers:     #7c3aed;   // clients — violet
+  --ac-domain-customers-50:  #f5f0ff;
+  --ac-domain-customers-700: #5b21b6;
+
+  --ac-domain-loyalty:       #be185d;   // fidélité — rose
+  --ac-domain-loyalty-50:    #fdf2f8;
+  --ac-domain-loyalty-700:   #9d174d;
+
+  --ac-domain-bookings:      #4f46e5;   // rendez-vous — indigo
+  --ac-domain-bookings-50:   #eef2ff;
+  --ac-domain-bookings-700:  #3730a3;
+
+  --ac-domain-analytics:     #0891b2;   // statistiques — cyan
+  --ac-domain-analytics-50:  #ecfeff;
+  --ac-domain-analytics-700: #0e7490;
+
+  --ac-domain-team:          #047857;   // équipe et pointage — émeraude
+  --ac-domain-team-50:       #ecfdf5;
+  --ac-domain-team-700:      #065f46;
+
+  // La teinte courante. Chaque page pose `--ac-domain` sur son
+  // conteneur ; les composants lisent CETTE variable et n'ont donc
+  // pas à connaître les huit. Sans elle, on retombe sur le bleu.
+  --ac-domain:     var(--ac-domain-operations);
+  --ac-domain-50:  var(--ac-domain-operations-50);
+  --ac-domain-700: var(--ac-domain-operations-700);
 
   // ================================================================
   // 2. STATUTS MÉTIER
@@ -275,8 +399,54 @@
   // Courtes. Une animation qu'on remarque est une animation ratée :
   // elle doit rendre le changement compréhensible, pas décoratif.
 
-  --ac-transition-fast: 120ms ease;
-  --ac-transition:      180ms ease;
+  --ac-transition-fast: var(--ac-duree-rapide) var(--ac-courbe-sortie);
+  --ac-transition:      var(--ac-duree) var(--ac-courbe-sortie);
+
+  // ================================================================
+  // LE VOCABULAIRE DU MOUVEMENT
+  // ================================================================
+  //
+  // Le produit comptait CINQ animations en tout. Ce n'était pas un
+  // parti pris de sobriété, c'était un manque : rien n'accusait
+  // réception d'un clic, rien ne disait qu'une liste venait de se
+  // recharger, rien ne distinguait une page qui arrive d'une page
+  // déjà là.
+  //
+  // QUATRE DURÉES, ET ELLES VEULENT DIRE QUELQUE CHOSE :
+  //
+  //   immédiat  ce que le doigt provoque — l'enfoncement d'un bouton.
+  //             Au-delà, on sent un décalage entre le geste et l'effet.
+  //   rapide    ce qui change sans changer de sens : un survol, une
+  //             bordure, une couleur.
+  //   normal    ce qui apparaît ou disparaît : une carte, un panneau.
+  //   lente     ce qui doit être REMARQUÉ : un dossier qui passe à
+  //             « prêt », une récompense atteinte. Rare, par nature.
+  //
+  // TROIS COURBES :
+  //
+  //   sortie    démarre vite, finit doucement. C'est la courbe des
+  //             choses qui arrivent — elles se posent, elles ne
+  //             freinent pas brutalement.
+  //   douce     symétrique, pour ce qui se déplace d'un point à un
+  //             autre sans naître ni mourir.
+  //   ressort   dépasse légèrement puis revient. RÉSERVÉE aux
+  //             confirmations : un tampon de fidélité qui s'ajoute,
+  //             un encaissement validé. Employée partout, elle
+  //             donnerait un air de jouet à un outil de travail.
+  --ac-duree-immediat: 90ms;
+  --ac-duree-rapide:   150ms;
+  --ac-duree:          240ms;
+  --ac-duree-lente:    420ms;
+
+  --ac-courbe-sortie:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ac-courbe-douce:   cubic-bezier(0.65, 0, 0.35, 1);
+  --ac-courbe-ressort: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  // Le décalage entre deux éléments d'une liste qui apparaît en
+  // cascade. 40 ms se perçoit comme un enchaînement ; au-delà, on
+  // attend, et une file d'attente de vingt véhicules deviendrait
+  // pénible à charger.
+  --ac-cascade: 40ms;
 
   // ================================================================
   // 8. MISE EN PAGE

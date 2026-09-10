@@ -1,0 +1,173 @@
+// ==================================================================
+// AUTOCARE OS — LE MOUVEMENT
+// ==================================================================
+//
+// CE QUE LE MOUVEMENT SERT ICI, ET CE QU'IL NE SERT PAS.
+//
+// Ce n'est pas de l'ornement. Dans un outil de comptoir, une
+// animation répond à trois questions que l'utilisateur se pose sans
+// les formuler :
+//
+//   « Est-ce que mon clic a été pris ? »        → l'enfoncement
+//   « Qu'est-ce qui vient de changer ? »        → l'apparition
+//   « Est-ce que ça charge ou est-ce cassé ? »  → le squelette
+//
+// Une animation qui ne répond à aucune de ces trois questions est du
+// bruit, et elle coûte : sur un portable modeste, chaque élément
+// animé occupe le processeur graphique pendant que l'employé attend.
+//
+// D'OÙ DEUX RÈGLES TENUES PARTOUT DANS CE FICHIER :
+//
+//   1. On n'anime que `transform` et `opacity`. Ce sont les deux
+//      seules propriétés que le navigateur traite sans recalculer la
+//      mise en page. Animer une hauteur ou une marge fait saccader
+//      une liste de vingt véhicules.
+//   2. Rien ne dure plus de 420 ms. Au-delà, l'utilisateur attend
+//      l'interface au lieu que l'interface le suive.
+// ==================================================================
+
+
+// ==================================================================
+// LES APPARITIONS
+// ==================================================================
+
+// Ce qui arrive monte de quelques pixels en s'opacifiant. Le
+// déplacement est FAIBLE — 8 px — parce qu'il ne s'agit pas de faire
+// voyager l'élément, seulement de dire « je suis nouveau ».
+@keyframes ac-monte {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+// Pour ce qui vient du bord : un panneau latéral, une notification.
+@keyframes ac-entre-droite {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+// La confirmation. Dépasse puis revient — c'est ce petit dépassement
+// qui se lit comme « c'est fait », là où une apparition linéaire se
+// lit comme « c'est affiché ».
+//
+// RÉSERVÉE aux moments qui comptent : un tampon de fidélité, un
+// encaissement validé, un dossier restitué. Sur un élément ordinaire,
+// elle donnerait un air de jouet à un outil de travail.
+@keyframes ac-confirme {
+  0%   { opacity: 0; transform: scale(0.82); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+// ==================================================================
+// LES ÉTATS QUI DURENT
+// ==================================================================
+
+// La pastille d'un dossier en cours. Elle respire lentement, sans
+// clignoter : un clignotement attire l'œil en permanence et devient
+// insupportable sur un écran qu'on regarde huit heures.
+@keyframes ac-respire {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+
+// L'onde autour d'une pastille : dit « ça bouge en ce moment »
+// sans occuper de place. Utilisée sur le véhicule en cours de lavage.
+@keyframes ac-onde {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+// ==================================================================
+// LES CLASSES UTILITAIRES
+// ==================================================================
+
+.ac-anim-monte     { animation: ac-monte var(--ac-duree) var(--ac-courbe-sortie) both; }
+.ac-anim-droite    { animation: ac-entre-droite var(--ac-duree) var(--ac-courbe-sortie) both; }
+.ac-anim-confirme  { animation: ac-confirme var(--ac-duree) var(--ac-courbe-ressort) both; }
+
+// La cascade : les enfants apparaissent l'un après l'autre.
+//
+// LE DÉCALAGE S'ARRÊTE À DOUZE. Une file d'attente peut contenir
+// quarante véhicules ; si le quarantième attendait son tour, il
+// arriverait une seconde et demie après le premier, et l'employé
+// aurait déjà cliqué ailleurs. Au-delà du douzième, tout arrive
+// ensemble — personne ne compte jusqu'à douze.
+.ac-cascade > * {
+  animation: ac-monte var(--ac-duree) var(--ac-courbe-sortie) both;
+}
+
+@for $i from 1 through 12 {
+  .ac-cascade > *:nth-child(#{$i}) {
+    animation-delay: calc(var(--ac-cascade) * #{$i - 1});
+  }
+}
+
+// Le soulèvement au survol. Deux pixels : assez pour que la carte
+// réponde, pas assez pour que la page semble bouger sous le curseur.
+.ac-souleve {
+  transition: transform var(--ac-duree-rapide) var(--ac-courbe-sortie),
+              box-shadow var(--ac-duree-rapide) var(--ac-courbe-sortie);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ac-shadow-md);
+  }
+}
+
+// L'enfoncement. C'est l'animation la plus importante du fichier, et
+// la plus courte : elle est la seule preuve que le clic a été pris
+// avant que le serveur ne réponde. Sur une connexion irrégulière,
+// c'est parfois la seule chose qui se passe pendant deux secondes.
+.btn,
+.ac-btn-icon {
+  transition: transform var(--ac-duree-immediat) var(--ac-courbe-sortie),
+              background-color var(--ac-duree-rapide) var(--ac-courbe-sortie),
+              border-color var(--ac-duree-rapide) var(--ac-courbe-sortie),
+              box-shadow var(--ac-duree-rapide) var(--ac-courbe-sortie);
+
+  &:active:not(:disabled) { transform: scale(0.97); }
+}
+
+// La pastille vivante : un point, et l'onde qui en part.
+.ac-pastille-active {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--ac-radius-full);
+    background-color: currentcolor;
+    animation: ac-onde 2s var(--ac-courbe-douce) infinite;
+  }
+}
+
+.ac-anim-respire { animation: ac-respire 2.4s var(--ac-courbe-douce) infinite; }
+
+// ==================================================================
+// CEUX QUI NE VEULENT PAS DE MOUVEMENT
+// ==================================================================
+//
+// Ce bloc n'est pas une politesse. Pour une personne sujette au mal
+// des transports vestibulaire, une interface qui glisse et rebondit
+// provoque des vertiges réels — pas une gêne, un symptôme. Le
+// système d'exploitation porte déjà ce réglage ; il suffit de
+// l'écouter.
+//
+// On ne SUPPRIME pas les animations : on les réduit à un battement
+// imperceptible. Les supprimer casserait les composants qui
+// s'appuient sur `animation-fill-mode: both` pour rester visibles à
+// la fin — ils resteraient à `opacity: 0`, invisibles.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .ac-souleve:hover { transform: none; }
+  .btn:active:not(:disabled) { transform: none; }
+}

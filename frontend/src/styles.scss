@@ -39,5 +39,12 @@
 // --- 5. Nos composants ---------------------------------------------
 @use 'styles/components';
 
+// --- 6. Le mouvement -----------------------------------------------
+// APRÈS les composants, délibérément : les transitions posées ici
+// doivent l'emporter sur celles que Bootstrap et nos composants
+// définissent, sans avoir à écrire `!important`. C'est l'ordre du
+// fichier qui fait la règle, comme pour tout le reste.
+@use 'styles/motion';
+
 // --- Icônes ---------------------------------------------------------
 @use 'bootstrap-icons/font/bootstrap-icons.css';
