@@ -49,7 +49,14 @@ APP_ENV = "production"
 MAIL_FROM = "no-reply@magyapro.com"
 
 # Le lien envoyé dans le courriel de réinitialisation pointe ici.
-APP_FRONTEND_URL = "https://magyapro.com"
+#
+# SOUS-DOMAINE, ET NON LA RACINE : « magyapro.com » sert déjà un autre
+# projet, et redirige vers « www ». Poser cette valeur sur la racine
+# enverrait les employés sur ce site-là au moment précis où ils
+# essaient de récupérer leur mot de passe — un lien qui n'échoue pas,
+# qui mène simplement ailleurs. Le genre de défaut qu'on ne voit pas
+# en recette, parce qu'on ne clique jamais vraiment sur le lien.
+APP_FRONTEND_URL = "https://autocare.magyapro.com"
 
 # L'envoi de courriel passe par RESEND. Sa clé est un SECRET Wrangler,
 # jamais une variable de ce fichier — il est suivi par Git :

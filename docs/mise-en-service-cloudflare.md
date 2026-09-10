@@ -185,24 +185,30 @@ n'est pas branché (section 7 bis), c'est la seule adresse utilisable.
 
 ---
 
-## 7 bis. Brancher magyapro.com
+## 7 bis. Brancher autocare.magyapro.com
 
-Le domaine est déjà chez Cloudflare, donc il n'y a pas de DNS à
-recopier ailleurs.
+**Un sous-domaine, pas la racine.** `magyapro.com` sert déjà un autre
+projet et redirige vers `www`. Y brancher le Worker prendrait sa place.
+
+Le domaine est chez Cloudflare, donc il n'y a pas de DNS à recopier
+ailleurs, ni d'enregistrement à créer à la main.
 
 Tableau de bord → **Workers & Pages** → `autocare-api` → **Settings** →
-**Domains & Routes** → **Add** → **Custom domain** → `magyapro.com`.
+**Domains & Routes** → **Add** → **Custom domain** →
+`autocare.magyapro.com`.
 
 Cloudflare crée l'enregistrement et le certificat lui-même. Comptez
 quelques minutes.
 
-Ensuite, vérifiez que les deux variables de `[vars]` correspondent bien
-au domaine servi, sinon les liens des courriels enverront ailleurs :
+Ensuite, vérifiez que les deux variables de `[vars]` correspondent au
+domaine réellement servi. Une erreur ici ne provoque aucune panne
+visible — elle envoie simplement les employés ailleurs, au moment où ils
+récupèrent leur mot de passe :
 
 | Variable | Doit valoir |
 |---|---|
-| `APP_FRONTEND_URL` | `https://magyapro.com` |
-| `MAIL_FROM` | une adresse **du domaine vérifié chez Resend** |
+| `APP_FRONTEND_URL` | `https://autocare.magyapro.com` |
+| `MAIL_FROM` | une adresse **du domaine vérifié chez Resend**, donc `@magyapro.com` — Resend vérifie `magyapro.com`, ce qui ne couvre pas automatiquement `autocare.magyapro.com` |
 
 ---
 
