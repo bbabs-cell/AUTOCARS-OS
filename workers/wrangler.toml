@@ -34,7 +34,7 @@ run_worker_first = ["/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "autocare"
-database_id = "a-remplacer-au-premier-deploiement"
+database_id = "6f822fa7-9e94-49ad-84e8-f30cf093a4a1"   # région WEUR
 migrations_dir = "migrations"
 
 # Les tests ont besoin du secret et du chemin des migrations. En
