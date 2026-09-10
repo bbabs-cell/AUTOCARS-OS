@@ -3,6 +3,34 @@ main = "src/index.ts"
 compatibility_date = "2026-08-15"
 compatibility_flags = ["nodejs_compat"]
 
+# ==================================================================
+# LE WORKER SERT AUSSI L'APPLICATION
+# ==================================================================
+# Un seul déploiement, une seule origine.
+#
+# C'est ce que `environment.ts` suppose depuis le début : `apiUrl`
+# vaut « /api », une adresse relative. Servir l'application depuis un
+# autre domaine que l'API la rendrait CROISÉE — pré-vol CORS, cookie
+# de rafraîchissement sous d'autres règles, et des en-têtes à porter
+# côté serveur qui n'existent que pour cela.
+#
+# `run_worker_first` décide qui répond : tout ce qui commence par
+# « /api/ » va au Worker, le reste aux fichiers. Sans cette ligne, le
+# repli page unique renverrait `index.html` sur les appels d'API —
+# l'application recevrait du HTML là où elle attend du JSON, et
+# n'afficherait aucune erreur utile.
+#
+# `single-page-application` sert `index.html` sur une adresse qui ne
+# correspond à aucun fichier : c'est ce qui permet de rafraîchir
+# /operations/42 sans tomber sur un 404.
+#
+# LE DOSSIER DOIT ÊTRE CONSTRUIT AVANT DE DÉPLOYER :
+#     cd ../frontend && npm run build
+[assets]
+directory = "../frontend/dist/frontend/browser"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "autocare"
