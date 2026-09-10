@@ -33,13 +33,12 @@
  * rend dangereuse, et ce que les garde-fous ci-dessous protègent.
  */
 
-import { execFileSync } from 'node:child_process';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { NPX } from './npx.mjs';
+import { lanceWrangler } from './wrangler.mjs';
 
 const racine = path.resolve(import.meta.dirname, '..');
 const options = process.argv.slice(2);
@@ -258,7 +257,7 @@ function reordonneLesTables(source) {
 
 const cible = distant ? '--remote' : '--local';
 const wrangler = (args) =>
-  execFileSync(NPX, ['wrangler', 'd1', ...args], { cwd: racine, encoding: 'utf8' });
+  lanceWrangler(['d1', ...args], { cwd: racine, encoding: 'utf8' });
 
 // ------------------------------------------------------------------
 // Vider la base

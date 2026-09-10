@@ -35,7 +35,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { NPX } from './npx.mjs';
+import { lanceWrangler } from './wrangler.mjs';
 
 const racine = path.resolve(import.meta.dirname, '..');
 const avecLaBase = process.argv.includes('--remote');
@@ -146,7 +146,7 @@ if (avecLaBase) {
   let secrets = '';
 
   try {
-    secrets = execFileSync(NPX, ['wrangler', 'secret', 'list'], {
+    secrets = lanceWrangler(['secret', 'list'], {
       cwd: racine, encoding: 'utf8',
     });
   } catch {
@@ -248,9 +248,7 @@ if (avecLaBase) {
   console.log('\n--- Base de production ---');
 
   const interroge = (requete) => {
-    const brut = execFileSync(
-      NPX,
-      ['wrangler', 'd1', 'execute', lis('database_name'), '--remote', '--json',
+    const brut = lanceWrangler(['d1', 'execute', lis('database_name'), '--remote', '--json',
         '--command', requete],
       { cwd: racine, encoding: 'utf8' },
     );

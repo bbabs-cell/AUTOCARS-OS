@@ -25,11 +25,10 @@
  * ne se rattrape pas.
  */
 
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { NPX } from './npx.mjs';
+import { lanceWrangler } from './wrangler.mjs';
 
 const racine = path.resolve(import.meta.dirname, '..');
 const combien = Math.max(1000, Number.parseInt(process.argv[2] ?? '30000', 10) || 30_000);
@@ -209,9 +208,7 @@ console.log(`  ${paiements.length.toLocaleString('fr-FR')} encaissements`);
 console.log(`\n  écriture dans la base locale…`);
 
 try {
-  execFileSync(
-    NPX,
-    ['wrangler', 'd1', 'execute', base, '--local', '--file', fichier, '--yes'],
+  lanceWrangler(['d1', 'execute', base, '--local', '--file', fichier, '--yes'],
     { cwd: racine, stdio: ['ignore', 'ignore', 'inherit'] },
   );
 } catch (e) {

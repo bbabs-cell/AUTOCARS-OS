@@ -29,10 +29,9 @@
  * cet appel-là comme elle écarterait un ralentissement isolé.
  */
 
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { NPX } from './npx.mjs';
+import { lanceWrangler } from './wrangler.mjs';
 
 const racine = path.resolve(import.meta.dirname, '..');
 const avecPlans = process.argv.includes('--plans');
@@ -110,9 +109,7 @@ const REQUETES = [
 ];
 
 function execute(sql, json = true) {
-  const brut = execFileSync(
-    NPX,
-    ['wrangler', 'd1', 'execute', base, '--local', ...(json ? ['--json'] : []),
+  const brut = lanceWrangler(['d1', 'execute', base, '--local', ...(json ? ['--json'] : []),
       '--command', sql],
     { cwd: racine, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
   );
