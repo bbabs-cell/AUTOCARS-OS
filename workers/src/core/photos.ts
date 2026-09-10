@@ -152,7 +152,13 @@ export async function range(env: Env, fichier: Blob): Promise<PhotoRangee> {
 
   try {
     details = await env.IMAGES.info(new Blob([recus]).stream());
-  } catch {
+  } catch (e) {
+    // LE MESSAGE RENDU À L'EMPLOYÉ RESTE VAGUE — il n'a rien à faire
+    // du détail — MAIS LA CAUSE PART DANS LES TRACES. Sans elle, une
+    // panne du service et un fichier réellement illisible donnent le
+    // même message, et personne ne peut les distinguer.
+    console.error("Images : lecture impossible —", e);
+
     throw new PhotoRefusee("Ce fichier n'est pas une image lisible.");
   }
 
@@ -184,7 +190,11 @@ export async function range(env: Env, fichier: Blob): Promise<PhotoRangee> {
       .input(new Blob([recus]).stream())
       .transform({ width: COTE_MAX, height: COTE_MAX, fit: 'scale-down' })
       .output({ format: 'image/webp', quality: QUALITE });
-  } catch {
+  } catch (e) {
+    // Même raison : « réessayez » ne dit pas si le service est
+    // indisponible, si la liaison manque, ou si l'image est en cause.
+    console.error('Images : ré-encodage impossible —', e);
+
     throw new PhotoRefusee("Cette image n'a pas pu être traitée. Réessayez.");
   }
 
