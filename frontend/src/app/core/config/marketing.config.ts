@@ -183,6 +183,97 @@ export interface Plan {
 
 export const PLANS: readonly Plan[] = [];
 
+/**
+ * Les questions qu'un gérant pose avant d'essayer
+ * ------------------------------------------------------------------
+ * CE NE SONT PAS DES QUESTIONS FRÉQUENTES, PUISQUE PERSONNE NE LES A
+ * ENCORE POSÉES. Ce sont les OBJECTIONS que le produit rencontrera,
+ * écrites d'après ce qu'il fait réellement.
+ *
+ * La différence compte : une FAQ inventée pour rassurer promet ce
+ * qu'on voudrait tenir. Chaque réponse ci-dessous décrit un
+ * comportement qui existe dans le code — ou dit franchement qu'il
+ * n'existe pas. La dernière en est l'exemple : elle admet une limite
+ * plutôt que de l'esquiver.
+ *
+ * Une objection traitée ici est un e-mail qu'on ne recevra pas, et
+ * surtout un gérant qui ne referme pas la page.
+ */
+export interface Question {
+  readonly question: string;
+  readonly reponse: string;
+}
+
+export const FAQ: readonly Question[] = [
+  {
+    question: 'Faut-il une connexion internet permanente ?',
+    reponse:
+      "Oui, le logiciel a besoin du réseau pour enregistrer. Mais une "
+      + "coupure ne fait pas perdre l'écran en cours : un bandeau prévient "
+      + "que le serveur ne répond plus, ce qui est affiché reste affiché, "
+      + "et rien n'est enregistré tant que la connexion n'est pas revenue. "
+      + "On préfère le dire plutôt que de laisser croire qu'une saisie est "
+      + "passée alors qu'elle est perdue.",
+  },
+  {
+    question: 'Mes employés doivent-ils être formés ?',
+    reponse:
+      "Un employé de comptoir apprend son écran en une matinée : il note "
+      + "une plaque, choisit une prestation, prend quatre photos. Le reste "
+      + "— caisse, statistiques, équipe — n'est visible que par le gérant, "
+      + "et personne n'a à apprendre ce qu'il ne verra jamais.",
+  },
+  {
+    question: "Et si un client conteste une rayure à la restitution ?",
+    reponse:
+      "C'est le cas pour lequel les photos existent. Quatre faces prises à "
+      + "l'arrivée, l'état constaté, le nom de l'employé qui a validé. Les "
+      + "photos ne s'effacent pas et restent attachées au dossier du "
+      + "véhicule. Vous montrez, vous ne discutez pas.",
+  },
+  {
+    question: 'Est-ce que ça marche sur téléphone ?',
+    reponse:
+      "Oui, et c'est le premier usage prévu : un employé qui traverse la "
+      + "station avec son téléphone, pas un poste fixe au bureau. Les "
+      + "photos sont réduites avant envoi — quelques secondes sur une "
+      + "connexion mobile, pas plusieurs minutes.",
+  },
+  {
+    question: 'Acceptez-vous Wave et Orange Money ?',
+    reponse:
+      "Ils sont traités comme des moyens de paiement normaux, au même "
+      + "titre que les espèces ou la carte : on enregistre par quel moyen "
+      + "le client a réglé. Le logiciel ne déclenche AUCUN paiement "
+      + "lui-même et ne se connecte à aucun opérateur — il enregistre ce "
+      + "que vous avez encaissé.",
+  },
+  {
+    question: 'Mes données m\'appartiennent-elles ?',
+    reponse:
+      "Oui. Chaque entreprise ne voit que ses propres données, et cette "
+      + "séparation est vérifiée à chaque requête côté serveur — pas "
+      + "seulement en masquant des boutons à l'écran. Vos photos et vos "
+      + "encaissements ne sont visibles par aucune autre station.",
+  },
+  {
+    question: 'Puis-je gérer plusieurs stations ?',
+    reponse:
+      "Oui. Un gérant voit ses stations, un employé ne voit que la sienne. "
+      + "La file d'attente, la caisse et les statistiques se lisent station "
+      + "par station ou toutes ensemble.",
+  },
+  {
+    question: 'Que se passe-t-il si j\'arrête ?',
+    reponse:
+      "Vos données restent les vôtres et vous pouvez en demander l'export. "
+      + "Et pour être franc sur un point que peu de logiciels admettent : "
+      + "le produit est jeune. Il fait ce qui est annoncé sur cette page, "
+      + "et rien de plus — aucune fonctionnalité listée ici n'est « bientôt "
+      + "disponible ».",
+  },
+];
+
 /** Où l'on vous joint tant que les tarifs ne sont pas publiés. */
 export const CONTACT = {
   email: 'contact@autocare-os.sn',

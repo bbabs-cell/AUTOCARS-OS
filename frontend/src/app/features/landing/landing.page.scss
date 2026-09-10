@@ -228,7 +228,17 @@
 // majuscules se confond avec le reste ; une capsule s'accroche à
 // l'œil au passage.
 .ac-lp-eyebrow {
-  display: inline-block;
+  // `block` + largeur ajustée + marges automatiques, plutôt que
+  // `inline-block`.
+  //
+  // En `inline-block`, la pastille dépendait du `text-align` de son
+  // parent. Dans l'accroche, centrée, elle tombait juste ; dans les
+  // sections, dont seul le TITRE est centré, elle se collait à gauche
+  // pendant que le titre restait au milieu. Défaut invisible au code,
+  // évident au rendu.
+  display: block;
+  width: fit-content;
+  margin-inline: auto;
   margin-bottom: var(--ac-space-4);
   padding: 0.35rem var(--ac-space-3);
   border-radius: var(--ac-radius-full);
@@ -678,4 +688,77 @@
 
 .ac-lp-pied .ac-lp-footer__links a:hover {
   color: var(--ac-white);
+}
+
+// ==================================================================
+// L'ACCORDÉON DES OBJECTIONS
+// ==================================================================
+.ac-lp-faq {
+  max-width: 46rem;
+  margin: var(--ac-space-8) auto 0;
+}
+
+.ac-lp-faq__item {
+  border-bottom: 1px solid var(--ac-border);
+
+  &:first-child { border-top: 1px solid var(--ac-border); }
+}
+
+.ac-lp-faq__question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ac-space-4);
+  padding: var(--ac-space-5) var(--ac-space-2);
+  cursor: pointer;
+  font-weight: var(--ac-weight-semibold);
+  color: var(--ac-text);
+  list-style: none;
+
+  // Le navigateur pose sa propre flèche. On la retire pour poser la
+  // nôtre, qui tourne.
+  &::-webkit-details-marker { display: none; }
+  &::marker { content: ''; }
+
+  &:hover { color: var(--ac-primary-700); }
+
+  // LE FOCUS RESTE VISIBLE. C'est un élément qu'on atteint à la
+  // tabulation, et un accordéon dont on ne voit pas où l'on est
+  // devient impraticable au clavier.
+  &:focus-visible {
+    outline: 2px solid var(--ac-primary);
+    outline-offset: -2px;
+    border-radius: var(--ac-radius-sm);
+  }
+
+  i {
+    flex-shrink: 0;
+    color: var(--ac-icon-muted);
+    transition: transform var(--ac-duree) var(--ac-courbe-sortie);
+  }
+}
+
+// La flèche tourne à l'ouverture. C'est la seule animation de cette
+// section : elle dit dans quel sens le bloc va bouger, ce qui est
+// une information. Animer la hauteur du contenu, en revanche,
+// obligerait le navigateur à recalculer la mise en page à chaque
+// image — la règle du fichier de mouvement s'applique ici aussi.
+.ac-lp-faq__item[open] .ac-lp-faq__question i {
+  transform: rotate(180deg);
+}
+
+.ac-lp-faq__reponse {
+  margin: 0;
+  padding: 0 var(--ac-space-2) var(--ac-space-5);
+  max-width: 62ch;
+  color: var(--ac-text-secondary);
+  line-height: 1.7;
+}
+
+// Une section alignée à gauche garde sa pastille à gauche : le
+// centrage automatique ci-dessus la ferait flotter au milieu d'un
+// bloc de texte aligné au bord.
+.ac-lp-section__title--left ~ .ac-lp-eyebrow,
+.ac-lp-eyebrow--gauche {
+  margin-inline: 0;
 }

@@ -14,6 +14,7 @@
       <a href="#fonctionnalites">Fonctionnalités</a>
       <a href="#parcours">Comment ça marche</a>
       <a href="#tarifs">Tarifs</a>
+      <a href="#questions">Questions</a>
     </nav>
 
     <div class="ac-lp-nav__actions d-none d-md-flex">
@@ -37,6 +38,7 @@
       <a href="#fonctionnalites" (click)="closeMenu()">Fonctionnalités</a>
       <a href="#parcours" (click)="closeMenu()">Comment ça marche</a>
       <a href="#tarifs" (click)="closeMenu()">Tarifs</a>
+      <a href="#questions" (click)="closeMenu()">Questions</a>
       <a routerLink="/login" (click)="closeMenu()">Se connecter</a>
       <a routerLink="/register" class="btn btn-primary" (click)="closeMenu()">
         Créer ma station
@@ -254,6 +256,48 @@
           </a>
         </div>
       }
+    </div>
+  </section>
+
+  <!-- ============================================================
+       LES OBJECTIONS
+       ============================================================
+       UN ACCORDÉON EN HTML NATIF, PAS UN COMPOSANT À ÉTAT.
+
+       `<details>` ouvre et ferme tout seul, se pilote au clavier,
+       s'annonce correctement aux lecteurs d'écran, et fonctionne même
+       si le JavaScript n'a pas fini de charger — ce qui arrive sur une
+       connexion mobile irrégulière, exactement le public de cette page.
+
+       Un accordéon écrit à la main aurait demandé un signal, des
+       gestionnaires de clic, des attributs `aria-expanded` posés à la
+       main, et aurait échoué sur chacun de ces points au premier
+       oubli. Le navigateur le fait mieux, gratuitement.
+
+       AUTRE EFFET, MOINS ÉVIDENT : le texte des réponses est dans le
+       document même fermé. Un moteur de recherche le lit, et la
+       fonction « rechercher dans la page » du navigateur le trouve.
+  -->
+  <section id="questions" class="ac-lp-section ac-lp-section--sunken">
+    <div class="ac-lp-container">
+      <p class="ac-lp-eyebrow">Questions</p>
+      <h2 class="ac-lp-section__title">Ce qu'on nous demandera</h2>
+      <p class="ac-lp-section__lead">
+        Les objections d'un gérant qui hésite. Répondues d'après ce que
+        le logiciel fait, pas d'après ce qu'on aimerait qu'il fasse.
+      </p>
+
+      <div class="ac-lp-faq">
+        @for (item of faq; track item.question) {
+          <details class="ac-lp-faq__item">
+            <summary class="ac-lp-faq__question">
+              {{ item.question }}
+              <i class="bi bi-chevron-down" aria-hidden="true"></i>
+            </summary>
+            <p class="ac-lp-faq__reponse">{{ item.reponse }}</p>
+          </details>
+        }
+      </div>
     </div>
   </section>
 

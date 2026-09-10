@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { AmountPipe } from '../../shared/pipes/amount.pipe';
 import {
   CONTACT,
+  FAQ,
   FEATURES,
   LOCAL_FIT,
   PLANS,
@@ -67,6 +68,7 @@ export class LandingPage {
   protected readonly localFit = LOCAL_FIT;
   protected readonly plans = PLANS;
   protected readonly contact = CONTACT;
+  protected readonly faq = FAQ;
 
   /**
    * Tant qu'aucun tarif n'est publié, la section invite à prendre
