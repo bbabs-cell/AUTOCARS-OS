@@ -97,7 +97,14 @@
   font-weight: var(--ac-weight-medium);
   color: var(--ac-text-secondary);
   text-decoration: none;
-  transition: all var(--ac-transition-fast);
+  position: relative;
+
+  // On nomme les propriétés au lieu d'écrire `all`. Avec `all`, le
+  // navigateur surveille TOUTES les propriétés calculées de l'élément
+  // à chaque image — y compris celles qui ne changent jamais. Sur une
+  // barre de quinze entrées, c'est du travail pour rien.
+  transition: background-color var(--ac-duree-rapide) var(--ac-courbe-sortie),
+              color var(--ac-duree-rapide) var(--ac-courbe-sortie);
 
   i {
     font-size: 1.05rem;
@@ -123,13 +130,36 @@
     text-decoration: none;
   }
 
-  // Module actif : fond bleu très clair et texte bleu.
-  // Pas de fond bleu plein, qui serait trop lourd sur une barre
-  // latérale claire — et le cahier des charges demande de la sobriété.
+  // Module actif : il prend LA TEINTE DE SA SECTION, pas le bleu.
+  //
+  // C'est ici que le repère de couleur sert le plus : on regarde le
+  // menu AVANT de cliquer, pas après. L'entrée active et l'en-tête de
+  // la page portent donc la même teinte — deux confirmations du même
+  // fait, aux deux endroits où l'œil se pose.
+  //
+  // Toujours pas de fond plein : trop lourd sur une barre claire, et
+  // le cahier des charges demande de la sobriété. Une refonte ne
+  // dispense pas de le lire.
   &.is-active {
-    background-color: var(--ac-primary-50);
-    color: var(--ac-primary-700);
+    background-color: var(--ac-domain-50);
+    color: var(--ac-domain-700);
     font-weight: var(--ac-weight-semibold);
+
+    // Le filet à gauche reprend celui de l'en-tête de page. Il porte
+    // aussi l'information pour qui ne distingue pas les teintes : la
+    // POSITION du repère ne dépend d'aucune couleur.
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      bottom: 20%;
+      width: 3px;
+      border-radius: 0 var(--ac-radius-sm) var(--ac-radius-sm) 0;
+      background-color: var(--ac-domain);
+    }
+
+    i { color: var(--ac-domain); }
   }
 
   &.is-disabled {

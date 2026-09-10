@@ -261,9 +261,21 @@
   --ac-domain-analytics-50:  #ecfeff;
   --ac-domain-analytics-700: #0e7490;
 
-  --ac-domain-team:          #047857;   // équipe et pointage — émeraude
-  --ac-domain-team-50:       #ecfdf5;
-  --ac-domain-team-700:      #065f46;
+  // L'équipe est OLIVE, et le choix mérite son paragraphe.
+  //
+  // Elle était d'abord émeraude — #047857. En vérifiant, ce n'était
+  // pas « proche » du vert de réussite : c'était `--ac-success-700`,
+  // AU CARACTÈRE PRÈS. Écart perceptuel mesuré : 0.0. Le bandeau
+  // « Équipe » aurait donc été peint dans la couleur qui signifie
+  // « prêt » partout ailleurs dans le produit.
+  //
+  // L'olive reste dans la famille verte — ce qui convient à l'équipe
+  // et au pointage — mais s'en éloigne franchement : 38 d'écart avec
+  // le vert de réussite, 52 avec la sarcelle de la file d'attente.
+  // Mesuré, pas jugé à l'œil.
+  --ac-domain-team:          #4d7c0f;   // équipe et pointage — olive
+  --ac-domain-team-50:       #f5faea;
+  --ac-domain-team-700:      #3f6212;
 
   // La teinte courante. Chaque page pose `--ac-domain` sur son
   // conteneur ; les composants lisent CETTE variable et n'ont donc

@@ -78,8 +78,21 @@
 }
 
 // ==================================================================
-// LES CLASSES UTILITAIRES
+// LES CLASSES UTILITAIRES — UN VOCABULAIRE, PAS DES RÈGLES MORTES
 // ==================================================================
+// Celles-ci ne visent AUCUN balisage existant, et c'est normal : ce
+// sont des mots mis à disposition, qu'on pose sur un élément quand on
+// en a besoin. `ac-souleve`, `ac-cascade`, `ac-anim-confirme`…
+//
+// La distinction compte, parce qu'un audit des sélecteurs les
+// signalera comme « absents du balisage » — au même titre qu'une
+// classe inventée par erreur, ce qui est arrivé plus bas dans ce
+// fichier. Les règles de la section suivante, elles, visent des
+// classes RELEVÉES dans les gabarits, une par une.
+//
+// Si l'une de celles-ci n'est toujours employée nulle part dans six
+// mois, c'est qu'elle ne servait à rien : à supprimer, pas à garder
+// « au cas où ».
 
 .ac-anim-monte     { animation: ac-monte var(--ac-duree) var(--ac-courbe-sortie) both; }
 .ac-anim-droite    { animation: ac-entre-droite var(--ac-duree) var(--ac-courbe-sortie) both; }
@@ -170,4 +183,108 @@
 
   .ac-souleve:hover { transform: none; }
   .btn:active:not(:disabled) { transform: none; }
+}
+
+// ==================================================================
+// OÙ LES ANIMATIONS SONT POSÉES, ET POURQUOI CELLES-LÀ
+// ==================================================================
+// Chaque règle ci-dessous répond à l'une des trois questions du haut
+// de ce fichier. Aucune n'est là pour faire joli — c'est le critère
+// qui a servi à écarter tout le reste.
+
+// « QU'EST-CE QUI VIENT DE CHANGER ? »
+//
+// Les cartes du tableau de la file arrivent en cascade. C'est le seul
+// endroit où elle est justifiée : l'ordre d'arrivée des cartes
+// REPRODUIT l'ordre de passage des véhicules. Le mouvement raconte
+// donc quelque chose de vrai.
+//
+// Elle n'est PAS posée sur les grilles de réglages ou de formulaires :
+// là, l'ordre n'a pas de sens, et faire attendre un champ de saisie
+// est une contrariété gratuite.
+.ac-board__column .ac-card {
+  animation: ac-monte var(--ac-duree) var(--ac-courbe-sortie) both;
+}
+
+@for $i from 1 through 12 {
+  .ac-board__column .ac-card:nth-child(#{$i}) {
+    animation-delay: calc(var(--ac-cascade) * #{$i - 1});
+  }
+}
+
+// Les lignes d'un tableau montent aussi, mais SANS cascade. Un
+// tableau se lit d'un bloc, pas ligne à ligne ; les décaler donnerait
+// l'impression que la page rame.
+.ac-table tbody tr {
+  animation: ac-monte var(--ac-duree-rapide) var(--ac-courbe-sortie) both;
+}
+
+// La carte se soulève au survol dans le tableau de la file : c'est là
+// qu'elle se saisit et se déplace. Une carte qui ne mène nulle part
+// ne bouge pas — le mouvement est une PROMESSE, et une promesse non
+// tenue use la confiance.
+.ac-board__column .ac-card {
+  transition: transform var(--ac-duree-rapide) var(--ac-courbe-sortie),
+              box-shadow var(--ac-duree-rapide) var(--ac-courbe-sortie);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ac-shadow-md);
+  }
+}
+
+// « EST-CE QUE ÇA CHARGE OU EST-CE CASSÉ ? »
+//
+// Le squelette existait déjà ; il gagne la courbe douce du système,
+// pour cesser d'avoir son rythme à lui.
+.ac-skeleton {
+  animation-timing-function: var(--ac-courbe-douce);
+}
+
+// « MON CLIC A-T-IL ÉTÉ PRIS ? »
+//
+// Le message de réussite arrive avec la courbe ressort. C'est le seul
+// usage de ce dépassement dans tout le produit : il dit « c'est
+// fait », là où une apparition linéaire dirait « c'est affiché ».
+.ac-toast--success,
+.ac-alert--success {
+  animation: ac-confirme var(--ac-duree) var(--ac-courbe-ressort) both;
+}
+
+// ==================================================================
+// LE SAFRAN, ENFIN EMPLOYÉ
+// ==================================================================
+// Il était défini et ne servait à rien. Il porte désormais ce qui
+// PROGRESSE et ce qui ABOUTIT — jamais une action, qui reste bleue.
+//
+// Les sélecteurs ci-dessous ont été relevés dans le VRAI balisage,
+// après qu'une première version eut visé cinq classes inventées
+// (`ac-card-grid`, `ac-kanban__column`, `ac-loyalty-progress__fill`…)
+// qui n'existaient nulle part. Du CSS qui a l'air d'être du travail
+// et ne s'applique à rien.
+
+// La barre de progression : lavage en cours, avancement de la mise en
+// route. Le dégradé va du safran au safran — ce n'est pas un effet,
+// c'est un relief qui distingue la barre de son rail.
+.ac-progress__bar {
+  background: linear-gradient(90deg, var(--ac-saffron) 0%, var(--ac-saffron-600) 100%);
+  transition: width var(--ac-duree-lente) var(--ac-courbe-sortie);
+}
+
+// Les tampons de fidélité. Un tampon acquis est safran plein ; les
+// autres restent en creux. C'est la carte perforée du lavage
+// traditionnel, et l'employé comme le client la lisent d'un regard.
+.ac-stamps__slot--filled {
+  background-color: var(--ac-saffron);
+  border-color: var(--ac-saffron-600);
+  color: var(--ac-white);
+  animation: ac-confirme var(--ac-duree) var(--ac-courbe-ressort) both;
+}
+
+// Les montants dans les tableaux — la colonne que le gérant parcourt
+// des yeux en fin de journée. Chiffres à chasse fixe pour que les
+// unités s'alignent : sans cela, comparer deux montants oblige à les
+// lire au lieu de les voir.
+.ac-table__amount {
+  font-variant-numeric: tabular-nums;
 }

@@ -1,4 +1,11 @@
-<div class="ac-shell">
+<!--
+  `data-domaine` est posé sur la COQUE ENTIÈRE, pas sur la seule zone
+  de contenu. La barre latérale en est voisine, pas enfant : sans
+  cela, l'entrée active du menu serait restée bleue pendant que
+  l'en-tête de la page prenait sa teinte — deux repères qui se
+  contredisent valent moins qu'un seul.
+-->
+<div class="ac-shell" [attr.data-domaine]="domaine()">
 
   <ac-sidebar [isOpen]="isSidebarOpen()" (navigate)="closeSidebar()" />
 
@@ -40,12 +47,7 @@
     }
 
     <main class="ac-shell__content">
-      <!--
-        `data-domaine` porte la teinte de la section affichée. Les
-        composants lisent `--ac-domain` et n'ont donc pas à savoir sur
-        quel écran ils se trouvent — voir _tokens.scss.
-      -->
-      <div class="ac-shell__container" [attr.data-domaine]="domaine()">
+      <div class="ac-shell__container">
         <router-outlet />
       </div>
     </main>
