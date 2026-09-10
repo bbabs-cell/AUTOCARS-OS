@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { DELAIS } from './vitest.delais';
 
 /**
  * Les outils en ligne de commande se testent dans NODE, pas dans le
@@ -18,5 +19,11 @@ export default defineConfig({
   test: {
     include: ['test-outils/**/*.test.ts'],
     environment: 'node',
+
+    // CE FICHIER AVAIT ÉTÉ OUBLIÉ quand les délais ont été relevés
+    // côté Workers, et un test a continué d'échouer sur les 5 s par
+    // défaut. Ici chaque test lance un VRAI processus `node` et
+    // attend sa sortie — ce que Windows fait de plus lent.
+    ...DELAIS,
   },
 });
